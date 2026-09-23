@@ -15,7 +15,12 @@ services:
     name: delander
     runtime: docker
     plan: free
-    region: oregon
+    # MESMA regiao do banco no Neon (Ohio). Cada tela faz varias consultas;
+    # com banco e aplicacao em continentes diferentes, cada uma delas paga a
+    # travessia. O Render nao tem Sao Paulo, entao a dupla certa e us-east
+    # nos dois lados — o usuario no Brasil paga a distancia uma vez por
+    # clique, e nao uma vez por consulta.
+    region: ohio
     dockerfilePath: ./Dockerfile
     # O plano gratuito dorme depois de 15 min sem acesso e acorda em ~1 min.
     # O health check e o que diz ao Render que ja acordou de verdade.

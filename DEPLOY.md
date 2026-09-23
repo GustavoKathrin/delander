@@ -11,9 +11,9 @@ o embute no jar. Um serviço em vez de dois, sem CORS e sem URL de API para conf
 
 | | Escolhido | Por quê |
 |---|---|---|
-| Banco | **Neon** | 0,5 GB e 100 CU-horas/mês, **sem prazo e sem apagar dado**. Dorme quando ninguém usa e acorda sozinho. O Postgres grátis do Render expira; o do **Supabase pausa depois de 7 dias** sem acesso — ruim para um sistema que fica dias parado |
+| Banco | **Neon** | 0,5 GB e 100 CU-horas/mês, **sem prazo e sem apagar dado**. Dorme quando ninguém usa e acorda sozinho. O Postgres grátis do Render expira em 30 dias; o do **Supabase pausa depois de 7 dias** sem acesso — ruim para um sistema que fica dias parado |
 | Aplicação | **Render** | Plano grátis de verdade, **sem cartão**, 750 h/mês, aceita Docker e lê o `render.yaml` daqui. Fly.io e Railway hoje pedem cartão |
-| Tela | (junto) | Embutida no jar. Vercel/Cloudflare seriam ótimos, mas exigiriam trocar o `/api` relativo por URL absoluta + CORS — mais peça para quebrar, de graça |
+| Tela | **Vercel** (opcional) | O jar já serve a tela, então o sistema funciona só com o Render. O Vercel entra porque **não dorme**: a tela abre na hora mesmo com a API hibernando |
 
 ## O que o plano grátis cobra em troca
 
@@ -57,28 +57,43 @@ git push -u origin main
 O `.gitignore` já deixa `.env`, `dados/` e `target/` fora — nada de segredo vai subir.
 Pode ser repositório **privado**; o Render pede autorização de leitura e funciona igual.
 
-### 2. Banco no Neon
+### 2. Banco no Neon — **feito**
 
-1. [console.neon.tech](https://console.neon.tech) → entrar com GitHub ou Google
-2. **Create project** → nome `delander`, região mais perto do Brasil
-   (*AWS us-east-1* costuma ser a menor latência disponível no grátis)
-3. Copie a **connection string**. Ela vem assim:
+Projeto **`delander`**, região **AWS US East 2 (Ohio)**, plano Free, Postgres 18.
+
+> **Por que Ohio e não São Paulo.** O Neon oferece São Paulo e parece a escolha óbvia
+> daqui. É a errada: o **Render não tem região na América do Sul**, então o banco em São
+> Paulo com a aplicação nos EUA faria **cada consulta** atravessar o continente — e uma
+> tela do pátio dispara várias. Com os dois em Ohio, a consulta leva ~1 ms e você, no
+> Brasil, paga a distância **uma vez por clique** em vez de uma vez por consulta.
+
+A connection string do Neon vem assim (a senha fica mascarada na tela até você copiar):
 
 ```
-postgresql://meu_usuario:minha_senha@ep-algo-123.us-east-1.aws.neon.tech/neondb?sslmode=require
+postgresql://neondb_owner:SUA_SENHA@ep-sparkling-wave-b5y93el9.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 ```
 
-**Aqui é onde esse tipo de deploy quebra.** O Java não aceita essa URL inteira: usuário
-e senha vão separados, e o prefixo é `jdbc:`. Parta em três:
+**Ela não serve para o Java como está.** São três diferenças, e cada uma custa uma hora
+de depuração:
+
+1. usuário e senha vão em **campos separados**, fora da URL;
+2. o prefixo é **`jdbc:postgresql://`**;
+3. **apague o `&channel_binding=require`** — isso é parâmetro do driver C (libpq). O
+   driver JDBC não conhece esse parâmetro e recusa a conexão.
+
+Tem ainda uma quarta, invisível: a tela do Neon oferece o endereço **com `-pooler`** por
+padrão. **Não use.** O pooler é um PgBouncer em modo transação, e o Hibernate usa
+prepared statements — a combinação quebra com *"prepared statement already exists"*. A
+aplicação já tem o pool dela (HikariCP, 10 conexões); o endereço direto é o certo, e é o
+que está abaixo (sem `-pooler`).
+
+Os três valores prontos para colar no Render:
 
 | Variável | Valor |
 |---|---|
-| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://ep-algo-123.us-east-1.aws.neon.tech/neondb?sslmode=require` |
-| `SPRING_DATASOURCE_USERNAME` | `meu_usuario` |
-| `SPRING_DATASOURCE_PASSWORD` | `minha_senha` |
-
-Ou seja: troque `postgresql://` por `jdbc:postgresql://` e **apague o
-`usuario:senha@`** do meio. O `?sslmode=require` fica — sem ele o Neon recusa a conexão.
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://ep-sparkling-wave-b5y93el9.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require` |
+| `SPRING_DATASOURCE_USERNAME` | `neondb_owner` |
+| `SPRING_DATASOURCE_PASSWORD` | *no botão **Show password** do Neon — só você vê* |
 
 ### 3. A aplicação no Render
 
@@ -102,6 +117,30 @@ Abra a URL. Na primeira vez espere o minuto de partida.
 - Nos logs do Render, procure `Successfully applied N migrations` — é o Flyway criando
   as tabelas no Neon na primeira subida. Se aparecer erro de conexão, quase sempre é a
   URL do passo 2 com `usuario:senha@` sobrando ou sem `sslmode=require`.
+
+### 5. A tela no Vercel (opcional, e vale a pena)
+
+O Render sozinho já serve a tela. Pôr o front no Vercel resolve o pior sintoma do plano
+grátis: **a tela deixa de dormir**. Com tudo no Render, o primeiro acesso depois de 15
+minutos parados mostra uma página de carregamento por ~1 minuto. Com o Vercel na frente,
+a tela abre **na hora** (é CDN, não dorme) e só os dados esperam a API acordar — a
+diferença entre "site fora do ar" e "carregando".
+
+E não precisa mexer em uma linha de código. O front chama `/api` relativo; o
+[frontend/vercel.json](frontend/vercel.json) faz o Vercel repassar `/api/*` para o
+Render. O navegador continua vendo mesma origem, então **não entra CORS na história**.
+
+1. [vercel.com/new](https://vercel.com/new) → entrar com GitHub → importar `delander`
+2. **Root Directory: `frontend`** (esse é o campo que todo mundo erra)
+3. O `vercel.json` já define build e saída — não precisa configurar mais nada
+4. **Depois do deploy do Render**, confira se a URL dentro do `vercel.json` é mesmo a
+   sua (`https://delander.onrender.com`). Se o Render tiver dado outro nome, corrija a
+   linha `destination` e faça `git push`
+5. Com o Vercel na frente, `APP_URL_PUBLICA` no Render passa a ser a **URL do Vercel** —
+   é ela que o cliente recebe para acompanhar o carro
+
+> Se algo der errado no Vercel, a URL do Render continua servindo o sistema inteiro
+> sozinha. Não é um caminho sem volta.
 
 ## Depois
 

@@ -3,11 +3,21 @@
 **Feito: <https://delander.onrender.com>** — 23/09/2026. Sem cartão de crédito, sem prazo
 de validade, com HTTPS. O que segue é o registro de como foi, e serve para refazer.
 
+**Endereço para usar: <https://delander.vercel.app>** (a tela não dorme).
+
 | Peça | Onde | Detalhe |
 |---|---|---|
 | Banco | Neon, projeto `delander` | Ohio (`aws-us-east-2`), Postgres 18, plano Free |
 | Aplicação | Render, serviço `delander` | Ohio, Docker, plano Free, deploy automático a cada push |
+| Tela | Vercel, projeto `delander` | Root Directory `frontend`, repassa `/api` para o Render |
 | Repositório | [GustavoKathrin/delander](https://github.com/GustavoKathrin/delander) | branch `main` |
+
+### Ponta solta
+
+`APP_URL_PUBLICA` no Render ainda é `https://delander.onrender.com`. Funciona — é o mesmo
+sistema — mas é o endereço que vai no link de acompanhamento do cliente, e pelo Render ele
+pega a espera de 1 minuto. Trocar para `https://delander.vercel.app` em *Render → delander
+→ Environment* melhora isso. É um campo só; não está quebrado.
 
 **A pilha:** **Neon** (banco Postgres) + **Render** (a aplicação). Duas contas, e o
 deploy é uma imagem só — a tela e a API saem da mesma origem, porque o front chama

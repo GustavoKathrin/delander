@@ -1,0 +1,70 @@
+# =====================================================================
+# Delander - receita de hospedagem (Render Blueprint)
+#
+# Com este arquivo no repositorio, o Render le a configuracao daqui em vez
+# de pedir quinze campos num formulario. O que ele NAO le e o segredo:
+#   - generateValue: true  -> o proprio Render sorteia e guarda (ninguem digita)
+#   - sync: false          -> o dono preenche no painel, uma vez
+#
+# O banco fica FORA daqui, no Neon (Postgres gratuito sem prazo de validade).
+# O Postgres gratuito do Render expira; o do Neon nao apaga dado nenhum.
+# =====================================================================
+
+services:
+  - type: web
+    name: delander
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    # O plano gratuito dorme depois de 15 min sem acesso e acorda em ~1 min.
+    # O health check e o que diz ao Render que ja acordou de verdade.
+    healthCheckPath: /actuator/health
+    autoDeployTrigger: commit
+    envVars:
+      # ---------------- banco (Neon) ----------------
+      # jdbc:postgresql://HOST/NOME?sslmode=require
+      # Atencao: o Neon entrega uma URL "postgresql://usuario:senha@host/db".
+      # O Java precisa dela SEM usuario e senha, com o prefixo jdbc: e com
+      # sslmode=require. Usuario e senha vao nos dois campos abaixo.
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+
+      # ---------------- seguranca ----------------
+      # Sorteado pelo Render: ninguem ve, ninguem digita, ninguem cola no chat.
+      - key: APP_JWT_SECRET
+        generateValue: true
+      # O login do dono. Escolha uma senha de verdade aqui: na internet
+      # aberta, "123" significa que qualquer um que achar a URL e o dono.
+      - key: APP_ADMIN_EMAIL
+        sync: false
+      - key: APP_ADMIN_SENHA
+        sync: false
+      # Volta ao padrao seguro (6). O 3 do compose existe so para o teste local.
+      - key: APP_SENHA_MINIMA
+        value: "6"
+
+      # ---------------- comportamento ----------------
+      # Dados de demonstracao. Deixe "true" para mostrar o sistema cheio de
+      # carros; "false" para comecar a oficina vazia, de verdade.
+      - key: APP_CARGA_DEMO
+        value: "true"
+      # Mesma origem serve tela e API, entao nao existe pedido de outro site
+      # para liberar. Lista vazia = nenhum navegador de fora entra.
+      - key: APP_CORS_ORIGENS
+        value: ""
+      # Usada no link que o cliente recebe para acompanhar o carro. Troque
+      # pela URL que o Render te der (https://delander.onrender.com).
+      - key: APP_URL_PUBLICA
+        sync: false
+      - key: TZ
+        value: America/Sao_Paulo
+      # ATENCAO: o plano gratuito nao tem disco. Esta pasta existe dentro do
+      # container e some a cada deploy ou reinicio — PDF de leitura e foto da
+      # wiki nao sobrevivem. O resto (tudo que e banco) sobrevive.
+      - key: APP_UPLOADS_DIR
+        value: /dados/uploads

@@ -1,0 +1,67 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: oficina-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-oficina}
+      POSTGRES_USER: ${POSTGRES_USER:-oficina}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oficina}
+      TZ: America/Sao_Paulo
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-oficina} -d ${POSTGRES_DB:-oficina}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: ./backend
+    container_name: oficina-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-oficina}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-oficina}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-oficina}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-troque-este-segredo-em-producao-com-no-minimo-64-caracteres-aleatorios}
+      APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-dono@oficina.local}
+      APP_ADMIN_SENHA: ${APP_ADMIN_SENHA:-123}
+      APP_CARGA_DEMO: ${APP_CARGA_DEMO:-true}
+      # Ambiente de teste: permite senha curta. Em producao remova esta linha.
+      APP_SENHA_MINIMA: ${APP_SENHA_MINIMA:-3}
+      APP_CORS_ORIGENS: ${APP_CORS_ORIGENS:-http://localhost:5173,http://localhost:3000}
+      APP_URL_PUBLICA: ${APP_URL_PUBLICA:-http://localhost:5173}
+      # Caixa de e-mail de onde as leituras do scanner sao lidas. A senha fica
+      # aqui, e nao em Configuracoes, porque o mapa de configuracoes e legivel
+      # por qualquer usuario autenticado. Vazio = a integracao nao conecta,
+      # mesmo que a chave esteja ligada na tela.
+      APP_IMAP_HOST: ${APP_IMAP_HOST:-}
+      APP_IMAP_PORTA: ${APP_IMAP_PORTA:-993}
+      APP_IMAP_USUARIO: ${APP_IMAP_USUARIO:-}
+      APP_IMAP_SENHA: ${APP_IMAP_SENHA:-}
+      APP_IMAP_SSL: ${APP_IMAP_SSL:-true}
+      TZ: America/Sao_Paulo
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - uploads:/dados/uploads
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    container_name: oficina-web
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-5173}:80"
+
+volumes:
+  pgdata:
+  uploads:

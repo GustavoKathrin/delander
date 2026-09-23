@@ -1,0 +1,20 @@
+# O contexto do Dockerfile de deploy e a raiz do projeto, entao os
+# .dockerignore de backend/ e frontend/ nao valem aqui — eles so valem
+# quando o contexto e a propria pasta. Sem este arquivo, os 157 MB de
+# node_modules entrariam no build e ainda por cima cobririam o npm install.
+node_modules
+frontend/node_modules
+frontend/dist
+backend/target
+.mvn
+
+# Nada de segredo ou dado local dentro da imagem.
+.env
+dados
+uploads
+*.log
+
+.git
+.idea
+.vscode
+*.md

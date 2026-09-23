@@ -1,0 +1,5 @@
+app:
+  uploads-dir: /dados/uploads
+logging:
+  level:
+    br.com.oficina: INFO

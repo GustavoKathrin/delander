@@ -1,6 +1,13 @@
 # Subir o Delander na internet, de graça
 
-Dá. Sem cartão de crédito, sem prazo de validade, com HTTPS.
+**Feito: <https://delander.onrender.com>** — 23/09/2026. Sem cartão de crédito, sem prazo
+de validade, com HTTPS. O que segue é o registro de como foi, e serve para refazer.
+
+| Peça | Onde | Detalhe |
+|---|---|---|
+| Banco | Neon, projeto `delander` | Ohio (`aws-us-east-2`), Postgres 18, plano Free |
+| Aplicação | Render, serviço `delander` | Ohio, Docker, plano Free, deploy automático a cada push |
+| Repositório | [GustavoKathrin/delander](https://github.com/GustavoKathrin/delander) | branch `main` |
 
 **A pilha:** **Neon** (banco Postgres) + **Render** (a aplicação). Duas contas, e o
 deploy é uma imagem só — a tela e a API saem da mesma origem, porque o front chama

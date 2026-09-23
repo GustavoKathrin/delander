@@ -7,6 +7,12 @@ e não sai. O sistema mede a diferença entre **permanência** (dias que o carro
 oficina) e **mão de obra** (horas de trabalho que ele realmente recebeu), mostra por que
 cada carro está parado e diz quando há folga para aceitar o próximo.
 
+**No ar:** <https://delander.onrender.com> — aplicação no Render, banco no Neon (Ohio),
+tudo em plano gratuito. Como subir e o que o grátis cobra está em [DEPLOY.md](DEPLOY.md).
+
+> O primeiro acesso depois de 15 minutos parados demora **cerca de 1 minuto**: o plano
+> gratuito desliga o serviço quando ninguém usa. Não é lentidão, é a instância acordando.
+
 ---
 
 ## Como subir

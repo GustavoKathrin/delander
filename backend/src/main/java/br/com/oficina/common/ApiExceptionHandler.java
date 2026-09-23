@@ -12,6 +12,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -89,6 +91,21 @@ public class ApiExceptionHandler {
     public ProblemDetail arquivoGrande(MaxUploadSizeExceededException ex, HttpServletRequest req) {
         return montar(HttpStatus.CONFLICT, "Operacao nao permitida",
                 "Arquivo muito grande. O limite e 8 MB.", req);
+    }
+
+    /**
+     * Endereco de API que nao existe.
+     *
+     * Sem isto, cai no handler generico e volta 500 "Erro interno" — que
+     * manda quem chamou procurar um defeito no servidor quando o problema
+     * e uma URL errada. Aparece tambem porque a tela e servida pelo mesmo
+     * processo: o handler de recurso estatico atende /** e e ele quem
+     * levanta esta excecao para os caminhos que nao sao tela.
+     */
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ProblemDetail enderecoInexistente(Exception ex, HttpServletRequest req) {
+        return montar(HttpStatus.NOT_FOUND, "Nao encontrado",
+                "Este endereco nao existe: " + req.getRequestURI(), req);
     }
 
     @ExceptionHandler(Exception.class)

@@ -54,10 +54,13 @@ services:
         value: "6"
 
       # ---------------- comportamento ----------------
-      # Dados de demonstracao. Deixe "true" para mostrar o sistema cheio de
-      # carros; "false" para comecar a oficina vazia, de verdade.
+      # Desligado: isto aqui e a oficina de verdade, nao a vitrine. Com
+      # "true" a subida cria 12 carros, clientes e OS que nunca existiram —
+      # otimo para demonstrar, veneno para uma base em uso, porque ninguem
+      # mais sabe qual carro e real. Ligue de novo so numa instalacao nova
+      # feita para mostrar o sistema.
       - key: APP_CARGA_DEMO
-        value: "true"
+        value: "false"
       # A tela no Vercel e uma origem DIFERENTE da API, e o navegador conta
       # isso ao servidor: num POST ele manda Origin: delander.vercel.app
       # enquanto o Host aqui e delander.onrender.com. O Spring ve um pedido

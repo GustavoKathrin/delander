@@ -138,6 +138,43 @@ public class CargaDemo implements ApplicationRunner {
             log.warn("Nao foi possivel carregar os dados de demonstracao ({}). "
                     + "O sistema subiu normalmente, sem eles.", e.getMessage(), e);
         }
+        // Fora do carregar(): aquele para na primeira linha se ja houver dados,
+        // e o dono de demonstracao precisa existir mesmo numa base ja carregada.
+        try {
+            transacao.executeWithoutResult(status -> garantirDonoDeDemonstracao());
+        } catch (RuntimeException e) {
+            log.warn("Nao foi possivel criar o usuario de demonstracao ({}).", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * A demonstracao precisa de uma visao de dono.
+     *
+     * Ate aqui a carga criava so mecanicos, e o unico DONO nascia de
+     * APP_ADMIN_SENHA — a senha de producao. Resultado: mostrar o patio, o
+     * painel e as configuracoes exigia a senha real, que quem esta na oficina
+     * com o cliente na frente normalmente nao tem a mao. Mostrar um sistema
+     * nao deveria custar a credencial de producao.
+     *
+     * Idempotente, e preso ao APP_CARGA_DEMO: numa instalacao de verdade, com
+     * a carga desligada, este usuario nunca nasce.
+     */
+    private void garantirDonoDeDemonstracao() {
+        String email = "demo@oficina.local";
+        if (usuarioRepository.existsByEmailIgnoreCase(email)) {
+            return;
+        }
+
+        Usuario dono = new Usuario();
+        dono.setOficinaId(OFICINA);
+        dono.setNome("Dono (demonstracao)");
+        dono.setEmail(email);
+        dono.setSenhaHash(passwordEncoder.encode(SENHA_DEMO));
+        dono.setPapel(Papel.DONO);
+        dono.setAtivo(true);
+        usuarioRepository.save(dono);
+
+        log.info("Usuario de demonstracao criado: {} (senha {})", email, SENHA_DEMO);
     }
 
     private void carregar() {

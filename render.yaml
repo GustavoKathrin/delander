@@ -58,10 +58,15 @@ services:
       # carros; "false" para comecar a oficina vazia, de verdade.
       - key: APP_CARGA_DEMO
         value: "true"
-      # Mesma origem serve tela e API, entao nao existe pedido de outro site
-      # para liberar. Lista vazia = nenhum navegador de fora entra.
+      # A tela no Vercel e uma origem DIFERENTE da API, e o navegador conta
+      # isso ao servidor: num POST ele manda Origin: delander.vercel.app
+      # enquanto o Host aqui e delander.onrender.com. O Spring ve um pedido
+      # cross-origin e, com a lista vazia, recusava com 403 — GET passava
+      # (fetch de mesma origem nao manda Origin) e POST nao, entao a tela
+      # abria e o login morria. O proxy do Vercel esconde isso do usuario,
+      # mas nao do servidor.
       - key: APP_CORS_ORIGENS
-        value: ""
+        value: "https://delander.vercel.app"
       # Usada no link que o cliente recebe para acompanhar o carro. Troque
       # pela URL que o Render te der (https://delander.onrender.com).
       - key: APP_URL_PUBLICA

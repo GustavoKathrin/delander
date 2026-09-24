@@ -61,6 +61,11 @@ services:
       # feita para mostrar o sistema.
       - key: APP_CARGA_DEMO
         value: "false"
+      # TEMPORARIO: apaga os carros de demonstracao que foram para a base de
+      # producao. Roda uma vez na subida e e removido no commit seguinte,
+      # junto com a classe ZerarBase — chave que apaga dado nao fica.
+      - key: APP_ZERAR_BASE
+        value: "true"
       # A tela no Vercel e uma origem DIFERENTE da API, e o navegador conta
       # isso ao servidor: num POST ele manda Origin: delander.vercel.app
       # enquanto o Host aqui e delander.onrender.com. O Spring ve um pedido

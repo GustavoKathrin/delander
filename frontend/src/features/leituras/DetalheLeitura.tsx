@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, FileText, GitCompareArrows } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, FileText, GitCompareArrows } from 'lucide-react'
 import { api } from '../../api/client'
 import type { DetalheLeitura as DetalheTipo, ResumoLeitura } from '../../types'
 import {
@@ -12,6 +12,7 @@ import {
   Etiqueta,
   Vazio,
   useAviso,
+  cx,
 } from '../../components/ui'
 import { Placa } from '../../components/oficina'
 import { dataHora } from '../../lib/format'
@@ -84,15 +85,22 @@ export default function DetalheLeitura() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               {r.placa && <Placa placa={r.placa} tamanho="md" />}
-              <Etiqueta
-                className={
+              {/* O tipo é a informação mais pesada desta tela: uma leitura
+                  OFICIAL é a régua contra a qual todas as outras do mesmo
+                  modelo são comparadas. Como etiqueta pequena ao lado da
+                  placa ela sumia, e confundir a régua com um caso qualquer
+                  estraga todas as comparações seguintes. */}
+              <span
+                className={cx(
+                  'fonte-display inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-extrabold uppercase tracking-wider ring-1',
                   r.tipo === 'OFICIAL'
-                    ? 'bg-emerald-100 text-emerald-800 ring-emerald-200'
-                    : 'bg-amber-100 text-amber-800 ring-amber-200'
-                }
+                    ? 'bg-emerald-500 text-white ring-emerald-600'
+                    : 'bg-amber-100 text-amber-900 ring-amber-300',
+                )}
               >
-                {r.tipoDescricao}
-              </Etiqueta>
+                {r.tipo === 'OFICIAL' && <BadgeCheck className="size-4" aria-hidden />}
+                {r.tipo === 'OFICIAL' ? 'Leitura oficial' : r.tipoDescricao}
+              </span>
               <Etiqueta>{r.motorLigado ? 'motor ligado' : 'motor desligado'}</Etiqueta>
               <Etiqueta>{r.ignicaoLigada ? 'ignição ligada' : 'ignição desligada'}</Etiqueta>
             </div>

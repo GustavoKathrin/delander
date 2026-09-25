@@ -115,20 +115,22 @@ export function QuatroSemanas({
                   : `${livres} vaga(s) livre(s) · ${info!.percentual}% da capacidade · o que aperta: ${info!.limitante}`
               }
               className={cx(
-                'flex flex-col items-center rounded py-1 transition',
+                // Alvo grande de proposito: isto e clicado de pe, no balcao
+                // ou no celular, com o cliente esperando no telefone.
+                'flex flex-col items-center justify-center rounded-md py-2 min-h-[3rem] transition',
                 fundo(info),
                 fechado ? 'cursor-not-allowed' : 'hover:brightness-95',
                 chave === escolhido && 'ring-2 ring-marca-600 ring-offset-1',
                 chave === hoje && chave !== escolhido && 'ring-1 ring-slate-400',
               )}
             >
-              <span className="text-[11px] font-bold leading-none tabular-nums">
+              <span className="text-base font-extrabold leading-none tabular-nums sm:text-lg">
                 {dia.getDate()}
               </span>
               {/* O texto decide junto com a cor, e nunca a contradiz: um dia
                   pode estar cheio de HORAS com vaga sobrando, e escrever
                   "4 vg" num quadrado vermelho só confundiria. */}
-              <span className="text-[9px] leading-tight opacity-80">
+              <span className="mt-0.5 text-[11px] font-medium leading-tight opacity-90">
                 {fechado ? '—' : info!.cheio ? 'cheio' : `${livres} vg`}
               </span>
             </button>

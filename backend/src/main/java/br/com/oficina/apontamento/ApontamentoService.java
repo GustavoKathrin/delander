@@ -339,9 +339,13 @@ public class ApontamentoService {
         OffsetDateTime agora = OffsetDateTime.now(clock);
 
         UUID funcionarioId = contexto.funcionarioId();
-        List<OsItem> itens = funcionarioId != null
-                ? itemRepository.abertosDoFuncionario(funcionarioId)
-                : itemRepository.abertosDaOficina(oficinaId);
+        // Dono e gerente veem a oficina inteira, mesmo quando tambem estao
+        // cadastrados como funcionario — e o caso normal da oficina pequena,
+        // onde o dono pega em chave. Sem isto, ele abria "Meus servicos" e
+        // via so o proprio carro, achando que o resto tinha sumido.
+        List<OsItem> itens = (funcionarioId == null || contexto.gerencia())
+                ? itemRepository.abertosDaOficina(oficinaId)
+                : itemRepository.abertosDoFuncionario(funcionarioId);
 
         return montarCards(itens, agora, funcionarioId);
     }

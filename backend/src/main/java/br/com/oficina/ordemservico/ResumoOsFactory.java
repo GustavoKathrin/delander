@@ -5,6 +5,9 @@ import br.com.oficina.compartilhamento.CompartilhamentoOsRepository;
 import br.com.oficina.configuracao.Chaves;
 import br.com.oficina.configuracao.ConfiguracaoService;
 import br.com.oficina.parada.Parada;
+import br.com.oficina.peca.PecaOsRepository;
+import br.com.oficina.peca.PecaOsRepository;
+import br.com.oficina.peca.StatusPeca;
 import br.com.oficina.parada.ParadaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,17 +39,20 @@ public class ResumoOsFactory {
     private final ApontamentoRepository apontamentoRepository;
     private final ParadaRepository paradaRepository;
     private final CompartilhamentoOsRepository compartilhamentoRepository;
+    private final PecaOsRepository pecaRepository;
     private final ConfiguracaoService config;
     private final Clock clock;
 
     public ResumoOsFactory(ApontamentoRepository apontamentoRepository,
                            ParadaRepository paradaRepository,
                            CompartilhamentoOsRepository compartilhamentoRepository,
+                           PecaOsRepository pecaRepository,
                            ConfiguracaoService config,
                            Clock clock) {
         this.apontamentoRepository = apontamentoRepository;
         this.paradaRepository = paradaRepository;
         this.compartilhamentoRepository = compartilhamentoRepository;
+        this.pecaRepository = pecaRepository;
         this.config = config;
         this.clock = clock;
     }
@@ -65,6 +71,14 @@ public class ResumoOsFactory {
         Map<UUID, OffsetDateTime> ultimaAtividade = mapaData(apontamentoRepository.ultimaAtividadePorOs(ids));
         Set<UUID> comLink = new HashSet<>(compartilhamentoRepository.osComLinkAtivo(ids));
 
+        // Peca: duas consultas em lote, nao uma por carro. ESPERANDO quer
+        // telefone para o fornecedor; CHEGOU quer mecanico — acoes opostas,
+        // e e por isso que precisam aparecer no card e nao so dentro da OS.
+        Set<UUID> esperandoPeca = new HashSet<>(pecaRepository.osComPecaEm(ids,
+                List.of(StatusPeca.SOLICITADA, StatusPeca.COMPRADA)));
+        Set<UUID> pecaChegou = new HashSet<>(pecaRepository.osComPecaEm(ids,
+                List.of(StatusPeca.RECEBIDA)));
+
         Map<UUID, Parada> paradasAbertas = new HashMap<>();
         paradaRepository.abertas(oficinaId)
                 .forEach(p -> paradasAbertas.put(p.getOrdemServicoId(), p));
@@ -82,6 +96,11 @@ public class ResumoOsFactory {
                     ultimaAtividade.get(os.getId()),
                     paradasAbertas.get(os.getId()),
                     comLink.contains(os.getId()),
+                    esperandoPeca.contains(os.getId())
+                            ? OsDtos.StatusPecaCard.ESPERANDO
+                            : pecaChegou.contains(os.getId())
+                                    ? OsDtos.StatusPecaCard.CHEGOU
+                                    : OsDtos.StatusPecaCard.NENHUMA,
                     limiteSemMovimento, limiteRetirada, limiteEstouro, diasAntesPrevisao));
         }
         return resultado;
@@ -102,6 +121,7 @@ public class ResumoOsFactory {
                                    OffsetDateTime ultimaAtividade,
                                    Parada paradaAberta,
                                    boolean compartilhado,
+                                   OsDtos.StatusPecaCard pecas,
                                    int limiteSemMovimento,
                                    int limiteRetirada,
                                    int limiteEstouro,
@@ -200,7 +220,8 @@ public class ResumoOsFactory {
                 especialidades,
                 alertas,
                 compartilhado,
-                os.isPrecisaElevador());
+                os.isPrecisaElevador(),
+                pecas);
     }
 
     private Map<UUID, BigDecimal> mapaDecimal(List<Object[]> linhas) {

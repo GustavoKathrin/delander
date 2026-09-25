@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CalendarPlus, Loader2, Lock, LockOpen, Plus } from 'lucide-react'
+import { AlertTriangle, CalendarPlus, Loader2, Lock, LockOpen, Package, Plus } from 'lucide-react'
 import { api } from '../../api/client'
 import type { ItemFila, Patio as PatioTipo, SituacaoVaga, Vaga } from '../../types'
 import { useAuth } from '../../lib/auth'
@@ -937,6 +937,25 @@ function CelulaVaga({
             <p className="flex items-start gap-1 text-[10px] leading-tight text-red-600">
               <AlertTriangle className="mt-px size-3 flex-none" aria-hidden />
               {os.alertas.find((a) => a.severidade === 'ALTA')?.texto}
+            </p>
+          )}
+
+          {/* Peça, no card e não só dentro da OS. É o motivo número um de
+              carro parado, e os dois estados pedem coisas opostas: esperando
+              quer telefone para o fornecedor, chegou quer mecânico. Enquanto
+              isso só aparecia dentro da OS, o carro cuja peça chegou na terça
+              ficava parado até alguém lembrar de abrir a tela. */}
+          {os.pecas !== 'NENHUMA' && (
+            <p
+              className={cx(
+                'flex items-center gap-1 rounded px-1.5 py-1 text-[10px] font-semibold leading-tight',
+                os.pecas === 'ESPERANDO'
+                  ? 'bg-orange-100 text-orange-800'
+                  : 'bg-emerald-100 text-emerald-800',
+              )}
+            >
+              <Package className="size-3 flex-none" aria-hidden />
+              {os.pecas === 'ESPERANDO' ? 'Esperando peça' : 'Peça chegou — pode trabalhar'}
             </p>
           )}
         </div>

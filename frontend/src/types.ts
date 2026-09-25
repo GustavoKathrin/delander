@@ -87,6 +87,8 @@ export interface ResumoOs {
   alertas: Alerta[]
   compartilhado: boolean
   precisaElevador: boolean
+  /** Peça: ESPERANDO pede telefone ao fornecedor, CHEGOU pede mecânico. */
+  pecas: 'NENHUMA' | 'ESPERANDO' | 'CHEGOU'
 }
 
 export interface ItemOs {

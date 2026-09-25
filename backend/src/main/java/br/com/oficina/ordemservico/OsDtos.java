@@ -166,7 +166,15 @@ public final class OsDtos {
             List<Alerta> alertas,
             boolean compartilhado,
             /** O servico sobe o carro: alimenta a fila do elevador e o selo no card. */
-            boolean precisaElevador) {
+            boolean precisaElevador,
+            /**
+             * Peca do carro: o motivo numero um de carro parado.
+             *
+             * Dois estados diferentes, e confundi-los custa dia de oficina:
+             * ESPERANDO = nao adianta chamar o mecanico;
+             * CHEGOU = o carro esta travado a toa e pode andar hoje.
+             */
+            StatusPecaCard pecas) {
     }
 
     public record ItemResposta(
@@ -248,6 +256,20 @@ public final class OsDtos {
 
     public record ChecklistRequisicao(
             @NotNull @Valid List<ChecklistItemRequisicao> itens) {
+    }
+
+    /**
+     * Situacao das pecas de um carro, resumida para o card do patio.
+     *
+     * Falta de peca e o motivo numero um de carro parado, e os dois estados
+     * pedem acoes opostas: ESPERANDO quer telefone para o fornecedor,
+     * CHEGOU quer mecanico. Quando isso so aparece dentro da OS, o carro
+     * cuja peca chegou na terca continua parado ate alguem abrir a tela.
+     */
+    public enum StatusPecaCard {
+        NENHUMA,
+        ESPERANDO,
+        CHEGOU
     }
 
     public record ChecklistResposta(UUID id, String descricao, Boolean ok, String observacao) {

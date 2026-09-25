@@ -796,12 +796,54 @@ function CelulaVaga({
       />
 
       {modoEdicao && (
-        <span
-          onPointerDown={puxar}
-          title="Puxe para esticar"
-          className="absolute bottom-0 right-0 z-30 size-5 cursor-nwse-resize touch-none rounded-tl-md bg-marca-600 shadow"
-          aria-hidden
-        />
+        <>
+          <span
+            onPointerDown={puxar}
+            title="Puxe para esticar"
+            className="absolute bottom-0 right-0 z-30 size-5 cursor-nwse-resize touch-none rounded-tl-md bg-marca-600 shadow"
+            aria-hidden
+          />
+
+          {/* Dois formatos com um toque, além do puxador.
+              Puxar funciona no mouse, mas é ruim no celular e impreciso para
+              quem só quer "esta vaga é dupla". Box de moto e box de caminhão
+              são as duas formas que a oficina realmente usa; o puxador fica
+              para quem quer um tamanho fora disso. */}
+          <span className="absolute bottom-0 left-0 z-30 flex gap-px">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRedimensionar(1, 1)
+              }}
+              title="Vaga simples (quadrada)"
+              className={cx(
+                'grid size-6 place-items-center rounded-tr-md text-[10px] font-bold shadow',
+                (posicao?.largura ?? 1) === 1
+                  ? 'bg-marca-600 text-white'
+                  : 'bg-white/90 text-slate-600 hover:bg-white',
+              )}
+            >
+              1×
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRedimensionar(2, 1)
+              }}
+              title="Vaga dupla (retangular)"
+              className={cx(
+                'grid size-6 place-items-center text-[10px] font-bold shadow',
+                (posicao?.largura ?? 1) >= 2
+                  ? 'bg-marca-600 text-white'
+                  : 'bg-white/90 text-slate-600 hover:bg-white',
+              )}
+            >
+              2×
+            </button>
+          </span>
+        </>
       )}
 
       {critico && (
@@ -843,11 +885,23 @@ function CelulaVaga({
         )}
 
         {os ? (
-          <CarroTopo
-            cor={os.cor}
-            largura={visual ? 74 : 54}
-            titulo={` `}
-          />
+          /* O carro que já está numa vaga também se arrasta, para qualquer
+             outra. Antes só os da fila eram arrastáveis, e trocar dois carros
+             de box — coisa que acontece o dia inteiro na oficina — obrigava a
+             abrir a OS e mexer na alocação de dentro dela. O endpoint de
+             alocar já fazia a mudança; faltava a tela deixar pegar. */
+          <span
+            draggable={podeAgendar && !modoEdicao}
+            onDragStart={(e) => {
+              if (modoEdicao) return
+              e.dataTransfer.setData(TIPO_CARRO, os.id)
+              e.dataTransfer.effectAllowed = 'move'
+            }}
+            title={podeAgendar && !modoEdicao ? 'Arraste para outra vaga' : undefined}
+            className={cx(podeAgendar && !modoEdicao && 'cursor-grab active:cursor-grabbing')}
+          >
+            <CarroTopo cor={os.cor} largura={visual ? 74 : 54} titulo={` `} />
+          </span>
         ) : futuro ? (
           <span className="flex flex-col items-center gap-1 opacity-45">
             <CarroTopo cor={futuro.cor} largura={44} titulo={`${futuro.veiculo} (chega depois)`} />

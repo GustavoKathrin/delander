@@ -116,6 +116,14 @@ public final class LeituraDtos {
      * O rascunho devolvido pela importacao. NADA disso foi gravado ainda,
      * fora o proprio PDF.
      */
+    public record QualidadeResposta(int lidos,
+                                    int esperados,
+                                    int percentual,
+                                    List<Integer> faltando,
+                                    String estrategia,
+                                    boolean confiavel) {
+    }
+
     public record Previa(
             UUID arquivoId,
             String marca,
@@ -131,6 +139,13 @@ public final class LeituraDtos {
             String numeroRelatorio,
             OffsetDateTime momentoTeste,
             List<ModuloResposta> modulos,
-            List<String> avisos) {
+            List<String> avisos,
+            /**
+             * Quanto da tabela foi lido. O relatorio numera as proprias
+             * linhas, entao da para saber o que ficou de fora sem ter com
+             * que comparar — e e isso que impede leitura incompleta de
+             * passar por completa na tela de conferencia.
+             */
+            QualidadeResposta qualidade) {
     }
 }

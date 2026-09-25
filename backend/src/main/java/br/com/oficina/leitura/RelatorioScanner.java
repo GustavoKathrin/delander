@@ -47,7 +47,35 @@ public final class RelatorioScanner {
                             OffsetDateTime momentoTeste) {
     }
 
-    public record Previa(Cabecalho cabecalho, List<Modulo> modulos, List<String> avisos) {
+    /**
+     * O quanto da tabela o analisador conseguiu ler.
+     *
+     * O relatorio numera as proprias linhas, e essa e a melhor testemunha
+     * que existe: se o maior numero e 133 e so 95 itens foram lidos, 38
+     * linhas ficaram pelo caminho — sem precisar do PDF original para
+     * provar. Um analisador que devolve 95 itens sem dizer isso parece
+     * ter funcionado, e e assim que leitura incompleta vira acervo furado.
+     *
+     * @param lidos      itens efetivamente reconhecidos
+     * @param esperados  maior numero de linha visto no relatorio
+     * @param faltando   numeros de linha que existem no PDF e nao no resultado
+     */
+    public record Qualidade(int lidos, int esperados, List<Integer> faltando, String estrategia) {
+
+        public int percentual() {
+            return esperados <= 0 ? 100 : Math.min(100, lidos * 100 / esperados);
+        }
+
+        /** Abaixo disto a importacao nao deve passar batida pela tela. */
+        public boolean confiavel() {
+            return faltando.isEmpty();
+        }
+    }
+
+    public record Previa(Cabecalho cabecalho,
+                         List<Modulo> modulos,
+                         List<String> avisos,
+                         Qualidade qualidade) {
 
         public int totalDeItens() {
             return modulos.stream().mapToInt(m -> m.itens().size()).sum();

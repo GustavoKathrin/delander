@@ -24,7 +24,9 @@ import java.util.regex.Pattern;
  * Isso e o truque de robustez que mais importa aqui.
  */
 @Component
-public class AnalisadorRelatorioAutel {
+public class AnalisadorRelatorioAutel implements EstrategiaDeRelatorio {
+
+    static final String NOME = "Autel — colunas alinhadas";
 
     private static final int MAXIMO_DE_ITENS = 2000;
 
@@ -67,6 +69,12 @@ public class AnalisadorRelatorioAutel {
                     + "|informacoes|dados act?uais|dados atuais|caminho|relatorio"
                     + "|maxidas|oficina:|e-?mail:|endereco:|nome do tecnico)"));
 
+    @Override
+    public String nome() {
+        return NOME;
+    }
+
+    @Override
     public RelatorioScanner.Previa analisar(String texto) {
         if (texto == null || texto.isBlank()) {
             throw new RegraNegocioException(
@@ -99,7 +107,14 @@ public class AnalisadorRelatorioAutel {
                     .formatted(cabecalho.placaSugerida()));
         }
 
-        return new RelatorioScanner.Previa(cabecalho, modulos, avisos);
+        RelatorioScanner.Qualidade qualidade = QualidadeDaLeitura.medir(modulos, NOME);
+        if (!qualidade.confiavel()) {
+            avisos.add("Faltaram %d linha(s) numeradas no meio da tabela (de %d). "
+                    .formatted(qualidade.faltando().size(), qualidade.esperados())
+                    + "O relatorio numera as proprias linhas, e esses numeros nao apareceram.");
+        }
+
+        return new RelatorioScanner.Previa(cabecalho, modulos, avisos, qualidade);
     }
 
     // ------------------------------------------------------------- cabecalho
@@ -126,12 +141,14 @@ public class AnalisadorRelatorioAutel {
                 if (m.matches()) {
                     ano = inteiro(m.group(1));
                     marca = m.group(2).strip();
-                    modelo = m.group(3).strip();
+                    modelo = ateOProximoRotulo(m.group(3));
                 }
             }
             km = km != null ? km : primeiroInteiro(KM, chave);
             placa = placa != null ? placa : primeiro(PLACA, comCaso, true);
-            ferramenta = ferramenta != null ? ferramenta : primeiroOriginal(FERRAMENTA, chave, linha);
+            ferramenta = ferramenta != null
+                    ? ferramenta
+                    : ateOProximoRotulo(primeiroOriginal(FERRAMENTA, chave, linha));
             versao = versao != null ? versao : primeiro(VERSAO, comCaso, false);
             numeroRelatorio = numeroRelatorio != null ? numeroRelatorio : primeiro(RELATORIO, comCaso, true);
 
@@ -219,7 +236,7 @@ public class AnalisadorRelatorioAutel {
             if (chave.matches("dados act?uais|dados atuais|live data|datastream")) {
                 continue;
             }
-            partes.add(limpo);
+            partes.add(semRotuloInicial(limpo));
         }
         return partes.isEmpty() ? "Modulo" : partes.get(partes.size() - 1);
     }
@@ -270,6 +287,55 @@ public class AnalisadorRelatorioAutel {
     // ----------------------------------------------------------------- apoio
 
     /** Sem acento e sem caso: para comparar. */
+    /**
+     * Rotulos que aparecem no cabecalho do relatorio.
+     *
+     * Existem porque a Autel nem sempre quebra linha entre um campo e o
+     * proximo: dependendo da versao e do idioma, uma linha sai como
+     * "2014/Honda/Civic Quilometragem: 175811 km" ou
+     * "Ferramenta: MaxiDAS DS900-BT Numero de serie: VX2GR5C01294".
+     * Quem captura "ate o fim da linha" leva o campo seguinte junto.
+     */
+    private static final Pattern PROXIMO_ROTULO = Pattern.compile(
+            "\\s*\\b(quilometragem|numero de serie|matricula|vin|versao|nome|tel"
+                    + "|tempo de teste|numero do relatorio|submodelo|unidade submodelo"
+                    + "|ferramenta)\\s*:",
+            Pattern.CASE_INSENSITIVE);
+
+    /**
+     * Corta um valor onde comeca o proximo rotulo.
+     *
+     * Sem isto, o modelo do carro vira "Civic Quilometragem: 175811 km" — e
+     * aquele Civic deixa de casar com os outros Civic 2014 do acervo, que e
+     * justamente o que da valor a leitura guardada.
+     */
+    private static String ateOProximoRotulo(String valor) {
+        if (valor == null) {
+            return null;
+        }
+        Matcher corte = PROXIMO_ROTULO.matcher(semAcentoMantendoCaso(valor));
+        String limpo = corte.find() ? valor.substring(0, corte.start()) : valor;
+        return limpo.strip();
+    }
+
+    /**
+     * Tira o rotulo que veio grudado no inicio do valor.
+     *
+     * "Unidade Submodelo: GERAL" e o nome do modulo com a etiqueta junto; o
+     * nome e "GERAL". Com a etiqueta, cada relatorio de fabricante diferente
+     * criaria um modulo novo para o mesmo lugar do carro.
+     */
+    private static String semRotuloInicial(String valor) {
+        if (valor == null) {
+            return null;
+        }
+        Matcher rotulo = PROXIMO_ROTULO.matcher(semAcentoMantendoCaso(valor));
+        if (rotulo.find() && rotulo.start() == 0) {
+            return valor.substring(rotulo.end()).strip();
+        }
+        return valor.strip();
+    }
+
     private static String semAcento(String texto) {
         return Normalizer.normalize(texto, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")

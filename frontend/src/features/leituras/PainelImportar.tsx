@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { FileUp, Search, X } from 'lucide-react'
+import { AlertTriangle, BadgeCheck, FileUp, Search, X } from 'lucide-react'
 import { api, ErroApi } from '../../api/client'
 import type {
   DetalheLeitura,
@@ -109,6 +109,7 @@ export default function PainelImportar({
       momentoTeste: dados.resumo.momentoTeste,
       modulos: dados.modulos,
       avisos: [],
+      qualidade: { lidos: 0, esperados: 0, percentual: 100, faltando: [], estrategia: '', confiavel: true },
     })
     setModulos(dados.modulos)
     if (dados.resumo.motor) setMotor(dados.resumo.motor)
@@ -326,6 +327,34 @@ export default function PainelImportar({
                   VIN, nome e telefone do cliente não são guardados.
                 </p>
               </div>
+
+              {/* A nota de leitura, antes dos avisos.
+                  Sem isto, uma importação que pegou 95 de 133 linhas aparece
+                  como "95 itens" — com cara de sucesso. Foi exatamente assim
+                  que 38 linhas sumiram sem ninguém ver. O relatório numera as
+                  próprias linhas, então o buraco é fato, não suspeita. */}
+              {previa.qualidade &&
+                (previa.qualidade.confiavel ? (
+                  <p className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800 ring-1 ring-emerald-200">
+                    <BadgeCheck className="size-4 flex-none" aria-hidden />
+                    Leitura completa: as {previa.qualidade.lidos} linhas da tabela foram lidas.
+                  </p>
+                ) : (
+                  <div className="rounded-lg bg-red-50 p-3 text-xs text-red-800 ring-1 ring-red-300">
+                    <p className="flex items-center gap-2 font-semibold">
+                      <AlertTriangle className="size-4 flex-none" aria-hidden />
+                      Leitura incompleta: {previa.qualidade.lidos} de{' '}
+                      {previa.qualidade.esperados} linhas ({previa.qualidade.percentual}%)
+                    </p>
+                    <p className="mt-1">
+                      Faltaram os itens {previa.qualidade.faltando.slice(0, 12).join(', ')}
+                      {previa.qualidade.faltando.length > 12 &&
+                        ` e mais ${previa.qualidade.faltando.length - 12}`}
+                      . Dá para salvar assim, mas a comparação com a leitura oficial vai
+                      ficar cega nesses pontos.
+                    </p>
+                  </div>
+                ))}
 
               {previa.avisos.length > 0 && (
                 <ul className="space-y-1 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 ring-1 ring-amber-200">

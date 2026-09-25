@@ -37,7 +37,7 @@ public class LeituraService {
     private final ArquivoLeituraRepository arquivoRepository;
     private final ArmazenamentoArquivos armazenamento;
     private final LeitorPdfAutel leitor;
-    private final AnalisadorRelatorioAutel analisador;
+    private final AnalisadorDeRelatorios analisador;
     private final Contexto contexto;
 
     public LeituraService(LeituraRepository repository,
@@ -45,7 +45,7 @@ public class LeituraService {
                           ArquivoLeituraRepository arquivoRepository,
                           ArmazenamentoArquivos armazenamento,
                           LeitorPdfAutel leitor,
-                          AnalisadorRelatorioAutel analisador,
+                          AnalisadorDeRelatorios analisador,
                           Contexto contexto) {
         this.repository = repository;
         this.veiculoRepository = veiculoRepository;
@@ -120,7 +120,14 @@ public class LeituraService {
                 previa.cabecalho().numeroRelatorio(),
                 previa.cabecalho().momentoTeste(),
                 previa.modulos().stream().map(this::paraModuloResposta).toList(),
-                avisos);
+                avisos,
+                new LeituraDtos.QualidadeResposta(
+                        previa.qualidade().lidos(),
+                        previa.qualidade().esperados(),
+                        previa.qualidade().percentual(),
+                        previa.qualidade().faltando(),
+                        previa.qualidade().estrategia(),
+                        previa.qualidade().confiavel()));
     }
 
     /**

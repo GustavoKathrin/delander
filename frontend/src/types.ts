@@ -630,6 +630,15 @@ export interface PreviaLeitura {
   momentoTeste?: string
   modulos: ModuloLeitura[]
   avisos: string[]
+  /** Quanto da tabela foi lido. O relatório numera as próprias linhas. */
+  qualidade: {
+    lidos: number
+    esperados: number
+    percentual: number
+    faltando: number[]
+    estrategia: string
+    confiavel: boolean
+  }
 }
 
 // ==================================================================== wiki

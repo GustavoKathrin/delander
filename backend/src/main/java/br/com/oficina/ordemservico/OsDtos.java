@@ -224,6 +224,32 @@ public final class OsDtos {
             BigDecimal total) {
     }
 
+    /**
+     * O mecanico contando o que esta fazendo.
+     *
+     * A visibilidade e escolha dele em cada registro, e nao uma configuracao
+     * da oficina: "troquei a correia" o cliente quer ler; "cliente enrolou
+     * para aprovar, perdi a manha" e conversa interna. Misturar os dois num
+     * unico interruptor faria a oficina parar de registrar o segundo.
+     */
+    public record TrabalhoRequisicao(
+            @NotBlank(message = "Escreva o que foi feito.")
+            @Size(max = 400, message = "Use ate 400 caracteres.")
+            String texto,
+            boolean visivelCliente) {
+    }
+
+    /** Uma linha do checklist respondida pelo mecanico. */
+    public record ChecklistItemRequisicao(
+            @NotNull UUID id,
+            Boolean ok,
+            @Size(max = 300) String observacao) {
+    }
+
+    public record ChecklistRequisicao(
+            @NotNull @Valid List<ChecklistItemRequisicao> itens) {
+    }
+
     public record ChecklistResposta(UUID id, String descricao, Boolean ok, String observacao) {
     }
 

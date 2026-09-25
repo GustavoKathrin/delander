@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class OrdemServicoService {
@@ -304,6 +305,88 @@ public class OrdemServicoService {
 
     // ================================================================ transicoes
 
+    /**
+     * O mecanico registra o que esta fazendo.
+     *
+     * Vira um evento no historico do carro. A foto e opcional e sobe pelo
+     * endpoint de arquivos com a MESMA visibilidade do texto — se o texto e
+     * interno e a foto fosse publica, o cliente veria a imagem de uma coisa
+     * que ninguem explicou para ele.
+     */
+    @Transactional
+    public OsDtos.Detalhe registrarTrabalho(UUID id, OsDtos.TrabalhoRequisicao req) {
+        UUID oficinaId = contexto.oficinaId();
+        OrdemServico os = buscarComItens(id, oficinaId);
+
+        eventoService.registrar(oficinaId, os.getId(), EventoService.TRABALHO_REGISTRADO,
+                req.texto().trim(), req.visivelCliente(),
+                Map.of("autor", contexto.nomeUsuario()));
+
+        return detalhe(os.getId());
+    }
+
+    /**
+     * Responde o checklist de entrada.
+     *
+     * E a foto do carro como ele chegou. Existe para a oficina nao pagar por
+     * um risco que ja estava la — por isso e respondido antes de comecar o
+     * servico, e nao depois, quando ninguem mais consegue provar nada.
+     */
+    @Transactional
+    public OsDtos.Detalhe responderChecklist(UUID id, OsDtos.ChecklistRequisicao req) {
+        UUID oficinaId = contexto.oficinaId();
+        OrdemServico os = buscarComItens(id, oficinaId);
+
+        List<ChecklistItem> itens = checklistRepository.findByOrdemServicoIdOrderByOrdem(os.getId());
+        Map<UUID, ChecklistItem> porId = itens.stream()
+                .collect(Collectors.toMap(ChecklistItem::getId, i -> i));
+
+        for (OsDtos.ChecklistItemRequisicao resposta : req.itens()) {
+            ChecklistItem item = porId.get(resposta.id());
+            if (item == null) {
+                throw new RegraNegocioException("Item de checklist nao pertence a esta OS.");
+            }
+            item.setOk(resposta.ok());
+            item.setObservacao(resposta.observacao());
+        }
+        checklistRepository.saveAll(itens);
+
+        long comRessalva = itens.stream().filter(i -> Boolean.FALSE.equals(i.getOk())).count();
+        eventoService.registrar(oficinaId, os.getId(), EventoService.OBSERVACAO,
+                comRessalva == 0
+                        ? "Checklist de entrada preenchido, sem ressalvas."
+                        : "Checklist de entrada preenchido com %d ressalva(s).".formatted(comRessalva),
+                true);
+
+        return detalhe(os.getId());
+    }
+
+    /**
+     * O checklist de entrada tem que estar respondido antes de mexer no carro.
+     *
+     * Ele existe para provar como o carro chegou. Preenchido depois que o
+     * mecanico ja abriu o motor, nao prova nada — e a oficina paga por um
+     * risco que ja estava la. Por isso a trava e aqui, na porta da execucao.
+     *
+     * Retomar uma pausa nao pede de novo: o carro nao chegou duas vezes.
+     */
+    private void exigirChecklistDeEntrada(OrdemServico os, UUID oficinaId, StatusOs de) {
+        if (de == StatusOs.PAUSADO || !config.flag(oficinaId, Chaves.EXIGIR_CHECKLIST_ENTRADA)) {
+            return;
+        }
+        List<ChecklistItem> itens = checklistRepository.findByOrdemServicoIdOrderByOrdem(os.getId());
+        if (itens.isEmpty()) {
+            return;
+        }
+        long semResposta = itens.stream().filter(i -> i.getOk() == null).count();
+        if (semResposta > 0) {
+            throw new RegraNegocioException(
+                    ("Faltam %d item(ns) do checklist de entrada. Ele registra como o carro chegou — "
+                            + "preenchido depois de abrir o carro, nao protege a oficina de reclamacao "
+                            + "de avaria que ja existia.").formatted(semResposta));
+        }
+    }
+
     @Transactional
     public OsDtos.Detalhe transicionar(UUID id, OsDtos.TransicaoRequisicao req) {
         UUID oficinaId = contexto.oficinaId();
@@ -321,6 +404,7 @@ public class OrdemServicoService {
         }
         if (para == StatusOs.EM_EXECUCAO) {
             contexto.exigirMaoNaMassa();
+            exigirChecklistDeEntrada(os, oficinaId, de);
         }
 
         List<OsItem> ativos = os.getItens().stream()

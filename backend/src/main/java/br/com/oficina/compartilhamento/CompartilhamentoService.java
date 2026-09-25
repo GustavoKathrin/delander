@@ -346,11 +346,13 @@ public class CompartilhamentoService {
                     evento.getTipo(), evento.getDescricao(), evento.getCriadoEm()));
         }
 
-        List<String> fotos = List.of();
+        List<PublicoDtos.FotoPublica> fotos = List.of();
         if (Boolean.TRUE.equals(escopo.get(Chaves.COMP_MOSTRAR_FOTOS))) {
             fotos = arquivoRepository.findByOrdemServicoIdAndVisivelClienteTrueOrderByCriadoEm(os.getId())
                     .stream()
-                    .map(a -> "/api/publico/os/%s/fotos/%s".formatted(link.getToken(), a.getId()))
+                    .map(a -> new PublicoDtos.FotoPublica(
+                            "/api/publico/os/%s/fotos/%s".formatted(link.getToken(), a.getId()),
+                            a.getMomento()))
                     .toList();
         }
 

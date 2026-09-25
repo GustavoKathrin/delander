@@ -539,7 +539,8 @@ export interface AcompanhamentoPublico {
   itens: { descricao: string; status: string; concluido: boolean; mecanico?: string }[]
   parada?: { motivo: string; desde: string; horas: number }
   timeline: { tipo: string; descricao?: string; quando: string }[]
-  fotos: string[]
+  /** Foto no link do cliente. O momento separa o checklist de entrada do serviço. */
+  fotos: { url: string; momento: string }[]
   entradaEm: string
   prontoEm?: string
 }

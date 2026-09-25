@@ -22,6 +22,16 @@ public final class PublicoDtos {
     public record ParadaPublica(String motivo, OffsetDateTime desde, BigDecimal horas) {
     }
 
+    /**
+     * Uma foto no link do cliente, com o momento em que foi tirada.
+     *
+     * O momento importa: foto de ENTRADA e o checklist — como o carro
+     * chegou — e serve de prova para os dois lados. Misturada com as fotos
+     * do servico, ela vira so mais uma imagem e perde essa funcao.
+     */
+    public record FotoPublica(String url, String momento) {
+    }
+
     public record EventoPublico(String tipo, String descricao, OffsetDateTime quando) {
     }
 
@@ -40,7 +50,7 @@ public final class PublicoDtos {
                                  List<ItemPublico> itens,
                                  ParadaPublica parada,
                                  List<EventoPublico> timeline,
-                                 List<String> fotos,
+                                 List<FotoPublica> fotos,
                                  OffsetDateTime entradaEm,
                                  OffsetDateTime prontoEm) {
     }

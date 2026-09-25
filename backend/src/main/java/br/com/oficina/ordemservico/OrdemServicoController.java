@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -76,6 +77,20 @@ public class OrdemServicoController {
     public OsDtos.Detalhe transicionar(@PathVariable UUID id,
                                        @Valid @RequestBody OsDtos.TransicaoRequisicao req) {
         return service.transicionar(id, req);
+    }
+
+    @PostMapping("/{id}/trabalho")
+    @Operation(summary = "Mecanico registra o que esta fazendo (vai para o historico do carro)")
+    public OsDtos.Detalhe registrarTrabalho(@PathVariable UUID id,
+                                            @Valid @RequestBody OsDtos.TrabalhoRequisicao req) {
+        return service.registrarTrabalho(id, req);
+    }
+
+    @PutMapping("/{id}/checklist")
+    @Operation(summary = "Responde o checklist de entrada do veiculo")
+    public OsDtos.Detalhe responderChecklist(@PathVariable UUID id,
+                                             @Valid @RequestBody OsDtos.ChecklistRequisicao req) {
+        return service.responderChecklist(id, req);
     }
 
     @PostMapping("/{id}/alocar")

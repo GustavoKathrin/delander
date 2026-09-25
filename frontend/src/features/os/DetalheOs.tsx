@@ -58,6 +58,8 @@ import { useAuth } from '../../lib/auth'
 import { CHAVES, useConfig } from '../../lib/config'
 import { CarroTopo, Placa } from '../../components/oficina'
 import ModalCompartilhar from './ModalCompartilhar'
+import { RegistrarTrabalho } from './RegistrarTrabalho'
+import { ChecklistEntrada } from './ChecklistEntrada'
 
 const ROTULOS_ACAO: Partial<Record<StatusOs, string>> = {
   EM_DIAGNOSTICO: 'Iniciar diagnóstico',
@@ -105,6 +107,9 @@ export default function DetalheOs() {
   const { id = '' } = useParams()
   const { gerencia, ehMecanico, podeAtender } = useAuth()
   const perfil = { gerencia, ehMecanico, podeAtender }
+  // Quem registra trabalho e quem trabalha. Atendente nao tem o que contar
+  // sobre o servico, e o cliente le esses registros pelo link.
+  const podeRegistrarTrabalho = ehMecanico || gerencia
   const { flag } = useConfig()
   const avisar = useAviso()
   const queryClient = useQueryClient()
@@ -629,6 +634,13 @@ export default function DetalheOs() {
               </div>
             </Cartao>
           )}
+
+          {/* Ordem de propósito: o checklist vem antes porque ele trava o
+              início do serviço, e registrar trabalho vem antes da linha do
+              tempo porque é a ação, não o relato. */}
+          <ChecklistEntrada os={os} />
+
+          {podeRegistrarTrabalho && <RegistrarTrabalho os={os} />}
 
           <Cartao>
             <CartaoTitulo titulo="Linha do tempo" descricao="Tudo que aconteceu com este veículo" />

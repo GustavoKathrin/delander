@@ -35,6 +35,8 @@ public class EventoService {
     public static final String LINK_GERADO = "LINK_GERADO";
     public static final String FOTO_ANEXADA = "FOTO_ANEXADA";
     public static final String OBSERVACAO = "OBSERVACAO";
+    /** O mecanico contando o que fez, com ou sem foto. */
+    public static final String TRABALHO_REGISTRADO = "TRABALHO_REGISTRADO";
 
     private final EventoOsRepository repository;
     private final Clock clock;

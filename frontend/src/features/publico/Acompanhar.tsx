@@ -206,27 +206,27 @@ export default function Acompanhar() {
           </section>
         )}
 
-        {/* ---------------- fotos ---------------- */}
-        {os.fotos.length > 0 && (
-          <section>
-            <h2 className="mb-2 text-sm font-semibold text-slate-800">Fotos</h2>
-            <div className="grid grid-cols-3 gap-2">
-              {os.fotos.map((url) => (
-                <a key={url} href={url} target="_blank" rel="noreferrer">
-                  <img
-                    src={url}
-                    alt="Foto do serviço no veículo"
-                    loading="lazy"
-                    className="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200"
-                  />
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* ---------------- fotos ----------------
+            Separadas por momento de propósito. As de ENTRADA são o checklist
+            — como o carro chegou — e servem de prova para os dois lados;
+            juntas com as do serviço virariam só mais uma imagem. */}
+        <GaleriaDeFotos
+          titulo="Como o carro chegou"
+          descricao="Registro feito na entrada, junto com você."
+          fotos={os.fotos.filter((f) => f.momento === 'ENTRADA')}
+        />
+        <GaleriaDeFotos
+          titulo="Durante o serviço"
+          fotos={os.fotos.filter((f) => f.momento !== 'ENTRADA')}
+        />
 
-        {/* ---------------- historico ---------------- */}
-        {os.timeline.length > 0 && (
+        {/* ---------------- historico ----------------
+            Desligado por enquanto, a pedido da oficina. A lista crua de
+            eventos ("Agendado -> Em diagnostico") é vocabulário de dentro da
+            casa: para quem está esperando o carro, ela é ruído, e ruído
+            numa tela de espera parece problema. O que o cliente precisa —
+            em que pé está e o que já foi feito — está acima. */}
+        {false && os.timeline.length > 0 && (
           <section>
             <h2 className="mb-2 text-sm font-semibold text-slate-800">Histórico</h2>
             <ol className="space-y-0">
@@ -302,5 +302,41 @@ function Linha({
         {valor}
       </dd>
     </div>
+  )
+}
+
+/**
+ * Uma galeria de fotos do carro no link do cliente.
+ *
+ * Some inteira quando não há foto: seção vazia numa tela de espera faz o
+ * cliente achar que algo não carregou.
+ */
+function GaleriaDeFotos({
+  titulo,
+  descricao,
+  fotos,
+}: {
+  titulo: string
+  descricao?: string
+  fotos: { url: string; momento: string }[]
+}) {
+  if (fotos.length === 0) return null
+  return (
+    <section>
+      <h2 className="text-sm font-semibold text-slate-800">{titulo}</h2>
+      {descricao && <p className="mb-2 text-xs text-slate-500">{descricao}</p>}
+      <div className={cx('grid grid-cols-3 gap-2', !descricao && 'mt-2')}>
+        {fotos.map((f) => (
+          <a key={f.url} href={f.url} target="_blank" rel="noreferrer">
+            <img
+              src={f.url}
+              alt={titulo}
+              loading="lazy"
+              className="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200"
+            />
+          </a>
+        ))}
+      </div>
+    </section>
   )
 }

@@ -5,7 +5,8 @@ import br.com.oficina.compartilhamento.CompartilhamentoOsRepository;
 import br.com.oficina.configuracao.Chaves;
 import br.com.oficina.configuracao.ConfiguracaoService;
 import br.com.oficina.parada.Parada;
-import br.com.oficina.peca.PecaOsRepository;
+import br.com.oficina.peca.MomentoDaPeca;
+import br.com.oficina.peca.PecaOs;
 import br.com.oficina.peca.PecaOsRepository;
 import br.com.oficina.peca.StatusPeca;
 import br.com.oficina.parada.ParadaRepository;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Monta os cards da OS com as metricas que realmente importam:
@@ -71,13 +73,11 @@ public class ResumoOsFactory {
         Map<UUID, OffsetDateTime> ultimaAtividade = mapaData(apontamentoRepository.ultimaAtividadePorOs(ids));
         Set<UUID> comLink = new HashSet<>(compartilhamentoRepository.osComLinkAtivo(ids));
 
-        // Peca: duas consultas em lote, nao uma por carro. ESPERANDO quer
+        // Peca: uma consulta em lote para o lote inteiro. ESPERANDO quer
         // telefone para o fornecedor; CHEGOU quer mecanico — acoes opostas,
         // e e por isso que precisam aparecer no card e nao so dentro da OS.
-        Set<UUID> esperandoPeca = new HashSet<>(pecaRepository.osComPecaEm(ids,
-                List.of(StatusPeca.SOLICITADA, StatusPeca.COMPRADA)));
-        Set<UUID> pecaChegou = new HashSet<>(pecaRepository.osComPecaEm(ids,
-                List.of(StatusPeca.RECEBIDA)));
+        Map<UUID, List<PecaOs>> pecasPorOs = pecaRepository.pecasDeCompraDasOs(ids).stream()
+                .collect(Collectors.groupingBy(PecaOs::getOrdemServicoId));
 
         Map<UUID, Parada> paradasAbertas = new HashMap<>();
         paradaRepository.abertas(oficinaId)
@@ -96,11 +96,7 @@ public class ResumoOsFactory {
                     ultimaAtividade.get(os.getId()),
                     paradasAbertas.get(os.getId()),
                     comLink.contains(os.getId()),
-                    esperandoPeca.contains(os.getId())
-                            ? OsDtos.StatusPecaCard.ESPERANDO
-                            : pecaChegou.contains(os.getId())
-                                    ? OsDtos.StatusPecaCard.CHEGOU
-                                    : OsDtos.StatusPecaCard.NENHUMA,
+                    pecasPorOs.getOrDefault(os.getId(), List.of()),
                     limiteSemMovimento, limiteRetirada, limiteEstouro, diasAntesPrevisao));
         }
         return resultado;
@@ -121,7 +117,7 @@ public class ResumoOsFactory {
                                    OffsetDateTime ultimaAtividade,
                                    Parada paradaAberta,
                                    boolean compartilhado,
-                                   OsDtos.StatusPecaCard pecas,
+                                   List<PecaOs> pecasDeCompra,
                                    int limiteSemMovimento,
                                    int limiteRetirada,
                                    int limiteEstouro,
@@ -159,18 +155,18 @@ public class ResumoOsFactory {
         }
         if (os.getStatus() == StatusOs.PRONTO_AGUARDANDO_RETIRADA && diasAguardandoRetirada >= limiteRetirada) {
             alertas.add(OsDtos.Alerta.vermelho("RETIRADA",
-                    "Pronto ha %d dia(s) e ninguem buscou".formatted(diasAguardandoRetirada)));
+                    "Pronto há %d dia(s) e ninguém buscou".formatted(diasAguardandoRetirada)));
         }
         if (os.getStatus().noPatio()
                 && os.getStatus() != StatusOs.PRONTO_AGUARDANDO_RETIRADA
                 && diasSemMovimentacao >= limiteSemMovimento) {
             alertas.add(OsDtos.Alerta.vermelho("SEM_MOVIMENTO",
-                    "Sem nenhum apontamento ha %d dia(s)".formatted(diasSemMovimentacao)));
+                    "Sem nenhum apontamento há %d dia(s)".formatted(diasSemMovimentacao)));
         }
         if (os.atrasada(hoje)) {
             long diasAtraso = Math.max(hoje.toEpochDay() - os.getPrevisaoEntrega().toEpochDay(), 0);
             alertas.add(OsDtos.Alerta.vermelho("ATRASO",
-                    "Entrega prometida ha %d dia(s)".formatted(diasAtraso)));
+                    "Entrega prometida há %d dia(s)".formatted(diasAtraso)));
         } else if (os.getPrevisaoEntrega() != null && os.getStatus().noPatio()
                 && !os.getPrevisaoEntrega().isBefore(hoje)
                 && os.getPrevisaoEntrega().toEpochDay() - hoje.toEpochDay() <= diasAntesPrevisao) {
@@ -184,8 +180,36 @@ public class ResumoOsFactory {
             alertas.add(OsDtos.Alerta.ambar("SEM_DIA", "Sem dia definido na agenda"));
         }
         if (os.getStatus() == StatusOs.AGENDADO && mecanicos.isEmpty() && !os.getItens().isEmpty()) {
-            alertas.add(OsDtos.Alerta.ambar("SEM_MECANICO", "Nenhum mecanico atribuido"));
+            alertas.add(OsDtos.Alerta.ambar("SEM_MECANICO", "Nenhum mecânico atribuído"));
         }
+
+        // Peca faltando: o selo e o alerta saem da mesma lista.
+        //
+        // O dono foi explicito em NAO travar o servico por peca — o mecanico
+        // comeca e resolve o que der. O que ele pediu foi o aviso, com nome:
+        // "Peca X ainda nao comprada". Alerta sem o nome da peca ninguem age
+        // em cima, e e por isso que a consulta traz as pecas e nao so ids.
+        List<PecaOs> naoChegaram = pecasDeCompra.stream()
+                .filter(p -> p.getStatus() == StatusPeca.SOLICITADA
+                        || p.getStatus() == StatusPeca.COMPRADA)
+                .toList();
+
+        OsDtos.StatusPecaCard seloPeca = !naoChegaram.isEmpty()
+                ? OsDtos.StatusPecaCard.ESPERANDO
+                : pecasDeCompra.stream().anyMatch(p -> p.getStatus() == StatusPeca.RECEBIDA)
+                        ? OsDtos.StatusPecaCard.CHEGOU
+                        : OsDtos.StatusPecaCard.NENHUMA;
+
+        naoChegaram.stream()
+                .filter(p -> p.getMomentoNecessario() == MomentoDaPeca.INICIO)
+                .findFirst()
+                .ifPresentOrElse(
+                        // Trava o inicio: o carro nao anda enquanto isso nao chega.
+                        p -> alertas.add(OsDtos.Alerta.vermelho("PECA",
+                                "Falta para começar: %s".formatted(p.getDescricao()))),
+                        () -> naoChegaram.stream().findFirst().ifPresent(
+                                p -> alertas.add(OsDtos.Alerta.ambar("PECA",
+                                        "Peça ainda não comprada: %s".formatted(p.getDescricao())))));
 
         return new OsDtos.Resumo(
                 os.getId(),
@@ -221,7 +245,7 @@ public class ResumoOsFactory {
                 alertas,
                 compartilhado,
                 os.isPrecisaElevador(),
-                pecas);
+                seloPeca);
     }
 
     private Map<UUID, BigDecimal> mapaDecimal(List<Object[]> linhas) {

@@ -343,7 +343,7 @@ public class AgendaService {
         if (os.status() == StatusOs.PRONTO_AGUARDANDO_RETIRADA) {
             long dias = os.diasAguardandoRetirada();
             return dias <= 0 ? "pronto, aguardando retirada"
-                    : "pronto ha %d dia(s), ninguem buscou".formatted(dias);
+                    : "pronto há %d dia(s), ninguém buscou".formatted(dias);
         }
         if (os.paradaMotivo() != null) {
             return os.paradaMotivo().toLowerCase();

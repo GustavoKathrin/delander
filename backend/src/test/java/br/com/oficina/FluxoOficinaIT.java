@@ -143,6 +143,55 @@ class FluxoOficinaIT {
                 Map.of("status", "ORCAMENTO_APROVADO"), auth);
         assertThat(aprovada.get("aprovadoEm").asText()).isNotBlank();
 
+        // ---------- pecas: o que temos aqui x o que precisa comprar ----------
+        // Peca de estoque entra no orcamento e nao vira trabalho de ninguem.
+        JsonNode comEstoque = enviar("/api/os/%s/pecas".formatted(osId), Map.of(
+                "descricao", "Fluido de freio",
+                "quantidade", 1,
+                "origem", "ESTOQUE",
+                "momentoNecessario", "DURANTE",
+                "valorUnitario", 40), auth);
+        assertThat(comEstoque.get("origem").asText()).isEqualTo("ESTOQUE");
+        // Se temos aqui, ela chegou: sem isto o patio acenderia "esperando peca".
+        assertThat(comEstoque.get("status").asText()).isEqualTo("RECEBIDA");
+
+        JsonNode paraComprar = enviar("/api/os/%s/pecas".formatted(osId), Map.of(
+                "descricao", "Kit de embreagem",
+                "quantidade", 1,
+                "origem", "COMPRAR",
+                "momentoNecessario", "INICIO",
+                "valorUnitario", 420), auth);
+        String pecaId = paraComprar.get("id").asText();
+
+        JsonNode fila = corpo(mvc.perform(MockMvcRequestBuilders.get("/api/pecas/pendentes")
+                        .header("Authorization", "Bearer " + auth))
+                .andExpect(status().isOk()).andReturn());
+        assertThat(fila).hasSize(1);
+        assertThat(fila.get(0).get("descricao").asText()).isEqualTo("Kit de embreagem");
+        assertThat(fila.get(0).get("momentoNecessario").asText()).isEqualTo("INICIO");
+
+        // O defeito de dinheiro: marcar "Comprei" reenvia a peca, e o valor
+        // nao pode sumir. Antes, cada clique zerava o preco e encolhia a OS.
+        JsonNode antes = corpo(mvc.perform(MockMvcRequestBuilders.get("/api/os/{id}", osId)
+                        .header("Authorization", "Bearer " + auth))
+                .andExpect(status().isOk()).andReturn());
+        double valorPecasAntes = antes.get("valorPecas").asDouble();
+        assertThat(valorPecasAntes).isEqualTo(460.0);
+
+        mvc.perform(MockMvcRequestBuilders.put("/api/os/{osId}/pecas/{pecaId}", osId, pecaId)
+                        .header("Authorization", "Bearer " + auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "descricao", "Kit de embreagem",
+                                "quantidade", 1,
+                                "status", "COMPRADA"))))
+                .andExpect(status().isOk());
+
+        JsonNode depois = corpo(mvc.perform(MockMvcRequestBuilders.get("/api/os/{id}", osId)
+                        .header("Authorization", "Bearer " + auth))
+                .andExpect(status().isOk()).andReturn());
+        assertThat(depois.get("valorPecas").asDouble()).isEqualTo(valorPecasAntes);
+
         // ---------- cronometro ----------
         JsonNode iniciado = enviar("/api/apontamentos/iniciar", Map.of(
                 "osItemId", itemId, "horasEstimadas", 3), auth);

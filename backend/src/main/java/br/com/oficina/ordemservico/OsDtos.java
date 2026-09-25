@@ -1,6 +1,8 @@
 package br.com.oficina.ordemservico;
 
 import br.com.oficina.cadastro.CategoriaParada;
+import br.com.oficina.peca.MomentoDaPeca;
+import br.com.oficina.peca.OrigemPeca;
 import br.com.oficina.peca.StatusPeca;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
@@ -227,6 +229,10 @@ public final class OsDtos {
             String fornecedor,
             StatusPeca status,
             String statusDescricao,
+            OrigemPeca origem,
+            String origemDescricao,
+            MomentoDaPeca momentoNecessario,
+            String momentoDescricao,
             LocalDate previsaoChegada,
             BigDecimal valorUnitario,
             BigDecimal total) {

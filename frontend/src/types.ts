@@ -28,6 +28,12 @@ export type CategoriaParada =
 
 export type StatusPeca = 'SOLICITADA' | 'COMPRADA' | 'RECEBIDA' | 'APLICADA' | 'CANCELADA'
 
+/** De onde a peça vem. Só COMPRAR vira trabalho para alguém. */
+export type OrigemPeca = 'ESTOQUE' | 'COMPRAR'
+
+/** Em que momento do serviço a peça faz falta — é daqui que sai o prazo. */
+export type MomentoPeca = 'INICIO' | 'DURANTE'
+
 export type TipoBox = 'ELEVADOR' | 'BOX' | 'PATIO'
 
 export interface Usuario {
@@ -141,6 +147,12 @@ export interface PecaOs {
   fornecedor?: string
   status: StatusPeca
   statusDescricao: string
+  /** ESTOQUE = temos na prateleira; COMPRAR = alguem precisa ir atras. */
+  origem: OrigemPeca
+  origemDescricao: string
+  /** INICIO trava o comeco do servico; DURANTE faz falta antes de terminar. */
+  momentoNecessario: MomentoPeca
+  momentoDescricao: string
   previsaoChegada?: string
   valorUnitario?: number
   total: number
@@ -467,6 +479,12 @@ export interface ConfiguracaoItem {
   grupo: string
 }
 
+/**
+ * Uma linha da fila de compras.
+ *
+ * O cálculo vem pronto do servidor: prazo, risco e folga saem da agenda do
+ * carro, e essa conta precisa ter uma versão só.
+ */
 export interface PecaPendente {
   id: string
   osId: string
@@ -478,7 +496,19 @@ export interface PecaPendente {
   fornecedor?: string
   status: StatusPeca
   statusDescricao: string
+  momentoNecessario: MomentoPeca
+  momentoDescricao: string
+  valorUnitario?: number
+  /** O que o FORNECEDOR prometeu. */
   previsaoChegada?: string
+  /** Quando NÓS precisamos dela. Ausente = o carro não tem dia marcado. */
+  comprarAte?: string
+  /** O fornecedor prometeu para depois do que precisamos. */
+  emRisco: boolean
+  /** Dias até o prazo; negativo já passou. Ausente quando não há prazo. */
+  diasDeFolga?: number
+  /** A OS não tem dia agendado: o carro está parado esperando esta peça. */
+  carroParado: boolean
 }
 
 export interface Painel {

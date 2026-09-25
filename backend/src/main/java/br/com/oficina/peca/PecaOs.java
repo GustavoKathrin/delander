@@ -32,6 +32,16 @@ public class PecaOs extends BaseEntity {
     @Column(name = "fornecedor", length = 160)
     private String fornecedor;
 
+    /** Ja temos, ou alguem precisa comprar? So a segunda vira fila. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "origem", nullable = false, length = 20)
+    private OrigemPeca origem = OrigemPeca.COMPRAR;
+
+    /** Trava o inicio do servico, ou so faz falta antes de terminar? */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "momento_necessario", nullable = false, length = 20)
+    private MomentoDaPeca momentoNecessario = MomentoDaPeca.DURANTE;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private StatusPeca status = StatusPeca.SOLICITADA;

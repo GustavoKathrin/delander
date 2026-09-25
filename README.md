@@ -256,6 +256,35 @@ Duas regras que mantêm o número honesto:
 - a ocupação de "agora" no painel do dono e as "vagas livres agora" na fila usam a mesma
   contagem, então as duas telas nunca se contradizem.
 
+### Peças: o que temos aqui × o que precisa comprar
+
+No diagnóstico o mecânico registra as peças, e cada uma responde duas perguntas — as duas
+em botão grande, porque isso é preenchido de pé, com o carro na frente:
+
+| Pergunta | Opções | Para que serve |
+|---|---|---|
+| **Esta peça** | Temos aqui · Precisa comprar | Só a segunda vira trabalho para alguém. A de estoque entra no orçamento e acabou |
+| **Faz falta** | Para começar · Antes de terminar | É daqui que sai o prazo |
+
+**O prazo não é digitado.** Prazo de peça é consequência de quando ela faz falta: peça que
+trava o início precisa estar aqui antes do **dia agendado** do carro; a outra, antes da
+**entrega prometida**. A peça herda a urgência de quem a espera.
+
+**O risco é a diferença entre duas datas com donos diferentes**: *precisa até* vem do carro,
+*fornecedor disse* vem do fornecedor. Uma peça que chega dia 30 é tranquila para um carro do
+dia 5 e é problema para um carro do dia 28 — e é por isso que a fila ordena por risco, e não
+por previsão de chegada. Também é risco o prazo que **já venceu** e a peça não chegou: aí não
+é mais previsão, é problema de hoje.
+
+Em **Peças para comprar** (dono e atendente) fica a fila, da mais urgente para a menos:
+carro parado sem dia marcado primeiro, depois o prazo vencido, depois o resto. Cada linha
+diz qual carro está esperando.
+
+> **Peça faltando não trava o serviço** — decisão da oficina. O mecânico começa e resolve o
+> que der; o card do carro mostra *"Falta para começar: kit de embreagem"* e sobe no quadro.
+> E a fila só mostra peça de **orçamento aprovado**: comprar antes do "sim" do cliente é
+> ficar com a peça na mão.
+
 ### Radar de carros parados
 Lista ordenada pelo que precisa de decisão hoje: carro sem nenhum apontamento há N dias,
 carro pronto que ninguém buscou, entrega prometida estourada, tempo acima do estimado,
@@ -436,7 +465,9 @@ npm run build
    **Iniciar**, informe 3h e veja o cronômetro rodando.
 6. Toque em **Pausar** e escolha "Falta de peça". Volte como dono: o card ficou âmbar e a
    parada já está contando.
-7. Na OS, registre a peça com previsão de chegada. Em **Peças pendentes**, marque "Chegou".
+7. Na OS, registre a peça escolhendo **Temos aqui** ou **Precisa comprar**, e se ela faz
+   falta **para começar** ou **antes de terminar**. Em **Peças para comprar**, marque
+   "Chegou".
 8. Como mecânico, **Iniciar** de novo e **Concluir**. A OS vira "Pronto — aguardando
    retirada" e começa a contar os dias.
 9. Como dono, abra a OS → **Compartilhar**. Desligue "Mostrar valores", copie o link e

@@ -70,6 +70,25 @@ public class ApiExceptionHandler {
                 "E-mail ou senha incorretos.", req);
     }
 
+    /**
+     * Recusa por papel: o motivo vai para a tela.
+     *
+     * "Seu perfil nao tem permissao" nao diz nada — a pessoa nao sabe se
+     * errou o caminho, se falta configurar algo ou a quem pedir. Quem lanca
+     * {@link PermissaoException} ja escreveu a frase certa.
+     */
+    @ExceptionHandler(PermissaoException.class)
+    public ProblemDetail semPermissao(PermissaoException ex, HttpServletRequest req) {
+        return montar(HttpStatus.FORBIDDEN, "Acesso negado", ex.getMessage(), req);
+    }
+
+    /**
+     * Qualquer outra recusa fica generica, e isso e proposital.
+     *
+     * Aqui caem as checagens de oficina e o que o proprio Spring Security
+     * lanca. Dizer "registro de outra oficina" ja confirma que o registro
+     * existe, e o texto do Spring vem em ingles, interno.
+     */
     @ExceptionHandler(AccessDeniedException.class)
     public ProblemDetail acessoNegado(AccessDeniedException ex, HttpServletRequest req) {
         return montar(HttpStatus.FORBIDDEN, "Acesso negado",

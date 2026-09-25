@@ -29,6 +29,8 @@ interface ItemMenu {
   rotulo: string
   Icone: typeof CalendarDays
   somenteGerencia?: boolean
+  /** Gerência + recepção: quem atende o cliente e cuida da compra. */
+  somenteAtendimento?: boolean
 }
 
 /** Grupos separam o dia a dia do cadastro — o menu deixa de ser uma lista solta. */
@@ -47,7 +49,7 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
     itens: [
       { para: '/radar', rotulo: 'Carros parados', Icone: RadarIcone, somenteGerencia: true },
       { para: '/painel', rotulo: 'Painel do dono', Icone: ChartNoAxesColumn, somenteGerencia: true },
-      { para: '/pecas', rotulo: 'Peças pendentes', Icone: Package, somenteGerencia: true },
+      { para: '/pecas', rotulo: 'Peças para comprar', Icone: Package, somenteAtendimento: true },
     ],
   },
   {
@@ -69,7 +71,7 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
 ]
 
 export default function Layout() {
-  const { usuario, gerencia, encerrar } = useAuth()
+  const { usuario, gerencia, podeAtender, encerrar } = useAuth()
   const { texto, flag } = useConfig()
   const navegar = useNavigate()
   const [menuAberto, setMenuAberto] = useState(false)
@@ -106,7 +108,11 @@ export default function Layout() {
 
         <nav className="flex-1 overflow-y-auto rolagem-suave px-2 py-3">
           {GRUPOS.map((grupo) => {
-            const itens = grupo.itens.filter((item) => gerencia || !item.somenteGerencia)
+            const itens = grupo.itens.filter(
+              (item) =>
+                (!item.somenteGerencia || gerencia) &&
+                (!item.somenteAtendimento || podeAtender),
+            )
             if (itens.length === 0) return null
             return (
               <div key={grupo.titulo} className="mb-4">

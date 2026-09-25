@@ -32,6 +32,7 @@ import br.com.oficina.veiculo.VeiculoProprietarioHistRepository;
 import br.com.oficina.veiculo.VeiculoRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import br.com.oficina.common.PermissaoException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -132,8 +133,8 @@ public class OrdemServicoService {
     public OsDtos.Detalhe checkIn(OsDtos.CheckinRequisicao req) {
         UUID oficinaId = contexto.oficinaId();
         if (!contexto.gerencia() && !config.flag(oficinaId, Chaves.MECANICO_CRIA_OS)) {
-            throw new AccessDeniedException("Seu perfil nao pode abrir OS. "
-                    + "O dono pode liberar isso em Configuracoes > Fluxo.");
+            throw new PermissaoException("Seu perfil não pode abrir OS. "
+                    + "O dono pode liberar isso em Configurações > Fluxo.");
         }
 
         Cliente cliente = resolverCliente(req, oficinaId);
@@ -602,8 +603,8 @@ public class OrdemServicoService {
     public OsDtos.Detalhe alocar(UUID id, OsDtos.AlocacaoRequisicao req) {
         UUID oficinaId = contexto.oficinaId();
         if (!contexto.gerencia() && !config.flag(oficinaId, Chaves.MECANICO_REALOCA)) {
-            throw new AccessDeniedException("Seu perfil nao pode mexer na agenda. "
-                    + "O dono pode liberar isso em Configuracoes > Fluxo.");
+            throw new PermissaoException("Seu perfil não pode mexer na agenda. "
+                    + "O dono pode liberar isso em Configurações > Fluxo.");
         }
         OrdemServico os = buscarComItens(id, oficinaId);
         if (os.getStatus().finalizada()) {
@@ -847,8 +848,10 @@ public class OrdemServicoService {
         List<OsDtos.PecaResposta> pecas = pecaRepository.findByOrdemServicoIdOrderByCriadoEm(id).stream()
                 .map(p -> new OsDtos.PecaResposta(
                         p.getId(), p.getDescricao(), p.getQuantidade(), p.getFornecedor(),
-                        p.getStatus(), p.getStatus().descricao(), p.getPrevisaoChegada(),
-                        p.getValorUnitario(), p.total()))
+                        p.getStatus(), p.getStatus().descricao(),
+                        p.getOrigem(), p.getOrigem().descricao(),
+                        p.getMomentoNecessario(), p.getMomentoNecessario().descricao(),
+                        p.getPrevisaoChegada(), p.getValorUnitario(), p.total()))
                 .toList();
 
         List<OsDtos.ChecklistResposta> checklist = checklistRepository

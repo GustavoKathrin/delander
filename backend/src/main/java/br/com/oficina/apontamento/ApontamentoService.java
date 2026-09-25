@@ -23,6 +23,7 @@ import br.com.oficina.parada.ParadaRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
+import br.com.oficina.common.PermissaoException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -439,7 +440,7 @@ public class ApontamentoService {
                         "Este servico ainda nao tem mecanico responsavel. Atribua um mecanico antes de iniciar.");
             }
             if (!contexto.gerencia()) {
-                throw new AccessDeniedException("Seu perfil nao pode apontar horas.");
+                throw new PermissaoException("Seu perfil não pode apontar horas.");
             }
             return item.getFuncionario();
         }
@@ -483,7 +484,7 @@ public class ApontamentoService {
         if (funcionarioId != null
                 && !apontamento.getFuncionario().getId().equals(funcionarioId)
                 && !contexto.gerencia()) {
-            throw new AccessDeniedException("Este apontamento e de outro mecanico.");
+            throw new PermissaoException("Este apontamento é de outro mecânico.");
         }
         return apontamento;
     }

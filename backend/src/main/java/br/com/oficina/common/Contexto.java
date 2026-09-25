@@ -35,7 +35,7 @@ public class Contexto {
 
     public void exigirGerencia() {
         if (!gerencia()) {
-            throw new AccessDeniedException("Apenas o dono ou o gerente podem fazer isso.");
+            throw new PermissaoException("Apenas o dono ou o gerente podem fazer isso.");
         }
     }
 
@@ -48,19 +48,32 @@ public class Contexto {
     }
 
     /**
-     * Registrar a resposta do cliente ao orcamento.
+     * Trabalho de quem atende o cliente: registrar a resposta ao orcamento e
+     * tocar a fila de compras.
      *
-     * O mecanico fica de fora de proposito: foi ele quem disse o que o carro
-     * precisa, e aprovar o proprio orcamento fecha o circuito em uma pessoa
-     * so. Quem atende o cliente — recepcao, gerente ou dono — e quem ouve o
-     * "pode fazer" e registra.
+     * O mecanico fica de fora de proposito, e pela mesma razao nos dois
+     * casos: foi ele quem disse o que o carro precisa. Aprovar o proprio
+     * orcamento — ou comprar em cima dele — fecha o circuito em uma pessoa
+     * so. Quem atende o cliente (recepcao, gerente ou dono) e quem ouve o
+     * "pode fazer" e quem gasta o dinheiro da oficina.
      */
     public void exigirAtendimento() {
+        exigirAtendimento(
+                "Quem registra a resposta do cliente ao orçamento é o atendente, o gerente ou o dono.");
+    }
+
+    /**
+     * A mesma regra, com o motivo desta acao.
+     *
+     * A recusa vai para a tela do usuario, e "voce nao pode" sem dizer o que
+     * ele tentou fazer nao ajuda ninguem — ainda mais quando um helper so
+     * atende acoes diferentes.
+     */
+    public void exigirAtendimento(String porque) {
         if (gerencia() || papel() == Papel.RECEPCAO) {
             return;
         }
-        throw new AccessDeniedException(
-                "Quem registra a resposta do cliente ao orcamento e o atendente, o gerente ou o dono.");
+        throw new PermissaoException(porque);
     }
 
     /**
@@ -75,6 +88,6 @@ public class Contexto {
         if (gerencia() || papel() == Papel.MECANICO) {
             return;
         }
-        throw new AccessDeniedException("Quem inicia a execucao e o mecanico.");
+        throw new PermissaoException("Quem começa a trabalhar no carro é o mecânico.");
     }
 }

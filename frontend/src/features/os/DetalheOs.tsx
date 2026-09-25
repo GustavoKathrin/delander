@@ -20,7 +20,9 @@ import type {
   DetalheOs as DetalheTipo,
   FilaElevador,
   Funcionario,
+  MomentoPeca,
   MotivoParada,
+  OrigemPeca,
   ResumoArtigo,
   ResumoLeitura,
   ServicoCatalogo,
@@ -519,7 +521,10 @@ export default function DetalheOs() {
               titulo="Peças"
               descricao="Falta de peça é o motivo número um de carro parado"
               acao={
-                gerencia && (
+                // O mecânico também registra: é o diagnóstico dele que diz o
+                // que o carro precisa. Antes só gerência via este botão, e o
+                // fluxo dependia de alguém repassar a lista verbalmente.
+                podeRegistrarTrabalho && (
                   <Botao variante="secundario" tamanho="sm" onClick={() => setAdicionandoPeca(true)}>
                     <Plus className="size-3.5" aria-hidden />
                     Adicionar
@@ -542,9 +547,27 @@ export default function DetalheOs() {
                         {peca.quantidade > 1 && `${peca.quantidade}x `}
                         {peca.descricao}
                       </p>
-                      <p className="text-xs text-slate-500">
-                        {peca.fornecedor ?? 'sem fornecedor'}
-                        {peca.previsaoChegada && ` · chega ${dataCompleta(peca.previsaoChegada)}`}
+                      {/* Origem primeiro: é ela que diz se aquilo é dinheiro
+                          no orçamento ou trabalho para alguém fazer. */}
+                      <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500">
+                        <span
+                          className={cx(
+                            'rounded px-1.5 py-0.5 font-medium',
+                            peca.origem === 'ESTOQUE'
+                              ? 'bg-slate-100 text-slate-700'
+                              : 'bg-orange-100 text-orange-800',
+                          )}
+                        >
+                          {peca.origemDescricao}
+                        </span>
+                        {peca.origem === 'COMPRAR' && (
+                          <>
+                            <span>· {peca.momentoDescricao}</span>
+                            <span>· {peca.fornecedor ?? 'sem fornecedor'}</span>
+                            {peca.previsaoChegada &&
+                              ` · chega ${dataCompleta(peca.previsaoChegada)}`}
+                          </>
+                        )}
                       </p>
                     </div>
                     <Etiqueta
@@ -1121,7 +1144,8 @@ function ModalNovaPeca({
   const [descricao, setDescricao] = useState('')
   const [quantidade, setQuantidade] = useState('1')
   const [fornecedor, setFornecedor] = useState('')
-  const [status, setStatus] = useState('SOLICITADA')
+  const [origem, setOrigem] = useState<OrigemPeca>('COMPRAR')
+  const [momento, setMomento] = useState<MomentoPeca>('DURANTE')
   const [previsao, setPrevisao] = useState('')
   const [valor, setValor] = useState('')
   const [erro, setErro] = useState<string>()
@@ -1133,9 +1157,16 @@ function ModalNovaPeca({
         corpo: {
           descricao,
           quantidade: Number(quantidade),
-          fornecedor: fornecedor || undefined,
-          status,
-          previsaoChegada: previsao || undefined,
+          // Situação não é pergunta para o mecânico: "temos aqui" já chegou,
+          // "precisa comprar" nasce solicitada. Quem decide é o servidor.
+          origem,
+          // "Quando faz falta" so existe para peca que alguem vai buscar:
+          // a da prateleira ja esta aqui, nao tem prazo e nao entra na fila.
+          momentoNecessario: origem === 'COMPRAR' ? momento : undefined,
+          // Peça de estoque já está aqui: o servidor força RECEBIDA, e mandar
+          // fornecedor ou previsão dela seria guardar dado que não existe.
+          fornecedor: origem === 'COMPRAR' ? fornecedor || undefined : undefined,
+          previsaoChegada: origem === 'COMPRAR' ? previsao || undefined : undefined,
           valorUnitario: valor ? Number(valor) : undefined,
         },
       }),
@@ -1145,6 +1176,14 @@ function ModalNovaPeca({
       setFornecedor('')
       setPrevisao('')
       setValor('')
+      // A origem volta para "precisa comprar" a cada peça registrada.
+      //
+      // Manter a última escolha pareceria comodidade, mas os dois erros não
+      // custam igual: peça de estoque marcada como compra aparece na fila e
+      // alguém corrige; peça de compra marcada como estoque não aparece em
+      // lugar nenhum, e o carro fica esperando uma peça que ninguém comprou.
+      setOrigem('COMPRAR')
+      setMomento('DURANTE')
       onSalvo()
     },
     onError: (falha: Error) => setErro(falha.message),
@@ -1178,6 +1217,47 @@ function ModalNovaPeca({
             />
           </Campo>
         </div>
+
+        {/* As duas perguntas que mudam tudo, em botão e não em combo: isto é
+            preenchido de pé, na oficina, muitas vezes no celular. */}
+        <div className="sm:col-span-2">
+          <Campo rotulo="Esta peça" obrigatorio>
+            <EscolhaDupla
+              valor={origem}
+              onEscolher={setOrigem}
+              opcoes={[
+                { valor: 'ESTOQUE', rotulo: 'Temos aqui' },
+                { valor: 'COMPRAR', rotulo: 'Precisa comprar' },
+              ]}
+            />
+          </Campo>
+        </div>
+
+        {/* "Quando faz falta" só é pergunta para peça que alguém vai
+            buscar. Para a que já está na prateleira a resposta não existe,
+            e pergunta cuja resposta o sistema joga fora é clique à toa. */}
+        {origem === 'COMPRAR' && (
+          <div className="sm:col-span-2">
+            <Campo
+              rotulo="Faz falta"
+              dica={
+                momento === 'INICIO'
+                  ? 'Sem ela o serviço não começa — o prazo passa a ser o dia agendado do carro.'
+                  : 'Dá para começar sem ela; precisa chegar antes de o carro sair.'
+              }
+            >
+              <EscolhaDupla
+                valor={momento}
+                onEscolher={setMomento}
+                opcoes={[
+                  { valor: 'INICIO', rotulo: 'Para começar' },
+                  { valor: 'DURANTE', rotulo: 'Antes de terminar' },
+                ]}
+              />
+            </Campo>
+          </div>
+        )}
+
         <Campo rotulo="Quantidade">
           <Entrada
             type="number"
@@ -1187,21 +1267,7 @@ function ModalNovaPeca({
             onChange={(e) => setQuantidade(e.target.value)}
           />
         </Campo>
-        <Campo rotulo="Fornecedor">
-          <Entrada value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} />
-        </Campo>
-        <Campo rotulo="Situação">
-          <Selecao value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="SOLICITADA">Solicitada</option>
-            <option value="COMPRADA">Comprada</option>
-            <option value="RECEBIDA">Recebida</option>
-            <option value="APLICADA">Aplicada</option>
-          </Selecao>
-        </Campo>
-        <Campo rotulo="Previsão de chegada">
-          <Entrada type="date" value={previsao} onChange={(e) => setPrevisao(e.target.value)} />
-        </Campo>
-        <Campo rotulo="Valor unitário (R$)">
+        <Campo rotulo="Valor unitário (R$)" dica="Entra no orçamento do cliente.">
           <Entrada
             type="number"
             step="0.01"
@@ -1210,10 +1276,62 @@ function ModalNovaPeca({
             onChange={(e) => setValor(e.target.value)}
           />
         </Campo>
+
+        {/* Fornecedor e previsão só existem para peça que alguém vai comprar.
+            Peça que já está na prateleira não tem fornecedor a cobrar. */}
+        {origem === 'COMPRAR' && (
+          <>
+            <Campo rotulo="Fornecedor">
+              <Entrada value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} />
+            </Campo>
+            <Campo rotulo="Fornecedor prometeu para" dica="Comparado com o prazo do carro.">
+              <Entrada type="date" value={previsao} onChange={(e) => setPrevisao(e.target.value)} />
+            </Campo>
+          </>
+        )}
+
         <div className="sm:col-span-2">
           <AvisoErro mensagem={erro} />
         </div>
       </div>
     </Modal>
+  )
+}
+
+/**
+ * Duas opções em botão, não em combo.
+ *
+ * Combo de duas opções é pior em tudo: esconde a segunda até você abrir,
+ * pede mira fina e some o rótulo depois de escolher. Isto aqui é preenchido
+ * de pé na oficina, muitas vezes no celular, com o carro na frente — e nessa
+ * situação alvo grande vale mais que economia de espaço.
+ */
+function EscolhaDupla<T extends string>({
+  valor,
+  onEscolher,
+  opcoes,
+}: {
+  valor: T
+  onEscolher: (v: T) => void
+  opcoes: { valor: T; rotulo: string }[]
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {opcoes.map((o) => (
+        <button
+          key={o.valor}
+          type="button"
+          onClick={() => onEscolher(o.valor)}
+          className={cx(
+            'rounded-lg px-3 py-2.5 text-sm font-medium ring-1 transition',
+            valor === o.valor
+              ? 'bg-marca-600 text-white ring-marca-600'
+              : 'bg-white text-slate-700 ring-slate-300 hover:bg-slate-50',
+          )}
+        >
+          {o.rotulo}
+        </button>
+      ))}
+    </div>
   )
 }

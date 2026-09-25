@@ -7,6 +7,8 @@ interface ContextoAuth {
   autenticado: boolean
   gerencia: boolean
   ehMecanico: boolean
+  /** Quem registra a resposta do cliente ao orcamento: atendente, gerente ou dono. */
+  podeAtender: boolean
   entrarComSenha: (email: string, senha: string) => Promise<void>
   encerrar: () => Promise<void>
 }
@@ -16,6 +18,7 @@ const Contexto = createContext<ContextoAuth>({
   autenticado: false,
   gerencia: false,
   ehMecanico: false,
+  podeAtender: false,
   entrarComSenha: async () => {},
   encerrar: async () => {},
 })
@@ -35,6 +38,8 @@ export function ProvedorAuth({ children }: { children: ReactNode }) {
       autenticado: Boolean(sessao?.accessToken),
       gerencia: sessao?.usuario?.gerencia ?? false,
       ehMecanico: sessao?.usuario?.papel === 'MECANICO',
+      podeAtender:
+        (sessao?.usuario?.gerencia ?? false) || sessao?.usuario?.papel === 'RECEPCAO',
       entrarComSenha: async (email, senha) => {
         const nova = await entrar(email, senha)
         setSessao(nova)

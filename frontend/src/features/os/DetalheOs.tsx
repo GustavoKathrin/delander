@@ -62,7 +62,8 @@ import ModalCompartilhar from './ModalCompartilhar'
 const ROTULOS_ACAO: Partial<Record<StatusOs, string>> = {
   EM_DIAGNOSTICO: 'Iniciar diagnóstico',
   AGUARDANDO_APROVACAO: 'Enviar orçamento',
-  AGENDADO: 'Aprovar e agendar',
+  ORCAMENTO_APROVADO: 'Aprovar orçamento',
+  AGENDADO: 'Agendar',
   EM_EXECUCAO: 'Iniciar execução',
   PAUSADO: 'Pausar',
   PRONTO_AGUARDANDO_RETIRADA: 'Marcar como pronto',
@@ -71,9 +72,39 @@ const ROTULOS_ACAO: Partial<Record<StatusOs, string>> = {
   RECEBIDO: 'Voltar para recebido',
 }
 
+/**
+ * O mesmo destino quer dizer coisas diferentes dependendo de onde a OS esta.
+ *
+ * Voltar para o diagnostico vindo da aprovacao nao e "iniciar diagnostico" —
+ * e o cliente ter dito nao. Chamar os dois de "Iniciar diagnostico" faria o
+ * atendente recusar um orcamento achando que estava so voltando uma etapa.
+ */
+function rotuloDaAcao(de: StatusOs, para: StatusOs): string {
+  if (para === 'EM_DIAGNOSTICO' && de === 'AGUARDANDO_APROVACAO') {
+    return 'Cliente recusou'
+  }
+  return ROTULOS_ACAO[para] ?? para
+}
+
+/** Quem pode dar o passo. O servidor recusa de novo; aqui é só não mostrar. */
+function podeAcionar(
+  de: StatusOs,
+  para: StatusOs,
+  perfil: { podeAtender: boolean; ehMecanico: boolean; gerencia: boolean },
+): boolean {
+  if (para === 'ORCAMENTO_APROVADO' || (para === 'EM_DIAGNOSTICO' && de === 'AGUARDANDO_APROVACAO')) {
+    return perfil.podeAtender
+  }
+  if (para === 'EM_EXECUCAO') {
+    return perfil.ehMecanico || perfil.gerencia
+  }
+  return true
+}
+
 export default function DetalheOs() {
   const { id = '' } = useParams()
-  const { gerencia } = useAuth()
+  const { gerencia, ehMecanico, podeAtender } = useAuth()
+  const perfil = { gerencia, ehMecanico, podeAtender }
   const { flag } = useConfig()
   const avisar = useAviso()
   const queryClient = useQueryClient()
@@ -307,24 +338,28 @@ export default function DetalheOs() {
               <div className="flex flex-wrap justify-end gap-2">
                 {os.proximosStatus
                   .filter((status) => status !== 'CANCELADO')
-                  .map((status) => (
-                    <Botao
-                      key={status}
-                      tamanho="sm"
-                      variante={
-                        status === 'ENTREGUE'
-                          ? 'sucesso'
-                          : status === 'PAUSADO'
-                            ? 'secundario'
-                            : 'primario'
-                      }
-                      carregando={transicionar.isPending}
-                      onClick={() => acionar(status)}
-                    >
-                      {status === 'PAUSADO' && <PauseCircle className="size-3.5" aria-hidden />}
-                      {ROTULOS_ACAO[status] ?? status}
-                    </Botao>
-                  ))}
+                  .filter((status) => podeAcionar(r.status, status, perfil))
+                  .map((status) => {
+                    const recusa = status === 'EM_DIAGNOSTICO' && r.status === 'AGUARDANDO_APROVACAO'
+                    return (
+                      <Botao
+                        key={status}
+                        tamanho="sm"
+                        variante={
+                          status === 'ENTREGUE'
+                            ? 'sucesso'
+                            : status === 'PAUSADO' || recusa
+                              ? 'secundario'
+                              : 'primario'
+                        }
+                        carregando={transicionar.isPending}
+                        onClick={() => acionar(status)}
+                      >
+                        {status === 'PAUSADO' && <PauseCircle className="size-3.5" aria-hidden />}
+                        {rotuloDaAcao(r.status, status)}
+                      </Botao>
+                    )
+                  })}
                 {os.proximosStatus.includes('CANCELADO') && (
                   <Botao variante="fantasma" tamanho="sm" onClick={() => acionar('CANCELADO')}>
                     Cancelar

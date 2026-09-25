@@ -6,6 +6,7 @@ export type StatusOs =
   | 'RECEBIDO'
   | 'EM_DIAGNOSTICO'
   | 'AGUARDANDO_APROVACAO'
+  | 'ORCAMENTO_APROVADO'
   | 'AGENDADO'
   | 'EM_EXECUCAO'
   | 'PAUSADO'

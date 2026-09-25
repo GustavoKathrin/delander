@@ -86,6 +86,13 @@ export const CORES_STATUS: Record<StatusOs, { chip: string; barra: string; rotul
     rotulo: 'Aguardando aprovação',
   },
   AGENDADO: { chip: 'bg-sky-100 text-sky-700 ring-sky-200', barra: 'bg-sky-500', rotulo: 'Agendado' },
+  // Verde-água, não verde de "pronto": o cliente liberou, mas ninguém pôs a
+  // mão no carro ainda. Confundir os dois faria o pátio parecer adiantado.
+  ORCAMENTO_APROVADO: {
+    chip: 'bg-teal-100 text-teal-800 ring-teal-200',
+    barra: 'bg-teal-500',
+    rotulo: 'Aprovado — pode começar',
+  },
   EM_EXECUCAO: {
     chip: 'bg-blue-100 text-blue-700 ring-blue-200',
     barra: 'bg-blue-600',

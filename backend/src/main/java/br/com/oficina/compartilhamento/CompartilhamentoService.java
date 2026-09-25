@@ -379,6 +379,7 @@ public class CompartilhamentoService {
         return switch (os.getStatus()) {
             case RECEBIDO, EM_DIAGNOSTICO -> 10;
             case AGUARDANDO_APROVACAO -> 20;
+            case ORCAMENTO_APROVADO -> 30;
             case AGENDADO -> 30;
             case EM_EXECUCAO, PAUSADO -> {
                 if (estimadas.signum() == 0) {
@@ -403,6 +404,7 @@ public class CompartilhamentoService {
             case RECEBIDO -> "Recebemos seu veiculo. Em breve iniciamos a avaliacao.";
             case EM_DIAGNOSTICO -> "Estamos avaliando seu veiculo para identificar o problema.";
             case AGUARDANDO_APROVACAO -> "O orcamento foi enviado e aguarda sua aprovacao.";
+            case ORCAMENTO_APROVADO -> "Orcamento aprovado. Seu veiculo esta na fila para comecar.";
             case AGENDADO -> "Servico aprovado e na fila de execucao.";
             case EM_EXECUCAO -> "Seu veiculo esta em atendimento agora.";
             case PAUSADO -> temParadaVisivel

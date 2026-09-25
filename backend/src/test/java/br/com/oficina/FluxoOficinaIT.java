@@ -128,10 +128,20 @@ class FluxoOficinaIT {
         assertThat(invalida.getResponse().getContentAsString(StandardCharsets.UTF_8))
                 .contains("Nao e possivel ir de");
 
-        // ---------- aprovacao do orcamento (exigida por padrao) ----------
+        // ---------- o caminho obrigatorio: diagnostico -> orcamento -> aprovacao ----------
+        // Nao existe atalho: quem tenta pular o diagnostico leva 409. E o que
+        // impede comecar a mexer no carro sem o cliente ter autorizado o gasto.
+        mvc.perform(MockMvcRequestBuilders.post("/api/os/{id}/transicao", osId)
+                        .header("Authorization", "Bearer " + auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("status", "EM_EXECUCAO"))))
+                .andExpect(status().isConflict());
+
+        enviar("/api/os/%s/transicao".formatted(osId), Map.of("status", "EM_DIAGNOSTICO"), auth);
         enviar("/api/os/%s/transicao".formatted(osId), Map.of("status", "AGUARDANDO_APROVACAO"), auth);
-        JsonNode agendada = enviar("/api/os/%s/transicao".formatted(osId), Map.of("status", "AGENDADO"), auth);
-        assertThat(agendada.get("aprovadoEm").asText()).isNotBlank();
+        JsonNode aprovada = enviar("/api/os/%s/transicao".formatted(osId),
+                Map.of("status", "ORCAMENTO_APROVADO"), auth);
+        assertThat(aprovada.get("aprovadoEm").asText()).isNotBlank();
 
         // ---------- cronometro ----------
         JsonNode iniciado = enviar("/api/apontamentos/iniciar", Map.of(

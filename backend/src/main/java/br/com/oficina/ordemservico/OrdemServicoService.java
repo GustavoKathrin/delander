@@ -313,6 +313,16 @@ public class OrdemServicoService {
         StatusOs de = os.getStatus();
         StatusOs para = req.status();
 
+        // Quem pode dar cada passo. A maquina de estados diz se a transicao
+        // faz sentido; isto diz se QUEM pediu tem papel para pedi-la.
+        if (para == StatusOs.ORCAMENTO_APROVADO
+                || (para == StatusOs.EM_DIAGNOSTICO && de == StatusOs.AGUARDANDO_APROVACAO)) {
+            contexto.exigirAtendimento();
+        }
+        if (para == StatusOs.EM_EXECUCAO) {
+            contexto.exigirMaoNaMassa();
+        }
+
         List<OsItem> ativos = os.getItens().stream()
                 .filter(i -> i.getStatus() != StatusItem.CANCELADO)
                 .toList();
@@ -325,13 +335,33 @@ public class OrdemServicoService {
                 temItemEmAberto);
 
         switch (para) {
-            case AGENDADO -> {
-                if (de == StatusOs.AGUARDANDO_APROVACAO) {
-                    os.setAprovadoEm(agora);
-                    eventoService.registrar(oficinaId, os.getId(), EventoService.ORCAMENTO_APROVADO,
-                            "Orcamento aprovado pelo cliente.", true);
-                }
+            case AGENDADO -> encerrarParadaAberta(os, agora);
+            // O "sim" do cliente. Guarda quem registrou e quando: seis meses
+            // depois, "voce autorizou" e conversa que precisa de nome e data.
+            case ORCAMENTO_APROVADO -> {
+                os.setAprovadoEm(agora);
+                os.setOrcamentoRespondidoEm(agora);
+                os.setOrcamentoRespondidoPor(contexto.nomeUsuario());
+                os.setOrcamentoRecusaMotivo(null);
+                eventoService.registrar(oficinaId, os.getId(), EventoService.ORCAMENTO_APROVADO,
+                        "Orcamento aprovado pelo cliente (registrado por %s)."
+                                .formatted(contexto.nomeUsuario()), true);
                 encerrarParadaAberta(os, agora);
+            }
+            // Voltar para o diagnostico vindo da aprovacao so acontece por um
+            // motivo: o cliente disse nao. Perder esse motivo e perder a razao
+            // pela qual a oficina nao fechou o servico.
+            case EM_DIAGNOSTICO -> {
+                if (de == StatusOs.AGUARDANDO_APROVACAO) {
+                    os.setOrcamentoRespondidoEm(agora);
+                    os.setOrcamentoRespondidoPor(contexto.nomeUsuario());
+                    os.setOrcamentoRecusaMotivo(req.descricao());
+                    os.setAprovadoEm(null);
+                    eventoService.registrar(oficinaId, os.getId(), EventoService.STATUS_ALTERADO,
+                            "Orcamento recusado pelo cliente%s".formatted(
+                                    req.descricao() == null || req.descricao().isBlank()
+                                            ? "." : ": " + req.descricao()), true);
+                }
             }
             case EM_EXECUCAO -> {
                 if (os.getInicioExecucaoEm() == null) {

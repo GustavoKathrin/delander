@@ -84,6 +84,18 @@ public class OrdemServico extends BaseEntity {
     @Column(name = "aprovado_em")
     private OffsetDateTime aprovadoEm;
 
+    /** Quando o cliente respondeu ao orcamento — aprovando OU recusando. */
+    @Column(name = "orcamento_respondido_em")
+    private OffsetDateTime orcamentoRespondidoEm;
+
+    /** Quem da oficina registrou a resposta do cliente. */
+    @Column(name = "orcamento_respondido_por", length = 120)
+    private String orcamentoRespondidoPor;
+
+    /** Por que o cliente recusou. Guardar o "nao" explica a venda perdida. */
+    @Column(name = "orcamento_recusa_motivo", length = 300)
+    private String orcamentoRecusaMotivo;
+
     @Column(name = "inicio_execucao_em")
     private OffsetDateTime inicioExecucaoEm;
 

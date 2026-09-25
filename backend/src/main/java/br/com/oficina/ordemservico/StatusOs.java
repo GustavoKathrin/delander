@@ -5,6 +5,7 @@ public enum StatusOs {
     RECEBIDO,
     EM_DIAGNOSTICO,
     AGUARDANDO_APROVACAO,
+    ORCAMENTO_APROVADO,
     AGENDADO,
     EM_EXECUCAO,
     PAUSADO,
@@ -23,7 +24,7 @@ public enum StatusOs {
 
     /** Estados em que o carro esta parado esperando algo, nao sendo trabalhado. */
     public boolean aguardando() {
-        return this == RECEBIDO || this == AGUARDANDO_APROVACAO
+        return this == RECEBIDO || this == AGUARDANDO_APROVACAO || this == ORCAMENTO_APROVADO
                 || this == AGENDADO || this == PAUSADO;
     }
 
@@ -32,6 +33,7 @@ public enum StatusOs {
             case RECEBIDO -> "Recebido";
             case EM_DIAGNOSTICO -> "Em diagnostico";
             case AGUARDANDO_APROVACAO -> "Aguardando aprovacao";
+            case ORCAMENTO_APROVADO -> "Orcamento aprovado";
             case AGENDADO -> "Agendado";
             case EM_EXECUCAO -> "Em execucao";
             case PAUSADO -> "Pausado";

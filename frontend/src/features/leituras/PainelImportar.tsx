@@ -209,10 +209,17 @@ export default function PainelImportar({
     [modulos],
   )
 
+  // O carro deixou de ser obrigatório: leitura e agendamento são coisas
+  // diferentes, e o scanner é plugado em carro que nunca vira OS — orçamento,
+  // favor, carro do vizinho. Exigir cadastro para guardar um PDF enchia o
+  // cadastro de carros que a oficina nunca atendeu.
+  //
+  // A exceção é a leitura OFICIAL: ela é a régua de um carro, então precisa
+  // dizer de qual. Sem carro, salva como anomalia e oficializa depois.
   const pronto =
     Boolean(previa) &&
     totalDeItens > 0 &&
-    Boolean(veiculoId) &&
+    (tipo !== 'OFICIAL' || Boolean(veiculoId)) &&
     (tipo === 'OFICIAL' || condicao.trim().length > 2)
 
   const mudarItem = (
@@ -329,7 +336,15 @@ export default function PainelImportar({
               )}
 
               {/* ------------------------------------------- o carro */}
-              <Campo rotulo="Carro desta leitura" obrigatorio>
+              <Campo
+                rotulo="Carro desta leitura"
+                obrigatorio={tipo === 'OFICIAL'}
+                dica={
+                  tipo === 'OFICIAL'
+                    ? 'Leitura oficial é a referência de um carro, então precisa dizer de qual.'
+                    : 'Opcional. Sem carro, a leitura fica guardada como "falta completar" e você vincula quando quiser.'
+                }
+              >
                 {veiculoId ? (
                   <div className="flex items-center gap-2 rounded-md bg-white px-2 py-1.5 ring-1 ring-slate-300">
                     <Placa placa={porPlaca.data?.placa ?? previa.placaSugerida ?? '—'} tamanho="sm" />

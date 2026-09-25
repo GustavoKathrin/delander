@@ -194,15 +194,34 @@ public class LeituraService {
             return anexarModulos(req);
         }
 
-        Veiculo veiculo = exigirVeiculo(req.veiculoId(), oficinaId);
+        // O carro e OPCIONAL aqui.
+        //
+        // Leitura e agendamento sao duas coisas: o scanner e plugado em carro
+        // que nunca vai virar OS — orcamento, favor, carro do vizinho. Exigir
+        // cadastro de veiculo para guardar um PDF enchia o cadastro de carros
+        // que a oficina nunca atendeu, e o acervo de leituras por modelo (que
+        // e o que faz o sistema valer) parava de crescer pelo atrito.
+        //
+        // Sem carro, a leitura nasce PENDENTE — o mesmo estado das que chegam
+        // por e-mail — e alguem vincula depois, se um dia fizer sentido.
+        Veiculo veiculo = req.veiculoId() == null
+                ? null
+                : exigirVeiculo(req.veiculoId(), oficinaId);
         TipoLeitura tipo = req.tipo() == null ? TipoLeitura.ANOMALIA : req.tipo();
         validarCondicao(tipo, req.condicao());
         exigirModulos(req.modulos());
         exigirRelatorioInedito(oficinaId, req.numeroRelatorio(), null);
 
+        if (veiculo == null && tipo == TipoLeitura.OFICIAL) {
+            throw new RegraNegocioException(
+                    "Leitura oficial e a referencia de um carro, entao precisa dizer de qual. "
+                            + "Salve como anomalia e marque como oficial depois de escolher o carro.");
+        }
+
         Leitura leitura = new Leitura();
         leitura.setOficinaId(oficinaId);
         leitura.setVeiculo(veiculo);
+        leitura.setSituacao(veiculo == null ? SituacaoLeitura.PENDENTE : SituacaoLeitura.COMPLETA);
         aplicar(leitura, req, veiculo, tipo);
 
         for (LeituraDtos.ModuloRequisicao m : req.modulos()) {
@@ -371,22 +390,24 @@ public class LeituraService {
     private void aplicar(Leitura leitura, LeituraDtos.Requisicao req, Veiculo veiculo, TipoLeitura tipo) {
         // A copia de marca/modelo/ano fica solta na leitura de proposito: e o
         // que faz a leitura de um Civic 2014 servir para outro Civic 2014.
-        leitura.setMarca(preferir(req.marca(), veiculo.getMarca()));
-        leitura.setModelo(preferir(req.modelo(), veiculo.getModelo()));
-        leitura.setAno(req.ano() != null ? req.ano() : veiculo.getAno());
-        leitura.setMotor(preferir(req.motor(), veiculo.getMotor()));
+        // O veiculo e opcional: leitura sem carro vinculado e caso normal
+        // (scanner plugado num orcamento, num favor, no carro do vizinho).
+        // Sem ele, o que o PDF disser e tudo que existe.
+        leitura.setMarca(preferir(req.marca(), veiculo == null ? null : veiculo.getMarca()));
+        leitura.setModelo(preferir(req.modelo(), veiculo == null ? null : veiculo.getModelo()));
+        leitura.setAno(req.ano() != null ? req.ano() : veiculo == null ? null : veiculo.getAno());
+        leitura.setMotor(preferir(req.motor(), veiculo == null ? null : veiculo.getMotor()));
         leitura.setTipo(tipo);
         leitura.setCondicao(tipo == TipoLeitura.ANOMALIA ? req.condicao() : null);
         leitura.setDescricao(req.descricao());
         leitura.setMotorLigado(Boolean.TRUE.equals(req.motorLigado()));
         leitura.setIgnicaoLigada(req.ignicaoLigada() == null || req.ignicaoLigada());
         leitura.setOrigem(req.arquivoId() != null ? OrigemLeitura.PDF : OrigemLeitura.MANUAL);
-        leitura.setSituacao(SituacaoLeitura.COMPLETA);
         leitura.setFerramenta(req.ferramenta());
         leitura.setFerramentaVersao(req.ferramentaVersao());
         leitura.setNumeroRelatorio(req.numeroRelatorio());
         leitura.setMomentoTeste(req.momentoTeste() != null ? req.momentoTeste() : OffsetDateTime.now());
-        leitura.setKm(req.km() != null ? req.km() : veiculo.getKm());
+        leitura.setKm(req.km() != null ? req.km() : veiculo == null ? null : veiculo.getKm());
         leitura.setOrdemServicoId(req.ordemServicoId());
     }
 

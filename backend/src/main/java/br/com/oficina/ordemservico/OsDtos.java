@@ -282,7 +282,12 @@ public final class OsDtos {
             @NotBlank(message = "Escreva o que foi feito.")
             @Size(max = 400, message = "Use ate 400 caracteres.")
             String texto,
-            boolean visivelCliente) {
+            boolean visivelCliente,
+            /**
+             * O servico de que se fala. Opcional: registro solto continua
+             * valendo para o que e do carro e nao de um servico so.
+             */
+            UUID osItemId) {
     }
 
     /** Uma linha do checklist respondida pelo mecanico. */
@@ -319,7 +324,9 @@ public final class OsDtos {
             String descricao,
             String autor,
             OffsetDateTime quando,
-            boolean visivelCliente) {
+            boolean visivelCliente,
+            /** O servico a que este evento se refere. Nulo = evento do carro. */
+            UUID osItemId) {
     }
 
     public record ArquivoResposta(

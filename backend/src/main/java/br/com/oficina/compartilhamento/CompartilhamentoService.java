@@ -100,7 +100,9 @@ public class CompartilhamentoService {
     @Transactional
     public CompartilhamentoDtos.Resposta criarOuRecuperar(UUID osId, CompartilhamentoDtos.Requisicao req) {
         UUID oficinaId = contexto.oficinaId();
-        contexto.exigirGerencia();
+        // Gerar o primeiro link faz parte de trabalhar no carro, como mudar o
+        // escopo. Quem nao pode e quem nao trabalha nele.
+        contexto.exigirEquipe("Gerar o link de acompanhamento é de quem trabalha no carro.");
 
         if (!config.flag(oficinaId, Chaves.COMP_ATIVO_GLOBAL)) {
             throw new RegraNegocioException("O compartilhamento com clientes esta desligado. "
@@ -131,7 +133,16 @@ public class CompartilhamentoService {
     @Transactional
     public CompartilhamentoDtos.Resposta atualizar(UUID linkId, CompartilhamentoDtos.AtualizacaoRequisicao req) {
         UUID oficinaId = contexto.oficinaId();
-        contexto.exigirGerencia();
+        // O mecanico decide o que vai para o link daquele carro.
+        //
+        // Ele e quem sabe se a foto do motor aberto ajuda ou assusta, e quem
+        // sabe se o servico ja esta apresentavel. Deixar isso so com a gerencia
+        // significava, na pratica, que ninguem mexia — o dono nao esta na
+        // bancada e o mecanico nao tinha o botao.
+        //
+        // `rotacionar` continua sendo da gerencia: gerar link novo invalida o
+        // que o cliente ja tem no celular, e isso e outra conversa.
+        contexto.exigirEquipe("Mudar o que o cliente vê é de quem trabalha no carro.");
 
         CompartilhamentoOs link = repository.findById(linkId)
                 .orElseThrow(() -> RecursoNaoEncontradoException.de("Compartilhamento", linkId));
@@ -328,8 +339,13 @@ public class CompartilhamentoService {
 
         PublicoDtos.ParadaPublica parada = null;
         if (Boolean.TRUE.equals(escopo.get(Chaves.COMP_MOSTRAR_PARADAS))) {
-            Optional<Parada> aberta = paradaRepository.abertaDaOs(os.getId());
-            if (aberta.isPresent() && aberta.get().isVisivelCliente()) {
+            // A mais antiga entre as abertas — do carro ou de um servico.
+            // O cliente nao precisa saber qual servico travou; ele precisa
+            // saber ha quanto tempo o carro dele espera, e essa e a primeira.
+            Optional<Parada> aberta = paradaRepository.abertasDaOs(os.getId()).stream()
+                    .filter(Parada::isVisivelCliente)
+                    .min(java.util.Comparator.comparing(Parada::getInicio));
+            if (aberta.isPresent()) {
                 Parada p = aberta.get();
                 parada = new PublicoDtos.ParadaPublica(
                         Boolean.TRUE.equals(escopo.get(Chaves.COMP_MOSTRAR_MOTIVO_PARADA))

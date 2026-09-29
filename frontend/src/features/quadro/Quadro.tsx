@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Clock, Inbox, LayoutGrid, Loader2 } from 'lucide-react'
 import { api } from '../../api/client'
+import { AjudaDaTela } from '../../components/AjudaDaTela'
 import type { DiaQuadro, Quadro as QuadroTipo } from '../../types'
 import { useAuth } from '../../lib/auth'
 import { CHAVES, useConfig } from '../../lib/config'
@@ -139,6 +140,15 @@ export default function Quadro() {
             {alocar.isPending && <Loader2 className="size-4 animate-spin text-slate-400" aria-hidden />}
           </div>
         </div>
+      </div>
+
+      <div className="px-4 pt-3">
+        <AjudaDaTela chave="quadro" titulo="A semana da oficina, por capacidade">
+          Cada coluna é um dia, e o número embaixo dela é quanto de trabalho já foi prometido
+          contra o que a equipe dá conta. <strong>Arraste um carro</strong> para outro dia para
+          remarcar, ou para a <strong>fila de espera</strong> para tirar da agenda sem perder
+          o carro de vista.
+        </AjudaDaTela>
       </div>
 
       {/* ---------------- colunas da semana ---------------- */}

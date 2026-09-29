@@ -58,4 +58,35 @@ public final class PecaDtos {
                            Integer diasDeFolga,
                            boolean carroParado) {
     }
+
+    /**
+     * Pedir peca para a prateleira.
+     *
+     * Sem `momentoNecessario` e sem prazo derivado: os dois so existem em
+     * relacao a agenda de um carro, e aqui nao ha carro.
+     */
+    public record PedidoEstoqueRequisicao(
+            @NotBlank(message = "Informe a peca") @Size(max = 200) String descricao,
+            @DecimalMin(value = "0.01", message = "Quantidade precisa ser maior que zero") BigDecimal quantidade,
+            UUID pecaCatalogoId,
+            @Size(max = 160) String fornecedor,
+            StatusPeca status,
+            LocalDate previsaoChegada,
+            @DecimalMin(value = "0.0", message = "Valor nao pode ser negativo") BigDecimal valorUnitario,
+            @Size(max = 400) String observacao) {
+    }
+
+    /** @param saldoAtual o que ja tem na prateleira, quando a peca e do catalogo */
+    public record PedidoEstoqueResposta(UUID id,
+                                        UUID pecaCatalogoId,
+                                        String descricao,
+                                        BigDecimal quantidade,
+                                        String fornecedor,
+                                        StatusPeca status,
+                                        String statusDescricao,
+                                        LocalDate previsaoChegada,
+                                        BigDecimal valorUnitario,
+                                        String observacao,
+                                        BigDecimal saldoAtual) {
+    }
 }

@@ -308,7 +308,14 @@ public class OrdemServicoService {
         UUID oficinaId = contexto.oficinaId();
         OrdemServico os = buscarComItens(id, oficinaId);
 
-        eventoService.registrar(oficinaId, os.getId(), EventoService.TRABALHO_REGISTRADO,
+        // O servico precisa ser desta OS: sem conferir, um id de outro carro
+        // gravaria um trabalho pendurado no servico errado.
+        UUID itemId = req.osItemId();
+        if (itemId != null && os.getItens().stream().noneMatch(i -> i.getId().equals(itemId))) {
+            throw new RegraNegocioException("Este serviço não é deste carro.");
+        }
+
+        eventoService.doServico(oficinaId, os.getId(), itemId, EventoService.TRABALHO_REGISTRADO,
                 req.texto().trim(), req.visivelCliente(),
                 Map.of("autor", contexto.nomeUsuario()));
 
@@ -553,7 +560,10 @@ public class OrdemServicoService {
         if (motivo == null) {
             return;
         }
-        if (paradaRepository.abertaDaOs(os.getId()).isPresent()) {
+        // Esta e a parada do CARRO inteiro (os_item_id nulo). Uma so por vez,
+        // e independente das paradas de servico: o carro pode estar parado
+        // esperando aprovacao e ainda ter um servico esperando peca.
+        if (paradaRepository.abertaDoCarro(os.getId()).isPresent()) {
             return;
         }
         boolean visivel = req.visivelCliente() != null
@@ -574,14 +584,21 @@ public class OrdemServicoService {
                 Map.of("motivo", motivo.getNome(), "categoria", motivo.getCategoria().name()));
     }
 
+    /**
+     * A OS inteira andou: fecha TODAS as paradas, do carro e dos servicos.
+     *
+     * Chamado quando o carro e entregue, cancelado, dado como pronto ou volta
+     * a andar. Nao ha mais servico travado que faca sentido continuar aberto —
+     * e parada aberta em OS encerrada contaria horas para sempre.
+     */
     private void encerrarParadaAberta(OrdemServico os, OffsetDateTime agora) {
-        paradaRepository.abertaDaOs(os.getId()).ifPresent(parada -> {
+        for (Parada parada : paradaRepository.abertasDaOs(os.getId())) {
             parada.setFim(agora);
             paradaRepository.save(parada);
             eventoService.registrar(os.getOficinaId(), os.getId(), EventoService.SERVICO_RETOMADO,
                     "Parada encerrada: " + parada.getMotivoParada().getNome(),
                     parada.isVisivelCliente());
-        });
+        }
     }
 
     private void encerrarApontamentosAbertos(OrdemServico os, OffsetDateTime agora, String motivo) {

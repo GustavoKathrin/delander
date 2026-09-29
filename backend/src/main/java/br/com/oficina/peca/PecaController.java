@@ -25,10 +25,14 @@ public class PecaController {
 
     private final PecaService service;
     private final PecaCatalogoService catalogo;
+    private final PedidoEstoqueService pedidoEstoque;
 
-    public PecaController(PecaService service, PecaCatalogoService catalogo) {
+    public PecaController(PecaService service,
+                          PecaCatalogoService catalogo,
+                          PedidoEstoqueService pedidoEstoque) {
         this.service = service;
         this.catalogo = catalogo;
+        this.pedidoEstoque = pedidoEstoque;
     }
 
     @GetMapping("/pecas/pendentes")
@@ -50,6 +54,40 @@ public class PecaController {
     @Operation(summary = "Busca peca do catalogo enquanto o mecanico digita")
     public List<PecaCatalogoDtos.Resposta> autocompletar(@RequestParam String termo) {
         return catalogo.autocompletar(termo);
+    }
+
+    // ---------------- reposicao de prateleira ----------------
+
+    @GetMapping("/pecas/pedidos")
+    @Operation(summary = "O que foi pedido para a prateleira e ainda nao chegou")
+    public List<PecaDtos.PedidoEstoqueResposta> pedidos() {
+        return pedidoEstoque.listar();
+    }
+
+    @PostMapping("/pecas/pedidos")
+    @Operation(summary = "Pede peca para o estoque, sem carro")
+    public PecaDtos.PedidoEstoqueResposta pedir(
+            @Valid @RequestBody PecaDtos.PedidoEstoqueRequisicao req) {
+        return pedidoEstoque.criar(req);
+    }
+
+    @PutMapping("/pecas/pedidos/{id}")
+    public PecaDtos.PedidoEstoqueResposta editarPedido(
+            @PathVariable UUID id, @Valid @RequestBody PecaDtos.PedidoEstoqueRequisicao req) {
+        return pedidoEstoque.atualizar(id, req);
+    }
+
+    @PostMapping("/pecas/pedidos/{id}/recebimento")
+    @Operation(summary = "A peca chegou e fica na prateleira")
+    public PecaDtos.PedidoEstoqueResposta receberPedido(
+            @PathVariable UUID id, @Valid @RequestBody PecaCatalogoDtos.Recebimento req) {
+        return pedidoEstoque.receber(id, req);
+    }
+
+    @DeleteMapping("/pecas/pedidos/{id}")
+    public ResponseEntity<Void> cancelarPedido(@PathVariable UUID id) {
+        pedidoEstoque.cancelar(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/pecas/catalogo/no-minimo")

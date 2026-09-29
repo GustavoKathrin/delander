@@ -16,7 +16,9 @@ import {
   cx,
   useAviso,
 } from '../../components/ui'
+import { AjudaDaTela } from '../../components/AjudaDaTela'
 import { Placa } from '../../components/oficina'
+import { ReporPrateleira } from './ReporPrateleira'
 import { dataCompleta } from '../../lib/format'
 import type { PecaCatalogo, PecaPendente } from '../../types'
 
@@ -116,6 +118,13 @@ export default function Pecas() {
         </p>
       </header>
 
+      <AjudaDaTela chave="pecas" titulo="Duas listas, e elas não são a mesma coisa">
+        Em cima, <strong>carros esperando</strong>: peça que já tem dono, ordenada pela urgência
+        do carro. Embaixo, <strong>repor prateleira</strong>: peça que vem para ficar no estoque.
+        Ao clicar em <strong>Chegou</strong>, o sistema pergunta onde guardar — é assim que o
+        saldo continua valendo.
+      </AjudaDaTela>
+
       {emRisco.length > 0 && (
         <p className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-800 ring-1 ring-red-200">
           <AlertTriangle className="mt-0.5 size-4 flex-none" aria-hidden />
@@ -157,6 +166,8 @@ export default function Pecas() {
           </ul>
         )}
       </Cartao>
+
+      <ReporPrateleira />
 
       <ModalRecebimento
         peca={recebendo}

@@ -33,6 +33,15 @@ public class EventoOs {
     @Column(name = "ordem_servico_id", nullable = false)
     private UUID ordemServicoId;
 
+    /**
+     * O servico a que este evento se refere. Nulo = evento do carro inteiro.
+     *
+     * A maioria continua sendo da OS: recebeu o veiculo, mudou de status,
+     * gerou link. Quem preenche e o trabalho registrado e as acoes de servico.
+     */
+    @Column(name = "os_item_id")
+    private UUID osItemId;
+
     @Column(name = "tipo", nullable = false, length = 60)
     private String tipo;
 

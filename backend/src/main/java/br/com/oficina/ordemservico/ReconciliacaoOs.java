@@ -96,8 +96,16 @@ public class ReconciliacaoOs {
         return apontamentoRepository.listarPorOs(os.getId()).stream().anyMatch(Apontamento::aberto);
     }
 
+    /**
+     * O carro ficou pronto: nao ha mais nada travado nele.
+     *
+     * Fecha todas — a do carro e as dos servicos. Deixar aberta a de um
+     * servico numa OS pronta faria o Pareto contar essas horas para sempre.
+     */
     public void encerrarParadaAberta(OrdemServico os, OffsetDateTime agora) {
-        paradaRepository.abertaDaOs(os.getId()).ifPresent(parada -> fechar(parada, os, agora));
+        for (Parada parada : paradaRepository.abertasDaOs(os.getId())) {
+            fechar(parada, os, agora);
+        }
     }
 
     private void fechar(Parada parada, OrdemServico os, OffsetDateTime agora) {

@@ -112,6 +112,11 @@ export interface ItemOs {
   valor?: number
   apontamentoAberto: boolean
   apontamentoInicio?: string
+  /** Por que este serviço não vai ser feito. Só quando cancelado. */
+  motivoCancelamento?: string
+  canceladoEm?: string
+  /** O que dá para fazer com este serviço agora. Quem decide é o servidor. */
+  proximosStatus: StatusItem[]
 }
 
 export interface ApontamentoOs {
@@ -187,6 +192,8 @@ export interface EventoOs {
   autor?: string
   quando: string
   visivelCliente: boolean
+  /** O serviço a que este evento se refere. Ausente = evento do carro. */
+  osItemId?: string
 }
 
 export interface ArquivoOs {
@@ -507,6 +514,29 @@ export interface ConfiguracaoItem {
  * O cálculo vem pronto do servidor: prazo, risco e folga saem da agenda do
  * carro, e essa conta precisa ter uma versão só.
  */
+/**
+ * Peça pedida para a prateleira, sem carro.
+ *
+ * Lista separada da fila de compras de propósito: lá a urgência vem da agenda
+ * do carro, e "sem prazo" vai para o topo porque significa carro parado. Um
+ * pedido de prateleira entrando naquela ordem pularia na frente de carro
+ * parado, que é o contrário do certo.
+ */
+export interface PedidoEstoque {
+  id: string
+  pecaCatalogoId?: string
+  descricao: string
+  quantidade: number
+  fornecedor?: string
+  status: StatusPeca
+  statusDescricao: string
+  previsaoChegada?: string
+  valorUnitario?: number
+  observacao?: string
+  /** O que já tem na prateleira, quando a peça é do catálogo. */
+  saldoAtual?: number
+}
+
 export interface PecaPendente {
   id: string
   osId: string

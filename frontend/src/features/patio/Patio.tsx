@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, CalendarPlus, Loader2, Lock, LockOpen, Package, Plus } from 'lucide-react'
 import { api } from '../../api/client'
+import { AjudaDaTela } from '../../components/AjudaDaTela'
 import type { ItemFila, Patio as PatioTipo, SituacaoVaga, Vaga } from '../../types'
 import { useAuth } from '../../lib/auth'
 import { CHAVES, useConfig } from '../../lib/config'
@@ -442,6 +443,14 @@ export default function Patio() {
 
       {/* ============================ piso da oficina ============================ */}
       <div className="piso flex-1 p-4">
+        <div className="mb-3">
+          <AjudaDaTela chave="patio" titulo="A planta da sua oficina">
+            Cada vaga é um lugar de verdade. Clique numa vaga livre para agendar, ou{' '}
+            <strong>arraste um carro</strong> da fila para ela. O <strong>cadeado</strong> em cima
+            libera mover e redimensionar as vagas até a planta ficar igual à oficina. A borda
+            colorida diz a situação; o formato da vaga muda em Configurações → Aparência.
+          </AjudaDaTela>
+        </div>
         <div
           ref={grade}
           className={cx(

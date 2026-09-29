@@ -165,6 +165,10 @@ public class ApontamentoService {
         item.setStatus(StatusItem.EM_EXECUCAO);
         itemRepository.save(item);
 
+        // Este servico destravou. A parada dele fecha aqui; a dos outros
+        // servicos continua contando, porque eles continuam esperando.
+        encerrarParadaDoServico(item, os, agora);
+
         eventoService.registrar(oficinaId, os.getId(), EventoService.SERVICO_INICIADO,
                 "%s comecou '%s'%s".formatted(
                         funcionario.getNome(),
@@ -246,10 +250,14 @@ public class ApontamentoService {
                 ? req.visivelCliente()
                 : motivo != null && motivo.isVisivelClientePadrao();
 
-        if (motivo != null && paradaRepository.abertaDaOs(os.getId()).isEmpty()) {
+        // A parada e DESTE servico. Antes era da OS, e a guarda olhava se ja
+        // havia qualquer parada aberta no carro — entao o segundo mecanico a
+        // pausar tinha o motivo descartado em silencio.
+        if (motivo != null && paradaRepository.abertaDoServico(item.getId()).isEmpty()) {
             Parada parada = new Parada();
             parada.setOficinaId(oficinaId);
             parada.setOrdemServicoId(os.getId());
+            parada.setOsItemId(item.getId());
             parada.setMotivoParada(motivo);
             parada.setInicio(agora);
             parada.setDescricao(req.descricao());
@@ -467,14 +475,29 @@ public class ApontamentoService {
         return apontamento;
     }
 
+    /**
+     * Fecha a parada do CARRO. Alguem voltou a trabalhar nele.
+     *
+     * Nao toca nas paradas de servico: outro servico pode continuar esperando
+     * peca, e fechar a parada dele aqui apagaria essas horas do relatorio.
+     */
     private void encerrarParadaAberta(OrdemServico os, OffsetDateTime agora) {
-        paradaRepository.abertaDaOs(os.getId()).ifPresent(parada -> {
-            parada.setFim(agora);
-            paradaRepository.save(parada);
-            eventoService.registrar(os.getOficinaId(), os.getId(), EventoService.SERVICO_RETOMADO,
-                    "Parada encerrada: " + parada.getMotivoParada().getNome(),
-                    parada.isVisivelCliente());
-        });
+        paradaRepository.abertaDoCarro(os.getId())
+                .ifPresent(parada -> fecharParada(parada, os, agora));
+    }
+
+    /** Fecha a parada daquele servico. Ele destravou. */
+    private void encerrarParadaDoServico(OsItem item, OrdemServico os, OffsetDateTime agora) {
+        paradaRepository.abertaDoServico(item.getId())
+                .ifPresent(parada -> fecharParada(parada, os, agora));
+    }
+
+    private void fecharParada(Parada parada, OrdemServico os, OffsetDateTime agora) {
+        parada.setFim(agora);
+        paradaRepository.save(parada);
+        eventoService.registrar(os.getOficinaId(), os.getId(), EventoService.SERVICO_RETOMADO,
+                "Parada encerrada: " + parada.getMotivoParada().getNome(),
+                parada.isVisivelCliente());
     }
 
     // ================================================================ job

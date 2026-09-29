@@ -55,9 +55,24 @@ public class EventoService {
     @Transactional
     public EventoOs registrar(UUID oficinaId, UUID ordemServicoId, String tipo,
                               String descricao, boolean visivelCliente, Map<String, Object> dados) {
+        return doServico(oficinaId, ordemServicoId, null, tipo, descricao, visivelCliente, dados);
+    }
+
+    /**
+     * Evento de um servico especifico.
+     *
+     * Existe porque "todo trabalho e em cima de um servico": sem o vinculo, a
+     * linha do tempo mistura o registro do mecanico com mudanca de status e
+     * atribuicao, e com tres servicos no mesmo carro ninguem sabe a qual deles
+     * "desmontei a suspensao" se refere.
+     */
+    @Transactional
+    public EventoOs doServico(UUID oficinaId, UUID ordemServicoId, UUID osItemId, String tipo,
+                              String descricao, boolean visivelCliente, Map<String, Object> dados) {
         EventoOs evento = new EventoOs();
         evento.setOficinaId(oficinaId);
         evento.setOrdemServicoId(ordemServicoId);
+        evento.setOsItemId(osItemId);
         evento.setTipo(tipo);
         evento.setDescricao(descricao);
         evento.setVisivelCliente(visivelCliente);
@@ -81,7 +96,7 @@ public class EventoService {
 
     private OsDtos.EventoResposta mapear(EventoOs e) {
         return new OsDtos.EventoResposta(e.getId(), e.getTipo(), e.getDescricao(),
-                e.getAutor(), e.getCriadoEm(), e.isVisivelCliente());
+                e.getAutor(), e.getCriadoEm(), e.isVisivelCliente(), e.getOsItemId());
     }
 
     private String autor() {

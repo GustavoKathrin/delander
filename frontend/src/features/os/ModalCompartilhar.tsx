@@ -8,46 +8,68 @@ import { Botao, Interruptor, Modal, cx, useAviso } from '../../components/ui'
 import { dataCompleta, telefoneWhatsapp } from '../../lib/format'
 
 /** Rotulos amigaveis para as chaves de escopo do link publico. */
-const ESCOPO: { chave: string; rotulo: string; descricao: string }[] = [
+/**
+ * O que o link pode mostrar.
+ *
+ * `basico` é o preset que a maioria das oficinas quer: o cliente acompanha o
+ * carro sem ver preço nem quem está com ele. `confirmaAoLigar` marca o que
+ * pede uma confirmação antes de ir para a rua.
+ */
+const ESCOPO: {
+  chave: string
+  rotulo: string
+  descricao: string
+  basico: boolean
+  confirmaAoLigar?: boolean
+}[] = [
   {
     chave: 'compartilhamento.mostrar_itens',
     rotulo: 'Lista de serviços',
     descricao: 'O cliente vê cada serviço e se já foi concluído',
+    basico: true,
   },
   {
     chave: 'compartilhamento.mostrar_previsao_entrega',
     rotulo: 'Previsão de entrega',
     descricao: 'Mostra a data prometida',
+    basico: true,
   },
   {
     chave: 'compartilhamento.mostrar_paradas',
     rotulo: 'Avisar quando estiver parado',
     descricao: 'Mostra que o serviço está aguardando algo',
+    basico: true,
   },
   {
     chave: 'compartilhamento.mostrar_motivo_parada',
     rotulo: 'Motivo da parada',
     descricao: 'Ex.: "falta de peça". Se desligado, aparece apenas "aguardando etapa externa"',
+    basico: true,
   },
   {
     chave: 'compartilhamento.mostrar_tempo_trabalhado',
     rotulo: 'Horas trabalhadas',
     descricao: 'Mostra o tempo de mão de obra já aplicado',
+    basico: true,
   },
   {
     chave: 'compartilhamento.mostrar_nome_mecanico',
     rotulo: 'Nome do mecânico',
     descricao: 'Quem está executando cada serviço',
+    basico: false,
   },
   {
     chave: 'compartilhamento.mostrar_valores',
     rotulo: 'Valores',
     descricao: 'Mostra o total da OS para o cliente',
+    basico: false,
+    confirmaAoLigar: true,
   },
   {
     chave: 'compartilhamento.mostrar_fotos',
     rotulo: 'Fotos liberadas',
     descricao: 'Somente as fotos marcadas como visíveis para o cliente',
+    basico: true,
   },
 ]
 
@@ -61,6 +83,8 @@ export default function ModalCompartilhar({ aberto, onFechar, os }: Props) {
   const avisar = useAviso()
   const queryClient = useQueryClient()
   const [link, setLink] = useState<CompartilhamentoOs | undefined>(os.compartilhamento)
+  const [confirmandoValores, setConfirmandoValores] = useState(false)
+  const [confirmandoTudo, setConfirmandoTudo] = useState(false)
 
   const gerar = useMutation({
     mutationFn: () =>
@@ -194,6 +218,33 @@ export default function ModalCompartilhar({ aberto, onFechar, os }: Props) {
               Vale só para esta OS. O padrão de toda a oficina fica em Configurações, e cada cliente
               pode ter a própria preferência.
             </p>
+            {/* Dois presets, porque mudar quatro coisas eram quatro toques e
+                quatro idas ao servidor. "Só o básico" é o que a maioria das
+                oficinas quer: o cliente acompanha sem ver preço nem nome de
+                quem está com o carro. */}
+            <div className="mb-2 flex gap-2">
+              <Botao
+                variante="secundario"
+                tamanho="sm"
+                disabled={atualizar.isPending}
+                onClick={() =>
+                  atualizar.mutate({
+                    escopo: Object.fromEntries(ESCOPO.map((i) => [i.chave, i.basico])),
+                  })
+                }
+              >
+                Só o básico
+              </Botao>
+              <Botao
+                variante="secundario"
+                tamanho="sm"
+                disabled={atualizar.isPending}
+                onClick={() => setConfirmandoTudo(true)}
+              >
+                Mostrar tudo
+              </Botao>
+            </div>
+
             <div className="divide-y divide-slate-100 rounded-lg ring-1 ring-slate-200">
               {ESCOPO.map((item) => (
                 <div key={item.chave} className="px-3">
@@ -202,9 +253,16 @@ export default function ModalCompartilhar({ aberto, onFechar, os }: Props) {
                     rotulo={item.rotulo}
                     descricao={item.descricao}
                     desabilitado={atualizar.isPending}
-                    onChange={(valor) =>
+                    onChange={(valor) => {
+                      // Valor é o único que pede confirmação: os outros o
+                      // cliente já podia perguntar por telefone; o preço é o
+                      // que vira discussão se aparecer antes da hora.
+                      if (item.confirmaAoLigar && valor) {
+                        setConfirmandoValores(true)
+                        return
+                      }
                       atualizar.mutate({ escopo: { ...link.escopo, [item.chave]: valor } })
-                    }
+                    }}
                   />
                 </div>
               ))}
@@ -228,6 +286,69 @@ export default function ModalCompartilhar({ aberto, onFechar, os }: Props) {
           </p>
         </div>
       )}
+
+      {/* Valor pede confirmação porque é o único que muda uma conversa.
+          Serviço, foto e previsão o cliente já podia perguntar por telefone;
+          o preço, aparecendo antes de alguém explicar, vira discussão. */}
+      <Modal
+        aberto={confirmandoValores}
+        onFechar={() => setConfirmandoValores(false)}
+        titulo="Mostrar os valores para o cliente?"
+        descricao="Ele vai ver o preço de cada serviço e o total desta OS, a qualquer hora, pelo link."
+        largura="max-w-md"
+        rodape={
+          <>
+            <Botao variante="secundario" onClick={() => setConfirmandoValores(false)}>
+              Não mostrar
+            </Botao>
+            <Botao
+              carregando={atualizar.isPending}
+              onClick={() => {
+                atualizar.mutate({
+                  escopo: { ...(link?.escopo ?? {}), 'compartilhamento.mostrar_valores': true },
+                })
+                setConfirmandoValores(false)
+              }}
+            >
+              Mostrar valores
+            </Botao>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">
+          Dá para desligar depois — o link é o mesmo e o cliente não precisa de outro.
+        </p>
+      </Modal>
+
+      <Modal
+        aberto={confirmandoTudo}
+        onFechar={() => setConfirmandoTudo(false)}
+        titulo="Mostrar tudo para o cliente?"
+        descricao="Inclui os valores, o nome do mecânico e as fotos liberadas."
+        largura="max-w-md"
+        rodape={
+          <>
+            <Botao variante="secundario" onClick={() => setConfirmandoTudo(false)}>
+              Voltar
+            </Botao>
+            <Botao
+              carregando={atualizar.isPending}
+              onClick={() => {
+                atualizar.mutate({
+                  escopo: Object.fromEntries(ESCOPO.map((i) => [i.chave, true])),
+                })
+                setConfirmandoTudo(false)
+              }}
+            >
+              Mostrar tudo
+            </Botao>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">
+          Cada item continua podendo ser desligado um a um depois.
+        </p>
+      </Modal>
     </Modal>
   )
 }

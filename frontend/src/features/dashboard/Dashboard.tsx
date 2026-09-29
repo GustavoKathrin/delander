@@ -329,7 +329,7 @@ export default function Dashboard() {
                         fontSize: 12,
                         boxShadow: '0 4px 12px rgb(15 23 42 / 0.08)',
                       }}
-                      formatter={(valor: number) => [`${valor} h`, 'Horas parado']}
+                      formatter={(valor: number) => [`${valor} h`, 'Horas de serviço paradas']}
                     />
                     <Bar dataKey="horas" radius={[0, 4, 4, 0]} maxBarSize={18}>
                       {pareto.map((linha, indice) => (

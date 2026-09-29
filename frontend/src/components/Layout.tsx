@@ -7,6 +7,7 @@ import {
   ClipboardList,
   LayoutGrid,
   ListOrdered,
+  Lightbulb,
   LogOut,
   Menu,
   Monitor,
@@ -19,6 +20,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react'
+import { reabrirAjudas } from './AjudaDaTela'
 import { useAuth } from '../lib/auth'
 import { CHAVES, useConfig } from '../lib/config'
 import { cx } from './ui'
@@ -161,10 +163,24 @@ export default function Layout() {
           <p className="truncate text-[11px] uppercase tracking-wider text-zinc-500">
             {usuario?.papelDescricao}
           </p>
+          {/* Traz de volta as explicações que a pessoa já dispensou. Sem isto,
+              fechar o cartão sem querer seria irreversível — e o único jeito de
+              recuperar seria limpar o navegador. */}
+          <button
+            type="button"
+            onClick={() => {
+              reabrirAjudas()
+              navegar(0)
+            }}
+            className="mt-2 flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-zinc-400 transition hover:bg-white/10 hover:text-white"
+          >
+            <Lightbulb className="size-4" aria-hidden />
+            Como funciona
+          </button>
           <button
             type="button"
             onClick={sair}
-            className="mt-2 flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-zinc-400 transition hover:bg-white/10 hover:text-white"
+            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-zinc-400 transition hover:bg-white/10 hover:text-white"
           >
             <LogOut className="size-4" aria-hidden />
             Sair

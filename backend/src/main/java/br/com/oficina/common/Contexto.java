@@ -69,6 +69,25 @@ public class Contexto {
      * ele tentou fazer nao ajuda ninguem — ainda mais quando um helper so
      * atende acoes diferentes.
      */
+    /**
+     * Qualquer um que trabalha na oficina — inclusive o mecanico.
+     *
+     * Existe para o que e do carro e nao do caixa: dizer o que o cliente ve no
+     * link, por exemplo. Quem esta com as maos no carro sabe se a foto do motor
+     * aberto ajuda ou assusta; o dono, que nao esta na bancada, nao sabe. Com
+     * isso so na gerencia, na pratica ninguem mexia.
+     *
+     * Hoje aceita todos os papeis. O metodo existe mesmo assim porque o dia em
+     * que houver um papel de fora — estagiario, financeiro — a regra estara
+     * escrita num lugar so, e nao espalhada em quem esqueceu de checar.
+     */
+    public void exigirEquipe(String porque) {
+        if (papel() != null) {
+            return;
+        }
+        throw new PermissaoException(porque);
+    }
+
     public void exigirAtendimento(String porque) {
         if (gerencia() || papel() == Papel.RECEPCAO) {
             return;

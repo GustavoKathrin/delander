@@ -131,10 +131,14 @@ public class StatusItemService {
                 ? req.visivelCliente()
                 : motivo != null && motivo.isVisivelClientePadrao();
 
-        if (motivo != null && paradaRepository.abertaDaOs(os.getId()).isEmpty()) {
+        // A parada e deste servico, e nao do carro: e isso que deixa dois
+        // mecanicos pausarem dois servicos do mesmo carro com motivos
+        // diferentes sem um apagar o outro.
+        if (motivo != null && paradaRepository.abertaDoServico(item.getId()).isEmpty()) {
             Parada parada = new Parada();
             parada.setOficinaId(oficinaId);
             parada.setOrdemServicoId(os.getId());
+            parada.setOsItemId(item.getId());
             parada.setMotivoParada(motivo);
             parada.setInicio(agora);
             parada.setDescricao(req.descricao());
@@ -142,7 +146,7 @@ public class StatusItemService {
             paradaRepository.save(parada);
         }
 
-        eventoService.registrar(oficinaId, os.getId(), EventoService.SERVICO_PAUSADO,
+        eventoService.doServico(oficinaId, os.getId(), item.getId(), EventoService.SERVICO_PAUSADO,
                 motivo == null
                         ? "Serviço pausado: " + item.getDescricao()
                         : "Serviço pausado (%s): %s".formatted(motivo.getNome(), item.getDescricao()),
@@ -161,6 +165,8 @@ public class StatusItemService {
         OrdemServico os = item.getOrdemServico();
 
         fecharApontamentoAberto(item, req.descricao(), agora);
+        // O servico acabou: se ele estava travado, parou de estar.
+        encerrarParadaDoServico(item, os, agora);
         item.setStatus(StatusItem.CONCLUIDO);
         itemRepository.save(item);
 
@@ -176,7 +182,7 @@ public class StatusItemService {
         // Hora so vem do relogio.
         boolean semCronometro = trabalhadas.compareTo(BigDecimal.ZERO) == 0;
 
-        eventoService.registrar(oficinaId, os.getId(), EventoService.SERVICO_CONCLUIDO,
+        eventoService.doServico(oficinaId, os.getId(), item.getId(), EventoService.SERVICO_CONCLUIDO,
                 semCronometro
                         ? "'%s' concluído sem cronômetro (0h trabalhadas)".formatted(item.getDescricao())
                         : "'%s' concluído (%sh trabalhadas, %sh estimadas)"
@@ -199,6 +205,8 @@ public class StatusItemService {
         // que estes botoes existem para matar. As horas ja trabalhadas ficam
         // no historico com o `fim` real.
         fecharApontamentoAberto(item, "Serviço cancelado", agora);
+        // Servico cancelado nao espera mais nada; a parada dele para de contar.
+        encerrarParadaDoServico(item, os, agora);
 
         item.setStatus(StatusItem.CANCELADO);
         item.setCanceladoEm(agora);
@@ -206,12 +214,12 @@ public class StatusItemService {
                 req.descricao() == null || req.descricao().isBlank() ? null : req.descricao().trim());
         itemRepository.save(item);
 
-        eventoService.registrar(oficinaId, os.getId(), EventoService.ITEM_REMOVIDO,
+        eventoService.doServico(oficinaId, os.getId(), item.getId(), EventoService.ITEM_REMOVIDO,
                 item.getMotivoCancelamento() == null
                         ? "Serviço cancelado: " + item.getDescricao()
                         : "Serviço cancelado: %s (%s)"
                                 .formatted(item.getDescricao(), item.getMotivoCancelamento()),
-                Boolean.TRUE.equals(req.visivelCliente()));
+                Boolean.TRUE.equals(req.visivelCliente()), null);
 
         // Servico cancelado nao se cobra. Esquecer isto deixa a OS cobrando um
         // servico que nao vai ser feito — e e o tipo de defeito que ninguem
@@ -221,6 +229,17 @@ public class StatusItemService {
     }
 
     // ----------------------------------------------------------------- apoio
+
+    /** Fecha a parada daquele servico, se houver. As dos outros continuam. */
+    private void encerrarParadaDoServico(OsItem item, OrdemServico os, OffsetDateTime agora) {
+        paradaRepository.abertaDoServico(item.getId()).ifPresent(parada -> {
+            parada.setFim(agora);
+            paradaRepository.save(parada);
+            eventoService.registrar(os.getOficinaId(), os.getId(), EventoService.SERVICO_RETOMADO,
+                    "Parada encerrada: " + parada.getMotivoParada().getNome(),
+                    parada.isVisivelCliente());
+        });
+    }
 
     private void fecharApontamentoAberto(OsItem item, String observacao, OffsetDateTime agora) {
         apontamentoRepository.abertoDoItem(item.getId()).ifPresent(aberto -> {

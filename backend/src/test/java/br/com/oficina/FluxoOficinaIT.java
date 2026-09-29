@@ -445,6 +445,59 @@ class FluxoOficinaIT {
                 .andExpect(status().isConflict());
     }
 
+    @Test
+    @Order(7)
+    @DisplayName("dois servicos pausados com motivos diferentes guardam os dois motivos")
+    void doisServicosPausadosGuardamOsDoisMotivos() throws Exception {
+        String auth = token();
+
+        // Dois motivos distintos, para provar que nenhum dos dois some.
+        JsonNode motivos = buscar("/api/motivos-parada?apenasAtivos=true", auth);
+        assertThat(motivos.size()).isGreaterThanOrEqualTo(2);
+        String motivoA = motivos.get(0).get("id").asText();
+        String motivoB = motivos.get(1).get("id").asText();
+
+        JsonNode os = enviar("/api/os/check-in", Map.of(
+                "novoCliente", Map.of("nome", "Cliente das Paradas"),
+                "novoVeiculo", Map.of("placa", "PAR4D45"),
+                "prioridade", "NORMAL",
+                "itens", List.of(
+                        Map.of("descricao", "Servico travado A", "horasEstimadas", 1),
+                        Map.of("descricao", "Servico travado B", "horasEstimadas", 1))), auth);
+        String osId = os.get("resumo").get("id").asText();
+        String itemA = os.get("itens").get(0).get("id").asText();
+        String itemB = os.get("itens").get(1).get("id").asText();
+
+        enviar("/api/os/%s/itens/%s/transicao".formatted(osId, itemA),
+                Map.of("status", "PAUSADO", "motivoParadaId", motivoA,
+                        "descricao", "Esperando a peca do A"), auth);
+        enviar("/api/os/%s/itens/%s/transicao".formatted(osId, itemB),
+                Map.of("status", "PAUSADO", "motivoParadaId", motivoB,
+                        "descricao", "Esperando o cliente do B"), auth);
+
+        // Antes da parada por servico, a guarda olhava se ja havia QUALQUER
+        // parada aberta no carro — entao a segunda nem chegava a ser gravada,
+        // e o motivo do segundo mecanico sumia sem ninguem perceber.
+        JsonNode detalhe = buscar("/api/os/" + osId, auth);
+        assertThat(detalhe.get("paradas")).hasSize(2);
+
+        // Retomar um servico nao pode fechar a parada do outro: cada um
+        // destrava no seu tempo, e as horas do que continua esperando
+        // precisam continuar contando.
+        enviar("/api/os/%s/itens/%s/transicao".formatted(osId, itemA),
+                Map.of("status", "CONCLUIDO"), auth);
+
+        JsonNode depois = buscar("/api/os/" + osId, auth);
+        long abertas = 0;
+        for (JsonNode parada : depois.get("paradas")) {
+            // `fim` some do JSON quando e nulo, entao ausente = ainda aberta.
+            if (!parada.hasNonNull("fim")) {
+                abertas++;
+            }
+        }
+        assertThat(abertas).isEqualTo(1);
+    }
+
     /** O item pelo id, para nao depender da ordem em que a OS devolve a lista. */
     private JsonNode itemPorId(JsonNode detalhe, String itemId) {
         for (JsonNode item : detalhe.get("itens")) {

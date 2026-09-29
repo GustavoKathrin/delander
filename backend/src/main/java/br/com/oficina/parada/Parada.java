@@ -30,6 +30,16 @@ public class Parada extends BaseEntity {
     @Column(name = "ordem_servico_id", nullable = false)
     private UUID ordemServicoId;
 
+    /**
+     * O servico travado, quando a parada e de um servico so.
+     *
+     * Nulo quer dizer que o CARRO inteiro esta parado — a OS foi pausada. As
+     * duas coisas convivem: um carro pode estar parado esperando aprovacao e
+     * ainda ter um servico especifico esperando peca.
+     */
+    @Column(name = "os_item_id")
+    private UUID osItemId;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "motivo_parada_id", nullable = false)
     private MotivoParada motivoParada;

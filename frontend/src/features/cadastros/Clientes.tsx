@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Car, History, Pencil, Plus, Search, UserPlus } from 'lucide-react'
 import { api } from '../../api/client'
+import { AjudaDaTela } from '../../components/AjudaDaTela'
 import type { Cliente, Pagina, ResumoOs, VeiculoResumo } from '../../types'
 import {
   AreaTexto,
@@ -121,6 +122,13 @@ export default function Clientes() {
 
       {/* ---------------- detalhe ---------------- */}
       <div className="space-y-4">
+        <AjudaDaTela chave="clientes" titulo="Cliente primeiro, carro depois">
+          O carro <strong>não é obrigatório</strong>: dá para ter o cliente cadastrado e o carro
+          entrar quando ele aparecer. Um cliente pode ter quantos carros tiver — o botão{' '}
+          <strong>Adicionar carro</strong> fica no cartão de veículos. O histórico é por placa,
+          e segue o carro mesmo se ele mudar de dono.
+        </AjudaDaTela>
+
         {!cliente ? (
           <Cartao>
             <Vazio

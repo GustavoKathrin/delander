@@ -1,4 +1,5 @@
-import { AlertTriangle, Check, PauseCircle, Wrench } from 'lucide-react'
+import { AlertTriangle, Check, ChevronDown, PauseCircle, Wrench } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Botao, cx } from '../../components/ui'
 import type { StatusOs } from '../../types'
 
@@ -87,6 +88,11 @@ export function EtapasDaOs({
   salvando: boolean
   onAcionar: (destino: StatusOs) => void
 }) {
+  const [abertas, setAbertas] = useState(false)
+  // Fecha de novo quando o carro anda: as opcoes de outra etapa nao sao as
+  // mesmas, e deixar aberto mostraria a lista errada.
+  useEffect(() => setAbertas(false), [status])
+
   const cancelada = status === 'CANCELADO'
   const pausada = status === 'PAUSADO'
   const atual = ETAPA_DO_STATUS[status]
@@ -197,20 +203,37 @@ export function EtapasDaOs({
             </Botao>
           )}
 
+          {/* As alternativas ficam atrás de um toque.
+              Soltas ao lado do passo principal, elas competiam com ele: quem
+              abria a OS via cinco botões e não sabia qual era o caminho. O
+              desvio existe e continua a um clique — só deixou de gritar. */}
           {alternativos.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-2">
-              {alternativos.map((destino) => (
-                <Botao
-                  key={destino}
-                  tamanho="sm"
-                  variante={varianteDaAcao(status, destino)}
-                  carregando={salvando}
-                  onClick={() => onAcionar(destino)}
+            <div className="text-center">
+              {abertas ? (
+                <div className="flex flex-wrap justify-center gap-2 pt-1">
+                  {alternativos.map((destino) => (
+                    <Botao
+                      key={destino}
+                      tamanho="sm"
+                      variante={varianteDaAcao(status, destino)}
+                      carregando={salvando}
+                      onClick={() => onAcionar(destino)}
+                    >
+                      {destino === 'PAUSADO' && <PauseCircle className="size-3.5" aria-hidden />}
+                      {rotulo(status, destino)}
+                    </Botao>
+                  ))}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAbertas(true)}
+                  className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
                 >
-                  {destino === 'PAUSADO' && <PauseCircle className="size-3.5" aria-hidden />}
-                  {rotulo(status, destino)}
-                </Botao>
-              ))}
+                  <ChevronDown className="size-3.5" aria-hidden />
+                  Outras opções ({alternativos.length})
+                </button>
+              )}
             </div>
           )}
         </div>

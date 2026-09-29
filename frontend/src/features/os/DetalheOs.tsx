@@ -20,6 +20,7 @@ import type {
   DetalheOs as DetalheTipo,
   FilaElevador,
   Funcionario,
+  ItemOs,
   MomentoPeca,
   PecaCatalogo,
   MotivoParada,
@@ -63,7 +64,12 @@ import { CarroTopo, Placa } from '../../components/oficina'
 import ModalCompartilhar from './ModalCompartilhar'
 import { RegistrarTrabalho } from './RegistrarTrabalho'
 import { ChecklistEntrada } from './ChecklistEntrada'
+import { AjudaDaTela } from '../../components/AjudaDaTela'
 import { EtapasDaOs } from './EtapasDaOs'
+import { LinhaServico } from './LinhaServico'
+import { ModalMotivoServico } from './ModalMotivoServico'
+import type { AcaoServico } from './ModalMotivoServico'
+import { ModalAnotarServico } from './ModalAnotarServico'
 import { BuscaPeca } from './BuscaPeca'
 
 const ROTULOS_ACAO: Partial<Record<StatusOs, string>> = {
@@ -86,9 +92,41 @@ const ROTULOS_ACAO: Partial<Record<StatusOs, string>> = {
  * e o cliente ter dito nao. Chamar os dois de "Iniciar diagnostico" faria o
  * atendente recusar um orcamento achando que estava so voltando uma etapa.
  */
+/**
+ * Voltar uma etapa não pode usar o texto de avançar.
+ *
+ * Era o que acontecia: com o carro em execução, o botão de voltar ao orçamento
+ * dizia "Aprovar orçamento" — o mesmo texto do avanço, mudando só a cor. Quem
+ * lia entendia que ia aprovar alguma coisa, e não desfazer.
+ */
+const ROTULOS_RECUO: Partial<Record<StatusOs, string>> = {
+  ORCAMENTO_APROVADO: 'Voltar para o orçamento',
+  EM_DIAGNOSTICO: 'Voltar ao diagnóstico',
+  AGENDADO: 'Voltar para a agenda',
+  EM_EXECUCAO: 'Voltar para a execução',
+}
+
+/** A ordem das etapas, para saber o que é avanço e o que é recuo. */
+const ORDEM_ETAPA: Record<StatusOs, number> = {
+  RECEBIDO: 0,
+  AGENDADO: 0,
+  EM_DIAGNOSTICO: 1,
+  AGUARDANDO_APROVACAO: 2,
+  ORCAMENTO_APROVADO: 2,
+  EM_EXECUCAO: 3,
+  PAUSADO: 3,
+  PRONTO_AGUARDANDO_RETIRADA: 4,
+  ENTREGUE: 5,
+  CANCELADO: 0,
+}
+
 function rotuloDaAcao(de: StatusOs, para: StatusOs): string {
   if (para === 'EM_DIAGNOSTICO' && de === 'AGUARDANDO_APROVACAO') {
     return 'Cliente recusou'
+  }
+  // Pausar e retomar andam de lado, não para trás: mantêm o texto de sempre.
+  if (para !== 'PAUSADO' && de !== 'PAUSADO' && ORDEM_ETAPA[para] < ORDEM_ETAPA[de]) {
+    return ROTULOS_RECUO[para] ?? ROTULOS_ACAO[para] ?? para
   }
   return ROTULOS_ACAO[para] ?? para
 }
@@ -126,6 +164,10 @@ export default function DetalheOs() {
   const [paradaVisivel, setParadaVisivel] = useState(true)
   const [adicionandoServico, setAdicionandoServico] = useState(false)
   const [adicionandoPeca, setAdicionandoPeca] = useState(false)
+  /** O serviço cujo motivo estamos perguntando, e para qual ação. */
+  const [acaoServico, setAcaoServico] = useState<{ item: ItemOs; acao: AcaoServico } | null>(null)
+  /** O serviço sobre o qual se vai anotar o trabalho. */
+  const [anotando, setAnotando] = useState<ItemOs | null>(null)
   const [erroAcao, setErroAcao] = useState<string>()
 
   const consulta = useQuery({
@@ -254,6 +296,24 @@ export default function DetalheOs() {
     onError: (erro: Error) => avisar(erro.message, 'erro'),
   })
 
+  /**
+   * Mudar o estado de um serviço.
+   *
+   * Um endpoint só para iniciar, pausar, concluir e cancelar, porque do ponto
+   * de vista de quem aperta o botão é a mesma coisa: este serviço andou.
+   */
+  const transicionarItem = useMutation({
+    mutationFn: ({ itemId, corpo }: { itemId: string; corpo: Record<string, unknown> }) =>
+      api<DetalheTipo>(`/os/${id}/itens/${itemId}/transicao`, { metodo: 'POST', corpo }),
+    onSuccess: (dados) => {
+      queryClient.setQueryData(['os', id], dados)
+      invalidar()
+      setAcaoServico(null)
+      setErroAcao(undefined)
+    },
+    onError: (erro: Error) => setErroAcao(erro.message),
+  })
+
   const removerItem = useMutation({
     mutationFn: (itemId: string) =>
       api<DetalheTipo>(`/os/${id}/itens/${itemId}`, { metodo: 'DELETE' }),
@@ -313,6 +373,16 @@ export default function DetalheOs() {
         </Link>
       </div>
 
+      <div className="sem-impressao">
+        <AjudaDaTela chave="os" titulo="Tudo no carro é um serviço">
+          A régua no meio do cartão mostra em que etapa o carro está, e o botão grande é o próximo
+          passo. Cada <strong>serviço</strong> tem os botões dele na linha: iniciar, pausar com o
+          motivo, concluir, cancelar com o motivo — e <strong>Anotar</strong>, para registrar o
+          que foi feito naquele serviço. O botão <strong>Compartilhar</strong> controla o que o
+          cliente vê pelo link, item a item.
+        </AjudaDaTela>
+      </div>
+
       <Cartao className="p-4">
         <div className="flex flex-wrap items-start gap-4">
           <CarroTopo cor={r.cor} largura={46} titulo={r.veiculo} className="flex-none" />
@@ -341,10 +411,17 @@ export default function DetalheOs() {
 
           <div className="flex flex-none flex-col gap-2 sem-impressao">
             <div className="flex gap-2">
-              {flag(CHAVES.compAtivo) && gerencia && (
-                <Botao variante="secundario" tamanho="sm" onClick={() => setCompartilhando(true)}>
+              {/* Sem `gerencia`: o mecânico decide o que vai para o link deste
+                  carro. Ele é quem sabe se a foto do motor aberto ajuda ou
+                  assusta. Com isso só na gerência, na prática ninguém mexia. */}
+              {flag(CHAVES.compAtivo) && (
+                <Botao
+                  variante={r.compartilhado ? 'sucesso' : 'secundario'}
+                  tamanho="sm"
+                  onClick={() => setCompartilhando(true)}
+                >
                   <Share2 className="size-3.5" aria-hidden />
-                  {r.compartilhado ? 'Link ativo' : 'Compartilhar'}
+                  {r.compartilhado ? 'O cliente vê' : 'Compartilhar'}
                 </Botao>
               )}
               {/* Link e nao botao: a ficha e uma pagina, e quem quer conferir
@@ -441,74 +518,23 @@ export default function DetalheOs() {
             ) : (
               <ul className="divide-y divide-slate-100">
                 {os.itens.map((item) => (
-                  <li key={item.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-medium text-slate-800">{item.descricao}</p>
-                        <Etiqueta className={CORES_ITEM[item.status]}>
-                          {item.statusDescricao}
-                        </Etiqueta>
-                        {item.especialidadeNome && (
-                          <Etiqueta
-                            className="text-white ring-transparent"
-                            titulo="Especialidade exigida"
-                          >
-                            <span
-                              className="inline-block size-2 rounded-full"
-                              style={{ backgroundColor: item.especialidadeCor ?? '#64748b' }}
-                              aria-hidden
-                            />
-                            <span className="text-slate-600">{item.especialidadeNome}</span>
-                          </Etiqueta>
-                        )}
-                        {item.apontamentoAberto && (
-                          <Etiqueta className="bg-blue-100 text-blue-700 ring-blue-200">
-                            <Clock className="size-2.5 pulsando" aria-hidden />
-                            rodando desde {horaMinuto(item.apontamentoInicio)}
-                          </Etiqueta>
-                        )}
-                      </div>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {horas(item.horasTrabalhadas)} de {horas(item.horasEstimadas)}
-                        {mostraValores && item.valor !== undefined && ` · ${moeda(item.valor)}`}
-                      </p>
-                    </div>
-
-                    {gerencia ? (
-                      <Selecao
-                        aria-label={`Mecânico de ${item.descricao}`}
-                        className="h-8 w-40 py-1 text-xs"
-                        value={item.funcionarioId ?? ''}
-                        onChange={(e) =>
-                          e.target.value &&
-                          atribuir.mutate({ itemId: item.id, funcionarioId: e.target.value })
-                        }
-                      >
-                        <option value="">Sem mecânico</option>
-                        {(funcionarios.data ?? []).map((f) => (
-                          <option key={f.id} value={f.id}>
-                            {f.nome}
-                          </option>
-                        ))}
-                      </Selecao>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-                        <User className="size-3" aria-hidden />
-                        {item.funcionarioNome ?? 'sem mecânico'}
-                      </span>
-                    )}
-
-                    {gerencia && item.status !== 'CANCELADO' && (
-                      <button
-                        type="button"
-                        onClick={() => removerItem.mutate(item.id)}
-                        className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                        aria-label={`Remover ${item.descricao}`}
-                      >
-                        <Trash2 className="size-4" aria-hidden />
-                      </button>
-                    )}
-                  </li>
+                  <LinhaServico
+                    key={item.id}
+                    item={item}
+                    gerencia={gerencia}
+                    mostraValores={mostraValores}
+                    funcionarios={funcionarios.data ?? []}
+                    salvando={transicionarItem.isPending}
+                    onAtribuir={(funcionarioId) =>
+                      atribuir.mutate({ itemId: item.id, funcionarioId })
+                    }
+                    onAcao={(acao) => setAcaoServico({ item, acao })}
+                    onIniciar={() =>
+                      transicionarItem.mutate({ itemId: item.id, corpo: { status: 'EM_EXECUCAO' } })
+                    }
+                    onRegistrarTrabalho={() => setAnotando(item)}
+                    onRemover={() => removerItem.mutate(item.id)}
+                  />
                 ))}
               </ul>
             )}
@@ -661,6 +687,9 @@ export default function DetalheOs() {
               tempo porque é a ação, não o relato. */}
           <ChecklistEntrada os={os} />
 
+          {/* O registro solto continua, para o que é do carro e não de um
+              serviço só — "cliente ligou perguntando", "levei para o teste".
+              O que é de um serviço agora sai pelo botão Anotar da linha dele. */}
           {podeRegistrarTrabalho && <RegistrarTrabalho os={os} />}
 
           <Cartao>
@@ -872,6 +901,32 @@ export default function DetalheOs() {
       </div>
 
       {/* ---------------- modais ---------------- */}
+      <ModalMotivoServico
+        acao={acaoServico?.acao ?? null}
+        descricaoDoServico={acaoServico?.item.descricao ?? ''}
+        semCronometro={acaoServico ? acaoServico.item.horasTrabalhadas === 0 : false}
+        salvando={transicionarItem.isPending}
+        erro={erroAcao}
+        onFechar={() => {
+          setAcaoServico(null)
+          setErroAcao(undefined)
+        }}
+        onConfirmar={(corpo) =>
+          acaoServico && transicionarItem.mutate({ itemId: acaoServico.item.id, corpo })
+        }
+      />
+
+      <ModalAnotarServico
+        item={anotando}
+        osId={id}
+        onFechar={() => setAnotando(null)}
+        onSalvo={(dados) => {
+          queryClient.setQueryData(['os', id], dados)
+          setAnotando(null)
+          avisar('Trabalho anotado.')
+        }}
+      />
+
       <ModalCompartilhar
         aberto={compartilhando}
         onFechar={() => setCompartilhando(false)}

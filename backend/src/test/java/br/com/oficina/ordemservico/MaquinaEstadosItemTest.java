@@ -27,6 +27,15 @@ class MaquinaEstadosItemTest {
     }
 
     @Test
+    @DisplayName("servico trava antes de comecar: pendente pode ir a pausado")
+    void pendentePodePausar() {
+        // "Nem adianta abrir, a peca nao chegou" e o caso mais comum. Sem esta
+        // transicao, registrar o motivo exigiria iniciar o cronometro de um
+        // servico que ninguem vai tocar — e a espera viraria mao de obra.
+        assertThat(MaquinaEstadosItem.permite(StatusItem.PENDENTE, StatusItem.PAUSADO)).isTrue();
+    }
+
+    @Test
     @DisplayName("servico pausado pode ser retomado, concluido ou cancelado")
     void pausadoTemTresSaidas() {
         assertThat(MaquinaEstadosItem.proximos(StatusItem.PAUSADO))

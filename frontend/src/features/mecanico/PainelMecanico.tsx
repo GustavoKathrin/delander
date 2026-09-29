@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ClipboardCheck, PauseCircle, Play, Wrench } from 'lucide-react'
 import { api } from '../../api/client'
+import { AjudaDaTela } from '../../components/AjudaDaTela'
 import type { MeuServico, MotivoParada } from '../../types'
 import {
   AreaTexto,
@@ -139,6 +140,13 @@ export default function PainelMecanico() {
             : 'Toque em Iniciar quando começar a mexer no carro.'}
         </p>
       </header>
+
+      <AjudaDaTela chave="meus-servicos" titulo="O cronômetro é o que conta as horas">
+        Toque em <strong>Iniciar</strong> quando pegar o carro e em <strong>Pausar</strong> quando
+        largar, dizendo o motivo — é daí que sai o relatório do que trava a oficina. Hora só conta
+        com o cronômetro rodando: serviço concluído sem ele entra com zero. Você também faz tudo
+        isso pela linha do serviço, dentro da OS.
+      </AjudaDaTela>
 
       {lista.length === 0 && (
         <Cartao>

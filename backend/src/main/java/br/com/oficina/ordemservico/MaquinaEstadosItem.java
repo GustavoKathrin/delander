@@ -30,9 +30,15 @@ public final class MaquinaEstadosItem {
     private static final Map<StatusItem, Set<StatusItem>> PERMITIDAS = new EnumMap<>(StatusItem.class);
 
     static {
-        // Pendente pode ir direto a concluido: e o servico de dois minutos,
-        // que ninguem cronometra. As horas ficam zeradas, e a tela diz isso.
-        PERMITIDAS.put(PENDENTE, EnumSet.of(EM_EXECUCAO, CONCLUIDO, CANCELADO));
+        // Pendente vai direto a concluido: e o servico de dois minutos, que
+        // ninguem cronometra. As horas ficam zeradas, e a tela diz isso.
+        //
+        // E vai direto a pausado, que parece estranho e nao e: servico travado
+        // antes de comecar e o caso mais comum da oficina — "nem adianta abrir,
+        // a peca nao chegou". Sem esta transicao, registrar esse motivo exigiria
+        // iniciar o cronometro de um servico que ninguem vai tocar, so para
+        // poder pausa-lo — e as horas de espera virariam mao de obra.
+        PERMITIDAS.put(PENDENTE, EnumSet.of(EM_EXECUCAO, PAUSADO, CONCLUIDO, CANCELADO));
         PERMITIDAS.put(EM_EXECUCAO, EnumSet.of(PAUSADO, CONCLUIDO, CANCELADO));
         PERMITIDAS.put(PAUSADO, EnumSet.of(EM_EXECUCAO, CONCLUIDO, CANCELADO));
         // Terminais. Reabrir servico concluido mexeria no `prontoEm` da OS e

@@ -14,8 +14,30 @@ public interface ParadaRepository extends JpaRepository<Parada, UUID> {
     @Query("select p from Parada p join fetch p.motivoParada where p.ordemServicoId = ?1 order by p.inicio")
     List<Parada> listarPorOs(UUID ordemServicoId);
 
-    @Query("select p from Parada p join fetch p.motivoParada where p.ordemServicoId = ?1 and p.fim is null")
-    Optional<Parada> abertaDaOs(UUID ordemServicoId);
+    /**
+     * A parada aberta do CARRO — a que nasce quando a OS inteira e pausada.
+     *
+     * Antes chamava-se `abertaDaOs` e devolvia a primeira que achasse, de
+     * qualquer servico. Com paradas por servico isso viraria uma loteria: o
+     * primeiro mecanico a retomar fecharia o "esperando peca" do segundo.
+     */
+    @Query("select p from Parada p join fetch p.motivoParada "
+            + "where p.ordemServicoId = ?1 and p.fim is null and p.osItemId is null")
+    Optional<Parada> abertaDoCarro(UUID ordemServicoId);
+
+    /** A parada aberta de um servico especifico. */
+    @Query("select p from Parada p join fetch p.motivoParada where p.osItemId = ?1 and p.fim is null")
+    Optional<Parada> abertaDoServico(UUID osItemId);
+
+    /**
+     * Todas as paradas abertas da OS, do carro e dos servicos.
+     *
+     * Para quando a OS inteira anda: entregue, cancelada, pronta. Ai nao ha
+     * mais servico travado que faca sentido continuar aberto.
+     */
+    @Query("select p from Parada p join fetch p.motivoParada "
+            + "where p.ordemServicoId = ?1 and p.fim is null")
+    List<Parada> abertasDaOs(UUID ordemServicoId);
 
     @Query("select p from Parada p join fetch p.motivoParada where p.oficinaId = ?1 and p.fim is null")
     List<Parada> abertas(UUID oficinaId);
@@ -38,6 +60,19 @@ public interface ParadaRepository extends JpaRepository<Parada, UUID> {
                                    @Param("ate") OffsetDateTime ate,
                                    @Param("agora") OffsetDateTime agora);
 
+    /**
+     * Horas de parada por OS.
+     *
+     * Limitacao conhecida: soma os intervalos, sem unir os que se sobrepoem.
+     * Dois servicos do mesmo carro parados as mesmas 3h somam 6h aqui, quando
+     * o CARRO ficou parado 3h. Para o Pareto isso esta certo — ele mede
+     * trabalho bloqueado, e dois servicos estavam. Para este numero, que a
+     * tela le como "horas do carro parado", esta superestimado.
+     *
+     * Corrigir exige uniao de intervalos em SQL, e o numero e usado numa
+     * frase de texto como ordem de grandeza, nao em decisao fina. Fica
+     * anotado aqui em vez de escondido.
+     */
     @Query(value = """
             select ordem_servico_id as osId,
                    coalesce(sum(extract(epoch from (coalesce(fim, :agora) - inicio))), 0) / 3600.0 as horas

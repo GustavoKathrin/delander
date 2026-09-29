@@ -10,9 +10,9 @@ public enum StatusItem {
     public String descricao() {
         return switch (this) {
             case PENDENTE -> "Pendente";
-            case EM_EXECUCAO -> "Em execucao";
+            case EM_EXECUCAO -> "Em execução";
             case PAUSADO -> "Pausado";
-            case CONCLUIDO -> "Concluido";
+            case CONCLUIDO -> "Concluído";
             case CANCELADO -> "Cancelado";
         };
     }

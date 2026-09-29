@@ -192,6 +192,65 @@ class FluxoOficinaIT {
                 .andExpect(status().isOk()).andReturn());
         assertThat(depois.get("valorPecas").asDouble()).isEqualTo(valorPecasAntes);
 
+        // ---------- catalogo e estoque ----------
+        // O saldo e a unica coisa que separa "temos aqui" de palpite. Estes
+        // testes guardam os dois movimentos que o mexem, e o caminho que o
+        // dono fechou de proposito: receber sem guardar.
+        JsonNode noCatalogo = enviar("/api/pecas/catalogo", Map.of(
+                "descricao", "Filtro de oleo PSL560",
+                "codigo", "PSL560",
+                "valorSugerido", 38.5,
+                "quantidadeEstoque", 6,
+                "estoqueMinimo", 2), auth);
+        String catalogoId = noCatalogo.get("id").asText();
+        assertThat(noCatalogo.get("temEstoque").asBoolean()).isTrue();
+
+        // Peca da prateleira sai do saldo ao entrar no carro.
+        JsonNode daPrateleira = enviar("/api/os/%s/pecas".formatted(osId), Map.of(
+                "descricao", "Filtro de oleo PSL560",
+                "quantidade", 2,
+                "pecaCatalogoId", catalogoId,
+                "origem", "ESTOQUE",
+                "valorUnitario", 38.5), auth);
+        assertThat(saldoDe(catalogoId, auth)).isEqualByComparingTo("4.00");
+
+        // Tirar a peca da OS devolve: engano de digitacao nao come estoque.
+        mvc.perform(MockMvcRequestBuilders
+                        .delete("/api/os/{osId}/pecas/{pecaId}", osId, daPrateleira.get("id").asText())
+                        .header("Authorization", "Bearer " + auth))
+                .andExpect(status().isNoContent());
+        assertThat(saldoDe(catalogoId, auth)).isEqualByComparingTo("6.00");
+
+        // Peca de compra que o catalogo ainda nao conhece.
+        JsonNode comprada = enviar("/api/os/%s/pecas".formatted(osId), Map.of(
+                "descricao", "Coxim do motor",
+                "quantidade", 1,
+                "origem", "COMPRAR",
+                "valorUnitario", 275), auth);
+        String compradaId = comprada.get("id").asText();
+
+        // Receber sem dizer onde guardar e recusado: e por esse caminho que o
+        // saldo vira ficcao, e o dono pediu que ele nao existisse.
+        mvc.perform(MockMvcRequestBuilders
+                        .post("/api/os/{osId}/pecas/{pecaId}/recebimento", osId, compradaId)
+                        .header("Authorization", "Bearer " + auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isConflict());
+
+        // Recebendo e cadastrando: a peca passa a existir no catalogo.
+        enviar("/api/os/%s/pecas/%s/recebimento".formatted(osId, compradaId), Map.of(
+                "novaDescricao", "Coxim do motor",
+                "codigo", "CX-448",
+                "valorUnitario", 275), auth);
+
+        JsonNode catalogo = corpo(mvc.perform(MockMvcRequestBuilders.get("/api/pecas/catalogo")
+                        .header("Authorization", "Bearer " + auth))
+                .andExpect(status().isOk()).andReturn());
+        assertThat(catalogo).hasSize(2);
+        assertThat(catalogo).anySatisfy(p ->
+                assertThat(p.get("codigo").asText()).isEqualTo("CX-448"));
+
         // ---------- cronometro ----------
         JsonNode iniciado = enviar("/api/apontamentos/iniciar", Map.of(
                 "osItemId", itemId, "horasEstimadas", 3), auth);
@@ -307,6 +366,95 @@ class FluxoOficinaIT {
         assertThat(painel.get("throughput")).isNotEmpty();
     }
 
+    @Test
+    @Order(6)
+    @DisplayName("servico muda de estado pela tela da OS, e cancelar o ultimo nao entrega o carro")
+    void servicoPelaTelaDaOs() throws Exception {
+        String auth = token();
+
+        JsonNode os = enviar("/api/os/check-in", Map.of(
+                "novoCliente", Map.of("nome", "Cliente do Servico"),
+                "novoVeiculo", Map.of("placa", "SRV9X87"),
+                "prioridade", "NORMAL",
+                "itens", List.of(
+                        Map.of("descricao", "Trocar pastilha", "horasEstimadas", 1),
+                        Map.of("descricao", "Alinhar", "horasEstimadas", 1))), auth);
+        String osId = os.get("resumo").get("id").asText();
+        String pastilha = os.get("itens").get(0).get("id").asText();
+        String alinhar = os.get("itens").get(1).get("id").asText();
+
+        // A queixa ficou de fora do corpo de proposito: ela deixou de ser
+        // obrigatoria, e este check-in prova que o servidor aceita sem ela.
+        assertThat(os.get("resumo").get("numero").asLong()).isPositive();
+
+        // ---------- concluir sem cronometro ----------
+        // O servico de dois minutos. Entra com zero hora, e isso e a regra:
+        // hora so vem do relogio, nunca da estimativa.
+        JsonNode depoisDeConcluir = enviar(
+                "/api/os/%s/itens/%s/transicao".formatted(osId, pastilha),
+                Map.of("status", "CONCLUIDO"), auth);
+        JsonNode itemConcluido = itemPorId(depoisDeConcluir, pastilha);
+        assertThat(itemConcluido.get("status").asText()).isEqualTo("CONCLUIDO");
+        assertThat(itemConcluido.get("horasTrabalhadas").asDouble()).isZero();
+        // Ainda falta o outro servico: o carro NAO esta pronto.
+        assertThat(depoisDeConcluir.get("resumo").get("status").asText())
+                .isNotEqualTo("PRONTO_AGUARDANDO_RETIRADA");
+
+        // ---------- cancelar com motivo ----------
+        JsonNode depoisDeCancelar = enviar(
+                "/api/os/%s/itens/%s/transicao".formatted(osId, alinhar),
+                Map.of("status", "CANCELADO", "descricao", "Cliente pediu para tirar"), auth);
+        JsonNode itemCancelado = itemPorId(depoisDeCancelar, alinhar);
+        assertThat(itemCancelado.get("status").asText()).isEqualTo("CANCELADO");
+        assertThat(itemCancelado.get("motivoCancelamento").asText())
+                .isEqualTo("Cliente pediu para tirar");
+
+        // ---------- a guarda do allMatch ----------
+        // Com um servico concluido e o outro cancelado, a lista de servicos
+        // vivos tem um item — e ele esta concluido, entao o carro ESTA pronto.
+        assertThat(depoisDeCancelar.get("resumo").get("status").asText())
+                .isEqualTo("PRONTO_AGUARDANDO_RETIRADA");
+
+        // ---------- agora o caso que o allMatch vazio quebrava ----------
+        // OS nova, servico unico, cancelado. Nao sobra nenhum servico vivo:
+        // `allMatch` sobre lista vazia devolve true, e sem a guarda o carro
+        // iria para "pronto para retirada" sem NENHUM servico feito.
+        JsonNode soUm = enviar("/api/os/check-in", Map.of(
+                "novoCliente", Map.of("nome", "Cliente do Cancelamento"),
+                "novoVeiculo", Map.of("placa", "CAN7Z65"),
+                "prioridade", "NORMAL",
+                "itens", List.of(Map.of("descricao", "Servico unico", "horasEstimadas", 1))), auth);
+        String osUnica = soUm.get("resumo").get("id").asText();
+        String itemUnico = soUm.get("itens").get(0).get("id").asText();
+
+        JsonNode depois = enviar(
+                "/api/os/%s/itens/%s/transicao".formatted(osUnica, itemUnico),
+                Map.of("status", "CANCELADO", "descricao", "Lancado errado"), auth);
+        assertThat(depois.get("resumo").get("status").asText())
+                .isNotEqualTo("PRONTO_AGUARDANDO_RETIRADA");
+
+        // E o servico cancelado para de ser cobrado.
+        assertThat(depois.get("valorMaoObra").asDouble()).isZero();
+
+        // ---------- transicao invalida ----------
+        mvc.perform(MockMvcRequestBuilders
+                        .post("/api/os/{osId}/itens/{itemId}/transicao", osUnica, itemUnico)
+                        .header("Authorization", "Bearer " + auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("status", "EM_EXECUCAO"))))
+                .andExpect(status().isConflict());
+    }
+
+    /** O item pelo id, para nao depender da ordem em que a OS devolve a lista. */
+    private JsonNode itemPorId(JsonNode detalhe, String itemId) {
+        for (JsonNode item : detalhe.get("itens")) {
+            if (item.get("id").asText().equals(itemId)) {
+                return item;
+            }
+        }
+        throw new AssertionError("Servico %s nao esta na OS".formatted(itemId));
+    }
+
     // ------------------------------------------------------------------ apoio
 
     private String token() throws Exception {
@@ -346,5 +494,18 @@ class FluxoOficinaIT {
 
     private JsonNode corpo(MvcResult resultado) throws Exception {
         return json.readTree(resultado.getResponse().getContentAsString(StandardCharsets.UTF_8));
+    }
+
+    /** O saldo de uma peca do catalogo, lido pela API como a tela leria. */
+    private java.math.BigDecimal saldoDe(String catalogoId, String auth) throws Exception {
+        JsonNode catalogo = corpo(mvc.perform(MockMvcRequestBuilders.get("/api/pecas/catalogo")
+                        .header("Authorization", "Bearer " + auth))
+                .andExpect(status().isOk()).andReturn());
+        for (JsonNode peca : catalogo) {
+            if (peca.get("id").asText().equals(catalogoId)) {
+                return peca.get("quantidadeEstoque").decimalValue();
+            }
+        }
+        throw new AssertionError("Peca %s nao esta no catalogo".formatted(catalogoId));
     }
 }

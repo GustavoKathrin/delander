@@ -21,6 +21,7 @@ import type {
   FilaElevador,
   Funcionario,
   MomentoPeca,
+  PecaCatalogo,
   MotivoParada,
   OrigemPeca,
   ResumoArtigo,
@@ -62,6 +63,8 @@ import { CarroTopo, Placa } from '../../components/oficina'
 import ModalCompartilhar from './ModalCompartilhar'
 import { RegistrarTrabalho } from './RegistrarTrabalho'
 import { ChecklistEntrada } from './ChecklistEntrada'
+import { EtapasDaOs } from './EtapasDaOs'
+import { BuscaPeca } from './BuscaPeca'
 
 const ROTULOS_ACAO: Partial<Record<StatusOs, string>> = {
   EM_DIAGNOSTICO: 'Iniciar diagnóstico',
@@ -263,15 +266,24 @@ export default function DetalheOs() {
   })
 
   if (consulta.isLoading) return <Carregando texto="Abrindo a OS..." />
-  if (consulta.isError) {
+  // `!consulta.data` junto com o erro de propósito: existe um terceiro estado,
+  // nem carregando nem em erro, quando a consulta está entre tentativas — API
+  // reiniciando, rede caindo. Com `consulta.data!` a tela ficava **em branco**,
+  // que é a pior falha possível: ninguém sabe se quebrou o sistema ou a
+  // internet, e não há o que fazer na tela.
+  if (consulta.isError || !consulta.data) {
     return (
       <div className="p-4">
-        <Vazio titulo="OS não encontrada" descricao={(consulta.error as Error).message} />
+        <Vazio
+          titulo="Não foi possível abrir a OS"
+          descricao={(consulta.error as Error)?.message ?? 'Sem resposta do servidor.'}
+          acao={<Botao onClick={() => void consulta.refetch()}>Tentar de novo</Botao>}
+        />
       </div>
     )
   }
 
-  const os = consulta.data!
+  const os = consulta.data
   const r = os.resumo
   const cores = CORES_STATUS[r.status]
   const mostraValores = gerencia || flag(CHAVES.mecanicoVeValores)
@@ -335,46 +347,32 @@ export default function DetalheOs() {
                   {r.compartilhado ? 'Link ativo' : 'Compartilhar'}
                 </Botao>
               )}
-              <Botao variante="secundario" tamanho="sm" onClick={() => window.print()}>
-                <Printer className="size-3.5" aria-hidden />
-                Ficha
-              </Botao>
+              {/* Link e nao botao: a ficha e uma pagina, e quem quer conferir
+                  antes de imprimir costuma abrir numa aba separada. */}
+              <Link to={`/os/${r.id}/ficha`}>
+                <Botao variante="secundario" tamanho="sm">
+                  <Printer className="size-3.5" aria-hidden />
+                  Ficha
+                </Botao>
+              </Link>
             </div>
 
-            {os.proximosStatus.length > 0 && (
-              <div className="flex flex-wrap justify-end gap-2">
-                {os.proximosStatus
-                  .filter((status) => status !== 'CANCELADO')
-                  .filter((status) => podeAcionar(r.status, status, perfil))
-                  .map((status) => {
-                    const recusa = status === 'EM_DIAGNOSTICO' && r.status === 'AGUARDANDO_APROVACAO'
-                    return (
-                      <Botao
-                        key={status}
-                        tamanho="sm"
-                        variante={
-                          status === 'ENTREGUE'
-                            ? 'sucesso'
-                            : status === 'PAUSADO' || recusa
-                              ? 'secundario'
-                              : 'primario'
-                        }
-                        carregando={transicionar.isPending}
-                        onClick={() => acionar(status)}
-                      >
-                        {status === 'PAUSADO' && <PauseCircle className="size-3.5" aria-hidden />}
-                        {rotuloDaAcao(r.status, status)}
-                      </Botao>
-                    )
-                  })}
-                {os.proximosStatus.includes('CANCELADO') && (
-                  <Botao variante="fantasma" tamanho="sm" onClick={() => acionar('CANCELADO')}>
-                    Cancelar
-                  </Botao>
-                )}
-              </div>
-            )}
           </div>
+        </div>
+
+        {/* As ações do fluxo saíram daqui de cima e viraram a régua de etapas,
+            logo abaixo: no canto elas pareciam um menu de opções, e o mecânico
+            novo não sabia se aquilo era o caminho ou uma escolha. */}
+        <div className="mt-4 sem-impressao">
+          <EtapasDaOs
+            status={r.status}
+            proximos={os.proximosStatus.filter(
+              (status) => status === 'CANCELADO' || podeAcionar(r.status, status, perfil),
+            )}
+            rotulo={rotuloDaAcao}
+            salvando={transicionar.isPending}
+            onAcionar={acionar}
+          />
         </div>
 
         <AvisoErro mensagem={erroAcao} />
@@ -1142,6 +1140,7 @@ function ModalNovaPeca({
   onSalvo: () => void
 }) {
   const [descricao, setDescricao] = useState('')
+  const [doCatalogo, setDoCatalogo] = useState<PecaCatalogo | null>(null)
   const [quantidade, setQuantidade] = useState('1')
   const [fornecedor, setFornecedor] = useState('')
   const [origem, setOrigem] = useState<OrigemPeca>('COMPRAR')
@@ -1150,6 +1149,21 @@ function ModalNovaPeca({
   const [valor, setValor] = useState('')
   const [erro, setErro] = useState<string>()
 
+  /**
+   * Escolher do catálogo responde três perguntas de uma vez.
+   *
+   * Tem na prateleira → é peça de estoque, e o preço já é conhecido. Não tem
+   * → é compra, por mais que esteja cadastrada. Deixar o mecânico responder
+   * "temos aqui" na mão quando o saldo diz zero seria manter o problema que
+   * o catálogo veio resolver.
+   */
+  function escolherDoCatalogo(peca: PecaCatalogo | null) {
+    setDoCatalogo(peca)
+    if (!peca) return
+    setOrigem(peca.temEstoque ? 'ESTOQUE' : 'COMPRAR')
+    if (peca.valorSugerido != null) setValor(String(peca.valorSugerido))
+  }
+
   const salvar = useMutation({
     mutationFn: () =>
       api(`/os/${osId}/pecas`, {
@@ -1157,6 +1171,9 @@ function ModalNovaPeca({
         corpo: {
           descricao,
           quantidade: Number(quantidade),
+          // O vínculo com o catálogo é o que faz a baixa de estoque acontecer
+          // e o que deixa a próxima vez ser só escolher da lista.
+          pecaCatalogoId: doCatalogo?.id,
           // Situação não é pergunta para o mecânico: "temos aqui" já chegou,
           // "precisa comprar" nasce solicitada. Quem decide é o servidor.
           origem,
@@ -1172,6 +1189,7 @@ function ModalNovaPeca({
       }),
     onSuccess: () => {
       setDescricao('')
+      setDoCatalogo(null)
       setQuantidade('1')
       setFornecedor('')
       setPrevisao('')
@@ -1208,12 +1226,20 @@ function ModalNovaPeca({
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <Campo rotulo="Peça" obrigatorio>
-            <Entrada
-              autoFocus
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Ex.: kit de embreagem"
+          <Campo
+            rotulo="Peça"
+            obrigatorio
+            dica={
+              doCatalogo
+                ? undefined
+                : 'Digite para procurar no catálogo. O que não estiver lá vira pedido de compra.'
+            }
+          >
+            <BuscaPeca
+              descricao={descricao}
+              onDescricao={setDescricao}
+              onEscolher={escolherDoCatalogo}
+              escolhida={doCatalogo}
             />
           </Campo>
         </div>

@@ -30,17 +30,20 @@ public class PecaService {
     private final PecaOsRepository repository;
     private final OrdemServicoRepository osRepository;
     private final EventoService eventoService;
+    private final PecaCatalogoService catalogoService;
     private final Contexto contexto;
     private final Clock clock;
 
     public PecaService(PecaOsRepository repository,
                        OrdemServicoRepository osRepository,
                        EventoService eventoService,
+                       PecaCatalogoService catalogoService,
                        Contexto contexto,
                        Clock clock) {
         this.repository = repository;
         this.osRepository = osRepository;
         this.eventoService = eventoService;
+        this.catalogoService = catalogoService;
         this.contexto = contexto;
         this.clock = clock;
     }
@@ -57,6 +60,13 @@ public class PecaService {
         peca.setOrdemServicoId(os.getId());
         aplicar(peca, req);
         PecaOs salva = repository.save(peca);
+
+        // Peca do catalogo que sai da prateleira tem que sair do saldo também,
+        // senão "temos aqui" continua verdade depois de a última ter ido para
+        // um carro — que é exatamente o erro que o catálogo veio corrigir.
+        if (salva.getPecaCatalogoId() != null && salva.getOrigem() == OrigemPeca.ESTOQUE) {
+            catalogoService.baixar(salva.getPecaCatalogoId(), salva.getQuantidade());
+        }
 
         recalcularValorPecas(os);
 
@@ -77,9 +87,7 @@ public class PecaService {
         UUID oficinaId = contexto.oficinaId();
         OrdemServico os = carregarOs(osId, oficinaId);
 
-        PecaOs peca = repository.findById(pecaId)
-                .filter(p -> p.getOrdemServicoId().equals(osId) && p.getOficinaId().equals(oficinaId))
-                .orElseThrow(() -> RecursoNaoEncontradoException.de("Peca", pecaId));
+        PecaOs peca = carregarPeca(osId, pecaId, oficinaId);
 
         StatusPeca anterior = peca.getStatus();
         aplicar(peca, req);
@@ -97,15 +105,66 @@ public class PecaService {
         return mapear(salva);
     }
 
+    /**
+     * A peca comprada chegou: entra no estoque e a compra se encerra.
+     *
+     * O dono pediu isto com todas as letras — ao dar a compra por concluida, a
+     * peca **tem** que ficar registrada no estoque. Por isso receber e um
+     * endpoint proprio e nao um `status = RECEBIDA` no PUT: com o status solto,
+     * o caminho de receber sem guardar continuaria existindo, e e por ele que
+     * o saldo vira ficcao.
+     *
+     * A peca vai direto para o carro, entao ela entra e sai do estoque na
+     * mesma transacao. Parece inutil e nao e: e o que deixa o catalogo saber
+     * que esta peca existe, com que codigo e por quanto — na proxima vez o
+     * mecanico escolhe da lista em vez de digitar tudo de novo.
+     */
+    @Transactional
+    public OsDtos.PecaResposta receber(UUID osId, UUID pecaId, PecaCatalogoDtos.Recebimento req) {
+        contexto.exigirAtendimento("Receber peca e do atendente, do gerente ou do dono.");
+        UUID oficinaId = contexto.oficinaId();
+        OrdemServico os = carregarOs(osId, oficinaId);
+        PecaOs peca = carregarPeca(osId, pecaId, oficinaId);
+
+        if (req.vazio()) {
+            throw new RegraNegocioException(
+                    "Diga qual peça chegou: escolha uma do catálogo ou cadastre agora. "
+                            + "Receber sem guardar no estoque é como o saldo deixa de valer.");
+        }
+
+        PecaCatalogo doCatalogo = catalogoService.receber(req, peca.getQuantidade());
+        peca.setPecaCatalogoId(doCatalogo.getId());
+        peca.setStatus(StatusPeca.RECEBIDA);
+        if (req.valorUnitario() != null) {
+            peca.setValorUnitario(req.valorUnitario());
+        }
+        PecaOs salva = repository.save(peca);
+
+        // Entrou no estoque e ja saiu, porque esta peca tem dono: este carro.
+        catalogoService.baixar(doCatalogo.getId(), peca.getQuantidade());
+
+        recalcularValorPecas(os);
+        eventoService.registrar(oficinaId, osId, EventoService.PECA_ATUALIZADA,
+                "%s chegou e entrou no catálogo.".formatted(salva.getDescricao()), true);
+
+        return mapear(salva);
+    }
+
     @Transactional
     public void remover(UUID osId, UUID pecaId) {
         contexto.exigirGerencia();
         UUID oficinaId = contexto.oficinaId();
         OrdemServico os = carregarOs(osId, oficinaId);
-        PecaOs peca = repository.findById(pecaId)
-                .filter(p -> p.getOrdemServicoId().equals(osId) && p.getOficinaId().equals(oficinaId))
-                .orElseThrow(() -> RecursoNaoEncontradoException.de("Peca", pecaId));
+        PecaOs peca = carregarPeca(osId, pecaId, oficinaId);
         repository.delete(peca);
+
+        // Peca tirada da OS volta para a prateleira: ela saiu do saldo quando
+        // entrou no carro, e agora não entrou. Sem isto, todo engano de digitação
+        // comeria uma peça do estoque para sempre.
+        if (peca.getPecaCatalogoId() != null && peca.getOrigem() == OrigemPeca.ESTOQUE) {
+            catalogoService.devolver(peca.getPecaCatalogoId(), peca.getQuantidade());
+        }
+
         recalcularValorPecas(os);
     }
 
@@ -240,6 +299,12 @@ public class PecaService {
         osRepository.save(os);
     }
 
+    private PecaOs carregarPeca(UUID osId, UUID pecaId, UUID oficinaId) {
+        return repository.findById(pecaId)
+                .filter(p -> p.getOrdemServicoId().equals(osId) && p.getOficinaId().equals(oficinaId))
+                .orElseThrow(() -> RecursoNaoEncontradoException.de("Peca", pecaId));
+    }
+
     private OrdemServico carregarOs(UUID osId, UUID oficinaId) {
         OrdemServico os = osRepository.buscarCompleta(osId)
                 .orElseThrow(() -> RecursoNaoEncontradoException.de("Ordem de servico", osId));
@@ -253,6 +318,9 @@ public class PecaService {
         peca.setDescricao(req.descricao().trim());
         peca.setQuantidade(req.quantidade() == null ? BigDecimal.ONE : req.quantidade());
         peca.setFornecedor(req.fornecedor());
+        if (req.pecaCatalogoId() != null) {
+            peca.setPecaCatalogoId(req.pecaCatalogoId());
+        }
         if (req.status() != null) {
             peca.setStatus(req.status());
         }

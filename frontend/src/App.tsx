@@ -8,6 +8,7 @@ import Radar from './features/quadro/Radar'
 import FilaEspera from './features/quadro/FilaEspera'
 import Checkin from './features/checkin/Checkin'
 import DetalheOs from './features/os/DetalheOs'
+import FichaOs from './features/os/FichaOs'
 import PainelMecanico from './features/mecanico/PainelMecanico'
 import Dashboard from './features/dashboard/Dashboard'
 import Clientes from './features/cadastros/Clientes'
@@ -38,6 +39,16 @@ export default function App() {
     <Routes>
       <Route path="/acompanhar/:token" element={<Acompanhar />} />
       <Route path="/entrar" element={<Login />} />
+      {/* Fora do Layout de proposito: a ficha vira papel, e o menu de aco
+          da lateral nao deve sair na impressao. */}
+      <Route
+        path="/os/:id/ficha"
+        element={
+          <Protegida>
+            <FichaOs />
+          </Protegida>
+        }
+      />
       <Route
         path="/tv"
         element={

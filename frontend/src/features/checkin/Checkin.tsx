@@ -176,7 +176,9 @@ export default function Checkin() {
   const clientePronto = Boolean(cliente) || (criandoCliente && novoCliente.nome.trim().length > 2)
   const veiculoPronto =
     Boolean(veiculo) || (criandoVeiculo && novoVeiculo.placa.replace(/\W/g, '').length >= 6)
-  const podeSalvar = clientePronto && veiculoPronto && queixa.trim().length > 2
+  // O relato não é obrigatório: revisão, carro que voltou, cliente que só
+  // deixa a chave. Exigir a frase faz alguém inventar uma para destravar.
+  const podeSalvar = clientePronto && veiculoPronto
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4 pb-24">
@@ -441,7 +443,10 @@ export default function Checkin() {
         <Cartao>
           <CartaoTitulo titulo="3. O que o cliente relatou" />
           <div className="space-y-4 p-4">
-            <Campo rotulo="Problema relatado" obrigatorio>
+            <Campo
+              rotulo="Problema relatado"
+              dica="Se ele não relatou nada — revisão, carro que voltou — pode deixar vazio."
+            >
               <AreaTexto
                 autoFocus
                 value={queixa}

@@ -72,6 +72,9 @@ public final class Chaves {
     /** Marcas do combo de veiculo, separadas por virgula. */
     public static final String MARCAS_VEICULO = "cadastro.marcas_veiculo";
 
+    /** O que se confere na entrada do carro, separado por virgula. */
+    public static final String ITENS_CHECKLIST_ENTRADA = "cadastro.itens_checklist_entrada";
+
     // ---- INTEGRACAO: o que entra no sistema sem ninguem digitar ----
     public static final String EMAIL_LEITURAS_ATIVO = "integracao.email_leituras_ativo";
     public static final String EMAIL_ASSUNTO = "integracao.email_assunto";
@@ -82,4 +85,7 @@ public final class Chaves {
     // ---- APARENCIA ----
     public static final String NOME_OFICINA = "app.nome_oficina";
     public static final String MODO_TV = "app.modo_tv";
+
+    /** CARTAO, COMPACTO ou PLANTA. Quem interpreta e a tela do patio. */
+    public static final String PATIO_FORMATO = "app.patio_formato";
 }

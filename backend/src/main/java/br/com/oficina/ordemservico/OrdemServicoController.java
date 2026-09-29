@@ -27,10 +27,14 @@ public class OrdemServicoController {
 
     private final OrdemServicoService service;
     private final ElevadorService elevadorService;
+    private final StatusItemService statusItemService;
 
-    public OrdemServicoController(OrdemServicoService service, ElevadorService elevadorService) {
+    public OrdemServicoController(OrdemServicoService service,
+                                  ElevadorService elevadorService,
+                                  StatusItemService statusItemService) {
         this.service = service;
         this.elevadorService = elevadorService;
+        this.statusItemService = statusItemService;
     }
 
     @PostMapping("/check-in")
@@ -159,5 +163,20 @@ public class OrdemServicoController {
                                    @PathVariable UUID itemId,
                                    @Valid @RequestBody OsDtos.AtribuicaoRequisicao req) {
         return service.atribuir(id, itemId, req);
+    }
+
+    /**
+     * Concluir, pausar ou cancelar o servico direto da tela do carro.
+     *
+     * `transicao` e nao `PUT status`: e o nome que a OS ja usa, e a acao nao e
+     * idempotente — pausar duas vezes abriria duas paradas.
+     */
+    @PostMapping("/{id}/itens/{itemId}/transicao")
+    @Operation(summary = "Muda o status do servico (validado pela maquina de estados do item)")
+    public OsDtos.Detalhe transicionarItem(@PathVariable UUID id,
+                                           @PathVariable UUID itemId,
+                                           @Valid @RequestBody OsDtos.ItemTransicaoRequisicao req) {
+        statusItemService.transicionar(id, itemId, req);
+        return service.detalhe(id);
     }
 }

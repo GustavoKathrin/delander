@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Car, History, Plus, Search, UserPlus } from 'lucide-react'
+import { Car, History, Pencil, Plus, Search, UserPlus } from 'lucide-react'
 import { api } from '../../api/client'
-import type { Cliente, Pagina, ResumoOs } from '../../types'
+import type { Cliente, Pagina, ResumoOs, VeiculoResumo } from '../../types'
 import {
   AreaTexto,
   AvisoErro,
@@ -20,6 +20,7 @@ import {
   cx,
   useAviso,
 } from '../../components/ui'
+import { CampoMarca } from '../../components/CampoMarca'
 import { CORES_STATUS, dataCompleta, horas } from '../../lib/format'
 
 export default function Clientes() {
@@ -32,6 +33,8 @@ export default function Clientes() {
   const [editando, setEditando] = useState<Cliente | null>(null)
   const [criando, setCriando] = useState(false)
   const [veiculoHistorico, setVeiculoHistorico] = useState<{ id: string; placa: string } | null>(null)
+  // null = fechado; {veiculo: null} = adicionando; {veiculo} = editando aquele carro.
+  const [editandoVeiculo, setEditandoVeiculo] = useState<{ veiculo: VeiculoResumo | null } | null>(null)
 
   useEffect(() => {
     const id = window.setTimeout(() => setBusca(termo.trim()), 350)
@@ -161,9 +164,36 @@ export default function Clientes() {
             </Cartao>
 
             <Cartao>
-              <CartaoTitulo titulo="Veículos" descricao={`${cliente.veiculos.length} cadastrado(s)`} />
+              <CartaoTitulo
+                titulo="Veículos"
+                descricao={
+                  cliente.veiculos.length === 0
+                    ? 'Um cliente pode ter nenhum, um ou vários'
+                    : `${cliente.veiculos.length} cadastrado(s)`
+                }
+                acao={
+                  <Botao
+                    variante="secundario"
+                    tamanho="sm"
+                    onClick={() => setEditandoVeiculo({ veiculo: null })}
+                  >
+                    <Plus className="size-3.5" aria-hidden />
+                    Adicionar carro
+                  </Botao>
+                }
+              />
               {cliente.veiculos.length === 0 ? (
-                <Vazio icone={<Car className="size-8" />} titulo="Nenhum veículo cadastrado" />
+                <Vazio
+                  icone={<Car className="size-8" />}
+                  titulo="Nenhum veículo cadastrado"
+                  descricao="Carro não é obrigatório: dá para ter o cliente no sistema e cadastrar o carro quando ele aparecer."
+                  acao={
+                    <Botao tamanho="sm" onClick={() => setEditandoVeiculo({ veiculo: null })}>
+                      <Plus className="size-3.5" aria-hidden />
+                      Adicionar carro
+                    </Botao>
+                  }
+                />
               ) : (
                 <ul className="divide-y divide-slate-100">
                   {cliente.veiculos.map((v) => (
@@ -177,6 +207,14 @@ export default function Clientes() {
                           {v.km && ` · ${v.km.toLocaleString('pt-BR')} km`}
                         </p>
                       </div>
+                      <Botao
+                        variante="fantasma"
+                        tamanho="sm"
+                        onClick={() => setEditandoVeiculo({ veiculo: v })}
+                      >
+                        <Pencil className="size-3.5" aria-hidden />
+                        Editar
+                      </Botao>
                       <Botao
                         variante="secundario"
                         tamanho="sm"
@@ -209,6 +247,19 @@ export default function Clientes() {
           void queryClient.invalidateQueries({ queryKey: ['clientes'] })
           void queryClient.invalidateQueries({ queryKey: ['cliente', salvo.id] })
           avisar('Cliente salvo.')
+        }}
+      />
+
+      <ModalVeiculo
+        aberto={editandoVeiculo !== null && selecionado !== null}
+        clienteId={selecionado?.id ?? ''}
+        veiculo={editandoVeiculo?.veiculo ?? null}
+        onFechar={() => setEditandoVeiculo(null)}
+        onSalvo={() => {
+          setEditandoVeiculo(null)
+          void queryClient.invalidateQueries({ queryKey: ['clientes'] })
+          void queryClient.invalidateQueries({ queryKey: ['cliente', selecionado!.id] })
+          avisar('Carro salvo.')
         }}
       />
 
@@ -362,6 +413,124 @@ function ModalCliente({
           />
         </div>
         <div className="sm:col-span-2">
+          <AvisoErro mensagem={erro} />
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+/**
+ * Cadastrar um carro para o cliente que ja existe.
+ *
+ * Ate aqui o unico jeito de um carro entrar no sistema era pelo check-in,
+ * junto com um agendamento — ou seja: para cadastrar o carro, a oficina era
+ * obrigada a abrir uma OS. Isso nao e verdade no balcao. O cliente aparece,
+ * diz que tem tres carros, e nenhum deles vai entrar hoje.
+ *
+ * Por isso carro aqui e opcional e plural: o cliente pode ficar sem nenhum,
+ * e pode ganhar mais um a qualquer momento, sem OS nenhuma.
+ */
+function ModalVeiculo({
+  aberto,
+  clienteId,
+  veiculo,
+  onFechar,
+  onSalvo,
+}: {
+  aberto: boolean
+  clienteId: string
+  veiculo: VeiculoResumo | null
+  onFechar: () => void
+  onSalvo: () => void
+}) {
+  const [placa, setPlaca] = useState('')
+  const [marca, setMarca] = useState('')
+  const [modelo, setModelo] = useState('')
+  const [ano, setAno] = useState('')
+  const [cor, setCor] = useState('')
+  const [km, setKm] = useState('')
+  const [erro, setErro] = useState<string>()
+
+  useEffect(() => {
+    if (!aberto) return
+    setPlaca(veiculo?.placa ?? '')
+    setMarca(veiculo?.marca ?? '')
+    setModelo(veiculo?.modelo ?? '')
+    setAno(veiculo?.ano ? String(veiculo.ano) : '')
+    setCor(veiculo?.cor ?? '')
+    setKm(veiculo?.km ? String(veiculo.km) : '')
+    setErro(undefined)
+  }, [aberto, veiculo])
+
+  const salvar = useMutation({
+    mutationFn: () => {
+      const corpo = {
+        clienteId,
+        placa: placa.trim().toUpperCase(),
+        marca: marca || undefined,
+        modelo: modelo || undefined,
+        ano: ano ? Number(ano) : undefined,
+        cor: cor || undefined,
+        km: km ? Number(km) : undefined,
+      }
+      return veiculo
+        ? api(`/veiculos/${veiculo.id}`, { metodo: 'PUT', corpo })
+        : api('/veiculos', { metodo: 'POST', corpo })
+    },
+    onSuccess: onSalvo,
+    onError: (falha: Error) => setErro(falha.message),
+  })
+
+  // Placa e a unica coisa que o balcao sempre tem na mao. Marca, modelo e cor
+  // dao para completar depois; km muda toda semana e seria mentira exigir.
+  const pronto = placa.replace(/\W/g, '').length >= 6
+
+  return (
+    <Modal
+      aberto={aberto}
+      onFechar={onFechar}
+      titulo={veiculo ? `Editar ${veiculo.placa}` : 'Adicionar carro'}
+      descricao={
+        veiculo ? undefined : 'Só a placa é obrigatória. O resto dá para completar depois.'
+      }
+      rodape={
+        <>
+          <Botao variante="secundario" onClick={onFechar}>
+            Cancelar
+          </Botao>
+          <Botao carregando={salvar.isPending} disabled={!pronto} onClick={() => salvar.mutate()}>
+            Salvar
+          </Botao>
+        </>
+      }
+    >
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Campo rotulo="Placa" obrigatorio>
+          <Entrada
+            autoFocus
+            className="font-mono uppercase"
+            value={placa}
+            onChange={(e) => setPlaca(e.target.value.toUpperCase())}
+            placeholder="ABC1D23"
+          />
+        </Campo>
+        <Campo rotulo="Marca">
+          <CampoMarca valor={marca} onChange={setMarca} />
+        </Campo>
+        <Campo rotulo="Modelo">
+          <Entrada value={modelo} onChange={(e) => setModelo(e.target.value)} />
+        </Campo>
+        <Campo rotulo="Ano">
+          <Entrada type="number" value={ano} onChange={(e) => setAno(e.target.value)} />
+        </Campo>
+        <Campo rotulo="Cor">
+          <Entrada value={cor} onChange={(e) => setCor(e.target.value)} />
+        </Campo>
+        <Campo rotulo="KM">
+          <Entrada type="number" value={km} onChange={(e) => setKm(e.target.value)} />
+        </Campo>
+        <div className="sm:col-span-3">
           <AvisoErro mensagem={erro} />
         </div>
       </div>

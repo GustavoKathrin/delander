@@ -43,6 +43,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -181,19 +182,7 @@ public class OrdemServicoService {
                     req.elevadorInicio(), req.elevadorHoras());
         }
 
-        if (req.checklist() != null && !req.checklist().isEmpty()) {
-            List<ChecklistItem> itens = new ArrayList<>();
-            int ordem = 0;
-            for (String descricao : req.checklist()) {
-                ChecklistItem item = new ChecklistItem();
-                item.setOficinaId(oficinaId);
-                item.setOrdemServicoId(salva.getId());
-                item.setDescricao(descricao);
-                item.setOrdem(ordem++);
-                itens.add(item);
-            }
-            checklistRepository.saveAll(itens);
-        }
+        criarChecklistDeEntrada(salva, oficinaId, req.checklist());
 
         eventoService.registrar(oficinaId, salva.getId(), EventoService.OS_CRIADA,
                 "Veiculo recebido na oficina.", true,
@@ -363,6 +352,42 @@ public class OrdemServicoService {
     }
 
     /**
+     * Os itens que a oficina confere na entrada, criados junto com a OS.
+     *
+     * A lista vem da configuracao, e nao de quem abre a OS. Antes ela so
+     * existia se o corpo da requisicao a trouxesse — e nenhuma tela mandava.
+     * O efeito era um recurso inteiro morto sem ninguem perceber: tabela
+     * vazia, tela escondida, e a trava de "nao inicia sem checklist" saindo
+     * cedo porque nao havia item nenhum para cobrar.
+     *
+     * Quem abre a OS ainda pode mandar a propria lista; a configuracao e o
+     * que vale quando ninguem manda, que e o caso normal.
+     */
+    private void criarChecklistDeEntrada(OrdemServico os, UUID oficinaId, List<String> pedidos) {
+        List<String> descricoes = pedidos != null && !pedidos.isEmpty()
+                ? pedidos
+                : Arrays.stream(config.texto(oficinaId, Chaves.ITENS_CHECKLIST_ENTRADA, "").split(","))
+                        .map(String::trim)
+                        .filter(d -> !d.isBlank())
+                        .toList();
+        if (descricoes.isEmpty()) {
+            return;
+        }
+
+        List<ChecklistItem> itens = new ArrayList<>();
+        int ordem = 0;
+        for (String descricao : descricoes) {
+            ChecklistItem item = new ChecklistItem();
+            item.setOficinaId(oficinaId);
+            item.setOrdemServicoId(os.getId());
+            item.setDescricao(descricao);
+            item.setOrdem(ordem++);
+            itens.add(item);
+        }
+        checklistRepository.saveAll(itens);
+    }
+
+    /**
      * O checklist de entrada tem que estar respondido antes de mexer no carro.
      *
      * Ele existe para provar como o carro chegou. Preenchido depois que o
@@ -372,19 +397,29 @@ public class OrdemServicoService {
      * Retomar uma pausa nao pede de novo: o carro nao chegou duas vezes.
      */
     private void exigirChecklistDeEntrada(OrdemServico os, UUID oficinaId, StatusOs de) {
-        if (de == StatusOs.PAUSADO || !config.flag(oficinaId, Chaves.EXIGIR_CHECKLIST_ENTRADA)) {
+        if (de == StatusOs.PAUSADO) {
             return;
         }
-        List<ChecklistItem> itens = checklistRepository.findByOrdemServicoIdOrderByOrdem(os.getId());
-        if (itens.isEmpty()) {
-            return;
+
+        if (config.flag(oficinaId, Chaves.EXIGIR_CHECKLIST_ENTRADA)) {
+            List<ChecklistItem> itens = checklistRepository.findByOrdemServicoIdOrderByOrdem(os.getId());
+            long semResposta = itens.stream().filter(i -> i.getOk() == null).count();
+            if (semResposta > 0) {
+                throw new RegraNegocioException(
+                        ("Faltam %d item(ns) do checklist de entrada. Ele registra como o carro chegou — "
+                                + "preenchido depois de abrir o carro, não protege a oficina de reclamação "
+                                + "de avaria que já existia.").formatted(semResposta));
+            }
         }
-        long semResposta = itens.stream().filter(i -> i.getOk() == null).count();
-        if (semResposta > 0) {
+
+        // A foto e a parte do checklist que nao depende de quem preencheu ter
+        // sido honesto. Risco no para-choque em texto vira discussao; em foto,
+        // nao. Esta flag existia no banco desde a V2 e nenhum codigo a lia.
+        if (config.flag(oficinaId, Chaves.EXIGIR_FOTOS_ENTRADA)
+                && arquivoRepository.contarDoMomento(os.getId(), "ENTRADA") == 0) {
             throw new RegraNegocioException(
-                    ("Faltam %d item(ns) do checklist de entrada. Ele registra como o carro chegou — "
-                            + "preenchido depois de abrir o carro, nao protege a oficina de reclamacao "
-                            + "de avaria que ja existia.").formatted(semResposta));
+                    "Falta a foto de entrada deste carro. Ela é o que protege a oficina e o mecânico "
+                            + "de reclamação de avaria que o carro já tinha quando chegou.");
         }
     }
 
@@ -813,7 +848,12 @@ public class OrdemServicoService {
                             i.getStatus().descricao(),
                             i.getValor(),
                             aberto != null,
-                            aberto == null ? null : aberto.getInicio());
+                            aberto == null ? null : aberto.getInicio(),
+                            i.getMotivoCancelamento(),
+                            i.getCanceladoEm(),
+                            // Quem decide o que cabe e o servidor; a tela so
+                            // desenha os botoes que vieram.
+                            List.copyOf(MaquinaEstadosItem.proximos(i.getStatus())));
                 })
                 .toList();
 

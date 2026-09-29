@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Check, ClipboardCheck, X } from 'lucide-react'
+import { Camera, Check, ClipboardCheck, Images, X } from 'lucide-react'
 import { api, ErroApi } from '../../api/client'
 import { Botao, Cartao, CartaoTitulo, Entrada, cx, useAviso } from '../../components/ui'
 import type { DetalheOs } from '../../types'
@@ -22,6 +22,32 @@ export function ChecklistEntrada({ os }: { os: DetalheOs }) {
 
   type Resposta = { ok: boolean | null; observacao: string }
   const [respostas, setRespostas] = useState<Record<string, Resposta>>({})
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const galeriaRef = useRef<HTMLInputElement>(null)
+
+  const fotosDeEntrada = os.arquivos.filter((a) => a.momento === 'ENTRADA')
+
+  const enviarFotos = useMutation({
+    mutationFn: async (arquivos: File[]) => {
+      for (const arquivo of arquivos) {
+        const dados = new FormData()
+        dados.append('arquivo', arquivo)
+        dados.append('momento', 'ENTRADA')
+        // A foto de entrada é do cliente também: é a prova dos dois lados
+        // numa discussão sobre risco que já existia.
+        dados.append('visivelCliente', 'true')
+        await api(`/os/${os.resumo.id}/arquivos`, { metodo: 'POST', formData: dados })
+      }
+    },
+    onSuccess: (_, arquivos) => {
+      if (cameraRef.current) cameraRef.current.value = ''
+      if (galeriaRef.current) galeriaRef.current.value = ''
+      void queryClient.invalidateQueries({ queryKey: ['os', os.resumo.id] })
+      avisar(`${arquivos.length} foto(s) de entrada registrada(s).`)
+    },
+    onError: (erro: Error) =>
+      avisar(erro instanceof ErroApi ? erro.message : 'Não foi possível enviar.', 'erro'),
+  })
 
   // A OS chega depois do primeiro render, e pode ser recarregada: as
   // respostas do servidor mandam, mas o que a pessoa acabou de marcar e
@@ -59,7 +85,11 @@ export function ChecklistEntrada({ os }: { os: DetalheOs }) {
       avisar(erro instanceof ErroApi ? erro.message : 'Não foi possível salvar.', 'erro'),
   })
 
-  if (os.checklist.length === 0) return null
+  // O cartão some só quando não há nada a registrar nem nada registrado: OS
+  // já entregue ou cancelada, sem item e sem foto. Antes ele sumia sempre que
+  // faltassem itens — e era exatamente aí que faltava o lugar de pôr a foto.
+  const encerrada = os.resumo.status === 'ENTREGUE' || os.resumo.status === 'CANCELADO'
+  if (os.checklist.length === 0 && fotosDeEntrada.length === 0 && encerrada) return null
 
   const faltam = os.checklist.filter((i) => (respostas[i.id]?.ok ?? null) === null).length
   const marcar = (id: string, ok: boolean) =>
@@ -138,6 +168,86 @@ export function ChecklistEntrada({ os }: { os: DetalheOs }) {
           )
         })}
       </ul>
+
+      {/* ---------------- fotos da entrada ----------------
+          A parte do checklist que não depende de quem preencheu ter sido
+          honesto. "Risco na porta direita" em texto vira discussão de
+          palavra contra palavra; em foto, não vira.
+
+          Só uma entrada por carro: quando este carro voltar e alguém
+          fotografar de novo, o servidor apaga estas. Foto de seis meses
+          atrás não prova o estado de hoje — provaria contra a oficina. */}
+      <div className="border-t border-slate-200 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-slate-800">Fotos da entrada</span>
+          {fotosDeEntrada.length > 0 && (
+            <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200">
+              <ClipboardCheck className="size-3" aria-hidden />
+              {fotosDeEntrada.length}
+            </span>
+          )}
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const lista = e.target.files
+              if (lista?.length) enviarFotos.mutate(Array.from(lista))
+            }}
+          />
+          <input
+            ref={galeriaRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              const lista = e.target.files
+              if (lista?.length) enviarFotos.mutate(Array.from(lista))
+            }}
+          />
+          <Botao
+            variante="secundario"
+            tamanho="sm"
+            className="ml-auto"
+            carregando={enviarFotos.isPending}
+            onClick={() => cameraRef.current?.click()}
+          >
+            <Camera className="size-4" aria-hidden />
+            Câmera
+          </Botao>
+          <Botao
+            variante="secundario"
+            tamanho="sm"
+            carregando={enviarFotos.isPending}
+            onClick={() => galeriaRef.current?.click()}
+          >
+            <Images className="size-4" aria-hidden />
+            Escolher fotos
+          </Botao>
+        </div>
+
+        {fotosDeEntrada.length === 0 ? (
+          <p className="mt-2 text-xs text-slate-500">
+            Ainda sem foto. Fotografe a lataria, as rodas e o painel antes de mexer no carro.
+          </p>
+        ) : (
+          <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-6">
+            {fotosDeEntrada.map((foto) => (
+              <a key={foto.id} href={foto.url} target="_blank" rel="noreferrer" title={foto.nome}>
+                <img
+                  src={foto.url}
+                  alt={foto.nome}
+                  loading="lazy"
+                  className="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200 transition hover:ring-slate-400"
+                />
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="border-t border-slate-200 p-4">
         <Botao className="w-full" carregando={salvar.isPending} onClick={() => salvar.mutate()}>

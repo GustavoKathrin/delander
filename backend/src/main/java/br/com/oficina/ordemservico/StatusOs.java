@@ -31,11 +31,11 @@ public enum StatusOs {
     public String descricao() {
         return switch (this) {
             case RECEBIDO -> "Recebido";
-            case EM_DIAGNOSTICO -> "Em diagnostico";
-            case AGUARDANDO_APROVACAO -> "Aguardando aprovacao";
-            case ORCAMENTO_APROVADO -> "Orcamento aprovado";
+            case EM_DIAGNOSTICO -> "Em diagnóstico";
+            case AGUARDANDO_APROVACAO -> "Aguardando aprovação";
+            case ORCAMENTO_APROVADO -> "Orçamento aprovado";
             case AGENDADO -> "Agendado";
-            case EM_EXECUCAO -> "Em execucao";
+            case EM_EXECUCAO -> "Em execução";
             case PAUSADO -> "Pausado";
             case PRONTO_AGUARDANDO_RETIRADA -> "Pronto - aguardando retirada";
             case ENTREGUE -> "Entregue";

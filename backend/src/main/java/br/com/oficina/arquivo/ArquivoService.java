@@ -6,6 +6,8 @@ import br.com.oficina.common.RegraNegocioException;
 import br.com.oficina.ordemservico.EventoService;
 import br.com.oficina.ordemservico.OrdemServico;
 import br.com.oficina.ordemservico.OrdemServicoRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,8 @@ import java.util.UUID;
  */
 @Service
 public class ArquivoService {
+
+    private static final Logger log = LoggerFactory.getLogger(ArquivoService.class);
 
     private final ArquivoOsRepository repository;
     private final OrdemServicoRepository osRepository;
@@ -73,10 +77,46 @@ public class ArquivoService {
         registro.setCriadoPor(contexto.usuario().email());
         ArquivoOs salvo = repository.save(registro);
 
+        if ("ENTRADA".equals(momentoValidado)) {
+            apagarEntradasAntigas(os);
+        }
+
         eventoService.registrar(oficinaId, osId, EventoService.FOTO_ANEXADA,
                 "Arquivo anexado: " + salvo.getNomeOriginal(), visivelCliente);
 
         return salvo;
+    }
+
+    /**
+     * Cada carro guarda uma foto de entrada so: a de agora.
+     *
+     * Decisao da oficina, e ela tem duas razoes. A primeira e disco: foto de
+     * entrada de todo carro em toda passagem cresce sem parar e ninguem volta
+     * para limpar. A segunda e mais importante: a foto da visita passada nao
+     * prova o estado de hoje. Guardada, ela viraria prova contra a propria
+     * oficina numa discussao sobre um risco que apareceu depois.
+     *
+     * Apaga do disco e do banco. Silencioso de proposito: falhar aqui
+     * derrubaria o upload que acabou de dar certo, e o que importa — a foto
+     * de hoje — ja esta gravada.
+     */
+    private void apagarEntradasAntigas(OrdemServico os) {
+        List<ArquivoOs> antigas =
+                repository.entradasDeOutrasPassagens(os.getVeiculo().getId(), os.getId());
+        if (antigas.isEmpty()) {
+            return;
+        }
+        for (ArquivoOs antiga : antigas) {
+            try {
+                armazenamento.apagar(antiga.getCaminho());
+            } catch (RuntimeException e) {
+                log.warn("Nao foi possivel apagar a foto de entrada {}: {}",
+                        antiga.getCaminho(), e.getMessage());
+            }
+        }
+        repository.deleteAll(antigas);
+        log.info("Foto de entrada do veiculo {} substituida ({} arquivo(s) antigo(s) removido(s)).",
+                os.getVeiculo().getPlaca(), antigas.size());
     }
 
     @Transactional(readOnly = true)

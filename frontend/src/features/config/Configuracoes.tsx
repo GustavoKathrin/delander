@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Save, Settings2, Sliders } from 'lucide-react'
+import CatalogoPecas from './CatalogoPecas'
 import { api } from '../../api/client'
 import type { Box, ConfiguracaoItem, Especialidade, MotivoParada, ServicoCatalogo } from '../../types'
 import {
@@ -156,6 +157,51 @@ export default function Configuracoes() {
                     )
                   }
 
+                  // Escolha fechada: botões com a explicação de cada opção em
+                  // vez de um campo onde dá para digitar qualquer coisa. Quem
+                  // escolhe formato de tela precisa saber o que muda antes de
+                  // escolher, e um combo esconde isso até você já ter escolhido.
+                  if (rotulo.opcoes) {
+                    return (
+                      <div key={item.chave} className="py-3">
+                        <Campo rotulo={rotulo.rotulo} dica={rotulo.descricao}>
+                          <div className="grid gap-2 sm:grid-cols-3">
+                            {rotulo.opcoes.map((opcao) => {
+                              const escolhida = valor === opcao.valor
+                              return (
+                                <button
+                                  key={opcao.valor}
+                                  type="button"
+                                  onClick={() => mudar(item.chave, opcao.valor)}
+                                  className={cx(
+                                    'rounded-lg p-3 text-left ring-1 transition',
+                                    escolhida
+                                      ? 'bg-marca-50 ring-2 ring-marca-600'
+                                      : 'bg-white ring-slate-200 hover:bg-slate-50',
+                                  )}
+                                >
+                                  <span
+                                    className={cx(
+                                      'block text-sm font-semibold',
+                                      escolhida ? 'text-marca-800' : 'text-slate-800',
+                                    )}
+                                  >
+                                    {opcao.rotulo}
+                                  </span>
+                                  {opcao.descricao && (
+                                    <span className="mt-0.5 block text-xs leading-snug text-slate-500">
+                                      {opcao.descricao}
+                                    </span>
+                                  )}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </Campo>
+                      </div>
+                    )
+                  }
+
                   // Cor não é um tipo no banco (o check só aceita seis): quem
                   // sabe que esta chave guarda uma cor é o rótulo, aqui na tela.
                   if (rotulo.cor) {
@@ -246,7 +292,14 @@ export default function Configuracoes() {
 
 // ================================================================ cadastros
 
-type TipoCadastro = 'especialidades' | 'boxes' | 'motivos' | 'catalogo' | 'marcas'
+type TipoCadastro =
+  | 'especialidades'
+  | 'boxes'
+  | 'motivos'
+  | 'catalogo'
+  | 'pecas'
+  | 'marcas'
+  | 'checklist'
 
 function Cadastros() {
   const [tipo, setTipo] = useState<TipoCadastro>('especialidades')
@@ -260,7 +313,9 @@ function Cadastros() {
             ['boxes', 'Boxes e vagas'],
             ['motivos', 'Motivos de parada'],
             ['catalogo', 'Catálogo de serviços'],
+            ['pecas', 'Peças e estoque'],
             ['marcas', 'Marcas de veículo'],
+            ['checklist', 'Checklist de entrada'],
           ] as [TipoCadastro, string][]
         ).map(([chave, rotulo]) => (
           <Botao
@@ -278,7 +333,27 @@ function Cadastros() {
       {tipo === 'boxes' && <Boxes />}
       {tipo === 'motivos' && <Motivos />}
       {tipo === 'catalogo' && <Catalogo />}
-      {tipo === 'marcas' && <Marcas />}
+      {tipo === 'pecas' && <CatalogoPecas />}
+      {tipo === 'marcas' && (
+        <ListaDeTexto
+          chave={CHAVES.marcasVeiculo}
+          titulo="Marcas de veículo"
+          descricao="O que aparece no combo ao cadastrar um carro. Quem cadastra ainda pode digitar uma marca fora da lista — nenhum carro fica de fora por causa disto."
+          placeholder="Nova marca e Enter"
+          substantivo="marca(s) na lista."
+          vazio="Nenhuma marca na lista. Enquanto estiver assim, o campo de marca volta a ser digitado à mão."
+        />
+      )}
+      {tipo === 'checklist' && (
+        <ListaDeTexto
+          chave={CHAVES.itensChecklistEntrada}
+          titulo="Checklist de entrada"
+          descricao="O que se confere quando o carro chega. Vale para as OS abertas daqui em diante — as que já estão na oficina mantêm a lista com que foram abertas."
+          placeholder="Novo item e Enter"
+          substantivo="item(ns) conferido(s) na entrada."
+          vazio="Nenhum item na lista. Sem itens, o checklist não aparece na OS e a exigência em Fluxo não tem o que cobrar."
+        />
+      )}
     </div>
   )
 }
@@ -291,10 +366,24 @@ function Cadastros() {
  * texto cru é péssimo, então aqui ela vira ficha: some com o X, entra pelo
  * Enter. O que vai para o banco continua sendo a linha de texto.
  */
-function Marcas() {
+function ListaDeTexto({
+  chave,
+  titulo,
+  descricao,
+  placeholder,
+  substantivo,
+  vazio,
+}: {
+  chave: string
+  titulo: string
+  descricao: string
+  placeholder: string
+  substantivo: string
+  vazio: string
+}) {
   const avisar = useAviso()
   const { lista, recarregar } = useConfig()
-  const salvas = lista(CHAVES.marcasVeiculo)
+  const salvas = lista(chave)
 
   const [marcas, setMarcas] = useState<string[]>(salvas)
   const [nova, setNova] = useState('')
@@ -309,19 +398,21 @@ function Marcas() {
     mutationFn: () =>
       api('/configuracoes', {
         metodo: 'PUT',
-        corpo: { valores: { [CHAVES.marcasVeiculo]: marcas.join(',') } },
+        corpo: { valores: { [chave]: marcas.join(',') } },
       }),
     onSuccess: () => {
       recarregar()
-      avisar('Marcas salvas.')
+      avisar(`${titulo} salvo(a).`)
     },
     onError: (erro: Error) => avisar(erro.message, 'erro'),
   })
 
   const adicionar = () => {
+    // A vírgula separa os itens no banco: deixá-la passar partiria um item
+    // em dois na próxima leitura.
     const limpa = nova.trim().replace(/,/g, ' ')
     if (limpa.length < 2) return
-    // Repetida não entra: duas "Honda" no combo só confundem.
+    // Repetido não entra: duas "Honda" no combo só confundem.
     if (marcas.some((m) => m.toLowerCase() === limpa.toLowerCase())) {
       avisar(`${limpa} já está na lista.`, 'erro')
       setNova('')
@@ -333,10 +424,7 @@ function Marcas() {
 
   return (
     <Cartao>
-      <CartaoTitulo
-        titulo="Marcas de veículo"
-        descricao="O que aparece no combo ao cadastrar um carro. Quem cadastra ainda pode digitar uma marca fora da lista — nenhum carro fica de fora por causa disto."
-      />
+      <CartaoTitulo titulo={titulo} descricao={descricao} />
 
       <div className="space-y-3 p-4">
         <div className="flex gap-2">
@@ -350,7 +438,7 @@ function Marcas() {
                 adicionar()
               }
             }}
-            placeholder="Nova marca e Enter"
+            placeholder={placeholder}
           />
           <Botao variante="secundario" onClick={adicionar}>
             Incluir
@@ -359,8 +447,7 @@ function Marcas() {
 
         {marcas.length === 0 ? (
           <p className="text-sm text-slate-500">
-            Nenhuma marca na lista. Enquanto estiver assim, o campo de marca volta a ser
-            digitado à mão.
+            {vazio}
           </p>
         ) : (
           <ul className="flex flex-wrap gap-1.5">
@@ -385,7 +472,7 @@ function Marcas() {
 
         {mudou && (
           <div className="flex items-center gap-3 border-t border-slate-200 pt-3">
-            <p className="flex-1 text-xs text-slate-500">{marcas.length} marca(s) na lista.</p>
+            <p className="flex-1 text-xs text-slate-500">{marcas.length} {substantivo}</p>
             <Botao variante="secundario" onClick={() => setMarcas(salvas)}>
               Descartar
             </Botao>

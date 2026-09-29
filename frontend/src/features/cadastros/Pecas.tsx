@@ -1,20 +1,24 @@
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, Package, ShoppingCart } from 'lucide-react'
+import { AlertTriangle, BadgeCheck, Package, ShoppingCart } from 'lucide-react'
 import { api } from '../../api/client'
 import {
   Botao,
+  Campo,
   Carregando,
   Cartao,
   CartaoTitulo,
+  Entrada,
   Etiqueta,
+  Modal,
   Vazio,
   cx,
   useAviso,
 } from '../../components/ui'
 import { Placa } from '../../components/oficina'
 import { dataCompleta } from '../../lib/format'
-import type { PecaPendente } from '../../types'
+import type { PecaCatalogo, PecaPendente } from '../../types'
 
 /**
  * A fila de compras da oficina.
@@ -30,6 +34,7 @@ import type { PecaPendente } from '../../types'
 export default function Pecas() {
   const avisar = useAviso()
   const queryClient = useQueryClient()
+  const [recebendo, setRecebendo] = useState<PecaPendente | null>(null)
 
   const consulta = useQuery({
     queryKey: ['pecas-pendentes'],
@@ -58,6 +63,20 @@ export default function Pecas() {
       void queryClient.invalidateQueries({ queryKey: ['radar'] })
       void queryClient.invalidateQueries({ queryKey: ['patio'] })
       avisar('Peça atualizada.')
+    },
+    onError: (erro: Error) => avisar(erro.message, 'erro'),
+  })
+
+  const receber = useMutation({
+    mutationFn: ({ peca, corpo }: { peca: PecaPendente; corpo: Record<string, unknown> }) =>
+      api(`/os/${peca.osId}/pecas/${peca.id}/recebimento`, { metodo: 'POST', corpo }),
+    onSuccess: () => {
+      setRecebendo(null)
+      void queryClient.invalidateQueries({ queryKey: ['pecas-pendentes'] })
+      void queryClient.invalidateQueries({ queryKey: ['quadro'] })
+      void queryClient.invalidateQueries({ queryKey: ['radar'] })
+      void queryClient.invalidateQueries({ queryKey: ['patio'] })
+      avisar('Peça recebida e guardada no estoque.')
     },
     onError: (erro: Error) => avisar(erro.message, 'erro'),
   })
@@ -132,13 +151,167 @@ export default function Pecas() {
                 peca={p}
                 salvando={mudarStatus.isPending}
                 onComprei={() => mudarStatus.mutate({ peca: p, status: 'COMPRADA' })}
-                onChegou={() => mudarStatus.mutate({ peca: p, status: 'RECEBIDA' })}
+                onChegou={() => setRecebendo(p)}
               />
             ))}
           </ul>
         )}
       </Cartao>
+
+      <ModalRecebimento
+        peca={recebendo}
+        salvando={receber.isPending}
+        onFechar={() => setRecebendo(null)}
+        onConfirmar={(corpo) => receber.mutate({ peca: recebendo!, corpo })}
+      />
     </div>
+  )
+}
+
+/**
+ * A peça chegou: onde ela vai ficar guardada.
+ *
+ * O dono foi explícito — ao dar a compra por concluída, a peça **tem** que
+ * ficar no estoque. Por isso "Chegou" abre esta pergunta em vez de só mudar
+ * o status: sem ela, a peça entrava no carro e o catálogo continuava sem
+ * saber que essa peça existe, com que código e por quanto.
+ *
+ * Duas saídas, e só duas: é uma peça que o catálogo já conhece, ou ela nasce
+ * agora. Não existe "recebo e não guardo" — é assim que o saldo vira ficção.
+ */
+function ModalRecebimento({
+  peca,
+  salvando,
+  onFechar,
+  onConfirmar,
+}: {
+  peca: PecaPendente | null
+  salvando: boolean
+  onFechar: () => void
+  onConfirmar: (corpo: Record<string, unknown>) => void
+}) {
+  const [termo, setTermo] = useState('')
+  const [escolhida, setEscolhida] = useState<PecaCatalogo | null>(null)
+  const [codigo, setCodigo] = useState('')
+
+  useEffect(() => {
+    if (!peca) return
+    setTermo(peca.descricao)
+    setEscolhida(null)
+    setCodigo('')
+  }, [peca])
+
+  const [busca, setBusca] = useState('')
+  useEffect(() => {
+    const id = window.setTimeout(() => setBusca(termo.trim()), 350)
+    return () => window.clearTimeout(id)
+  }, [termo])
+
+  const catalogo = useQuery({
+    queryKey: ['catalogo-peca', busca],
+    queryFn: () =>
+      api<PecaCatalogo[]>(`/pecas/catalogo/autocompletar?termo=${encodeURIComponent(busca)}`),
+    enabled: Boolean(peca) && busca.length >= 2,
+  })
+
+  if (!peca) return null
+  const achadas = catalogo.data ?? []
+
+  return (
+    <Modal
+      aberto
+      onFechar={onFechar}
+      titulo={`${peca.descricao} chegou`}
+      descricao="Onde esta peça fica guardada. O estoque só vale se tudo que chega passa por aqui."
+      rodape={
+        <>
+          <Botao variante="secundario" onClick={onFechar}>
+            Cancelar
+          </Botao>
+          <Botao
+            variante="sucesso"
+            carregando={salvando}
+            disabled={!escolhida && termo.trim().length < 2}
+            onClick={() =>
+              onConfirmar(
+                escolhida
+                  ? { catalogoId: escolhida.id, valorUnitario: peca.valorUnitario }
+                  : {
+                      novaDescricao: termo.trim(),
+                      codigo: codigo.trim() || undefined,
+                      valorUnitario: peca.valorUnitario,
+                    },
+              )
+            }
+          >
+            Guardar e concluir
+          </Botao>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <Campo rotulo="Peça no catálogo" obrigatorio>
+          <Entrada
+            autoFocus
+            value={termo}
+            onChange={(e) => {
+              setTermo(e.target.value)
+              setEscolhida(null)
+            }}
+            placeholder="Nome da peça"
+          />
+        </Campo>
+
+        {!escolhida && busca.length >= 2 && (
+          <div className="overflow-hidden rounded-lg ring-1 ring-slate-200">
+            {achadas.length > 0 ? (
+              <ul className="divide-y divide-slate-100">
+                {achadas.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEscolhida(c)
+                        setTermo(c.descricao)
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-50"
+                    >
+                      <Package className="size-4 flex-none text-slate-400" aria-hidden />
+                      <span className="min-w-0 flex-1 truncate text-sm">{c.descricao}</span>
+                      <span className="flex-none text-xs text-slate-500">
+                        {c.quantidadeEstoque} na prateleira
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                Não está no catálogo. Vai ser cadastrada agora como{' '}
+                <strong>{termo.trim()}</strong>.
+              </p>
+            )}
+          </div>
+        )}
+
+        {escolhida ? (
+          <p className="flex items-center gap-1.5 rounded-lg bg-emerald-50 p-2.5 text-xs text-emerald-900 ring-1 ring-emerald-200">
+            <BadgeCheck className="size-4 flex-none" aria-hidden />
+            Entra em <strong>{escolhida.descricao}</strong>, que tem{' '}
+            {escolhida.quantidadeEstoque} na prateleira.
+          </p>
+        ) : (
+          <Campo rotulo="Código do fabricante" dica="Opcional, mas é o que evita cadastrar a mesma peça duas vezes.">
+            <Entrada value={codigo} onChange={(e) => setCodigo(e.target.value)} />
+          </Campo>
+        )}
+
+        <p className="text-xs text-slate-500">
+          Esta peça vai direto para o {peca.placa}: ela entra no estoque e sai na mesma hora.
+          O que fica é o cadastro — na próxima vez é só escolher da lista.
+        </p>
+      </div>
+    </Modal>
   )
 }
 

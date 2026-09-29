@@ -403,17 +403,17 @@ public class CompartilhamentoService {
      */
     private String mensagemDeStatus(OrdemServico os, boolean temParadaVisivel) {
         return switch (os.getStatus()) {
-            case RECEBIDO -> "Recebemos seu veiculo. Em breve iniciamos a avaliacao.";
-            case EM_DIAGNOSTICO -> "Estamos avaliando seu veiculo para identificar o problema.";
-            case AGUARDANDO_APROVACAO -> "O orcamento foi enviado e aguarda sua aprovacao.";
-            case ORCAMENTO_APROVADO -> "Orcamento aprovado. Seu veiculo esta na fila para comecar.";
-            case AGENDADO -> "Servico aprovado e na fila de execucao.";
-            case EM_EXECUCAO -> "Seu veiculo esta em atendimento agora.";
+            case RECEBIDO -> "Recebemos seu veículo. Em breve iniciamos a avaliação.";
+            case EM_DIAGNOSTICO -> "Estamos avaliando seu veículo para identificar o problema.";
+            case AGUARDANDO_APROVACAO -> "O orçamento foi enviado e aguarda sua aprovação.";
+            case ORCAMENTO_APROVADO -> "Orçamento aprovado. Seu veículo está na fila para começar.";
+            case AGENDADO -> "Serviço aprovado e na fila de execução.";
+            case EM_EXECUCAO -> "Seu veículo está em atendimento agora.";
             case PAUSADO -> temParadaVisivel
-                    ? "O servico esta temporariamente parado. Veja o motivo abaixo."
-                    : "O servico esta temporariamente parado. A oficina retoma assim que possivel.";
-            case PRONTO_AGUARDANDO_RETIRADA -> "Seu veiculo esta pronto para retirada!";
-            case ENTREGUE -> "Servico concluido e veiculo entregue. Obrigado!";
+                    ? "O serviço está temporariamente parado. Veja o motivo abaixo."
+                    : "O serviço está temporariamente parado. A oficina retoma assim que possível.";
+            case PRONTO_AGUARDANDO_RETIRADA -> "Seu veículo está pronto para retirada!";
+            case ENTREGUE -> "Serviço concluído e veículo entregue. Obrigado!";
             case CANCELADO -> "Este atendimento foi cancelado.";
         };
     }

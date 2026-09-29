@@ -324,7 +324,13 @@ export default function PainelAgendar({
     alvo?.tipo === 'existente' ||
     (alvo?.tipo === 'novo' && alvo.placa.length >= 6 && nomeCliente.trim().length > 2)
 
-  const prontoParaAgendar = Boolean(alvo) && cadastroCompleto && queixa.trim().length > 2
+  // O relato do cliente **não** trava o agendamento.
+  //
+  // Nem sempre existe um relato: revisão de 10 mil km, carro que volta para
+  // terminar o que ficou, cliente que só deixa a chave e vai embora. Exigir a
+  // frase nesses casos faz o atendente inventar "problema." — e aí o campo
+  // passa a existir sem valer nada, que é pior do que estar vazio.
+  const prontoParaAgendar = Boolean(alvo) && cadastroCompleto
 
   const vagaEscolhida = vagas.find((v) => v.id === vagaId)
 
@@ -599,7 +605,10 @@ export default function PainelAgendar({
                 <Etapa numero={2} titulo="Serviço e dia" pronta={prontoParaAgendar} />
               </div>
 
-              <Campo rotulo="O que o cliente falou" obrigatorio>
+              <Campo
+                rotulo="O que o cliente falou"
+                dica="Se ele não falou nada — revisão, carro que voltou — pode deixar vazio."
+              >
                 <AreaTexto
                   rows={2}
                   value={queixa}
@@ -900,9 +909,7 @@ export default function PainelAgendar({
                 ? 'Escolha ou cadastre o carro'
                 : !cadastroCompleto
                   ? 'Falta a placa e o nome do cliente'
-                  : queixa.trim().length <= 2
-                    ? 'Falta o que o cliente falou'
-                    : 'Agendar'}
+                  : 'Agendar'}
           </button>
         </footer>
       </aside>

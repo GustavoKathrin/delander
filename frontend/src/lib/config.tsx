@@ -31,9 +31,11 @@ export const CHAVES = {
   diasProntoSemRetirada: 'alertas.dias_pronto_sem_retirada',
   horasUteisPorDia: 'capacidade.horas_uteis_por_dia',
   patioColunas: 'app.patio_colunas',
+  patioFormato: 'app.patio_formato',
   corMarca: 'app.cor_marca',
   corDestaque: 'app.cor_destaque',
   marcasVeiculo: 'cadastro.marcas_veiculo',
+  itensChecklistEntrada: 'cadastro.itens_checklist_entrada',
 } as const
 
 /**

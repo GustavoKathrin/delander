@@ -26,6 +26,17 @@ public class PecaOs extends BaseEntity {
     @Column(name = "descricao", nullable = false, length = 200)
     private String descricao;
 
+    /**
+     * A peca do catalogo, quando ela veio de la.
+     *
+     * Nulo e caso normal, nao excecao: peca avulsa — a que a oficina comprou
+     * uma vez para este carro e nao quer no catalogo — vale pela descricao.
+     * Obrigar catalogo faria o mecanico cadastrar lixo so para conseguir
+     * registrar o que acabou de ver no carro.
+     */
+    @Column(name = "peca_catalogo_id")
+    private UUID pecaCatalogoId;
+
     @Column(name = "quantidade", nullable = false, precision = 10, scale = 2)
     private BigDecimal quantidade = BigDecimal.ONE;
 

@@ -180,4 +180,30 @@ h2,
   body {
     background: #fff;
   }
+
+  /* A ficha e desenhada para virar papel: margem da folha, preto no branco
+     e nenhuma cor de fundo esmaecida pelo "economizar tinta" da impressora. */
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  /* Tabela de servicos ou pecas que estoura a pagina quebra no meio, mas
+     repete o cabecalho — sem isso a segunda folha vira uma lista de numeros
+     sem coluna. */
+  thead {
+    display: table-header-group;
+  }
+  tr {
+    break-inside: avoid;
+  }
+  .break-inside-avoid {
+    break-inside: avoid;
+  }
+
+  /* Impressora costuma descartar fundo; as bordas e o texto precisam sair. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }

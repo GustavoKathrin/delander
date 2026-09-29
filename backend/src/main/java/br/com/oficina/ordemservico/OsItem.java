@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
 /** Tarefa da OS. A especialidade exigida define quem pode assumir. */
 @Entity
@@ -59,4 +60,18 @@ public class OsItem extends BaseEntity {
 
     @Column(name = "ordem", nullable = false)
     private int ordem = 0;
+
+    @Column(name = "cancelado_em")
+    private OffsetDateTime canceladoEm;
+
+    /**
+     * Por que este servico nao vai ser feito.
+     *
+     * Texto livre, e nao um `MotivoParada`: aquela taxonomia mede *por que o
+     * carro esta parado* e alimenta o Pareto de horas perdidas. "Cliente
+     * desistiu" nao e uma parada — jogar isso la contaminaria o unico grafico
+     * que o dono usa para achar o gargalo.
+     */
+    @Column(name = "motivo_cancelamento", length = 300)
+    private String motivoCancelamento;
 }

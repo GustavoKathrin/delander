@@ -276,6 +276,18 @@ dia 5 e é problema para um carro do dia 28 — e é por isso que a fila ordena 
 por previsão de chegada. Também é risco o prazo que **já venceu** e a peça não chegou: aí não
 é mais previsão, é problema de hoje.
 
+**O catálogo é quem responde "temos aqui?"**, e não a memória do mecânico. Ao registrar a
+peça ele digita e o sistema procura no cadastro: se acha, já traz o preço e **o saldo da
+prateleira** — é o saldo que decide se é peça de estoque ou compra, não a opinião de quem
+está registrando. O que não está no catálogo vira pedido de compra sem obrigar ninguém a
+cadastrar nada na hora; quem está de pé ao lado do carro não vai preencher formulário.
+
+**Receber é guardar.** Quando a compra chega, "Chegou" pergunta *onde esta peça fica*: uma
+do catálogo, ou uma que nasce agora. Não existe receber sem guardar — é por esse caminho
+que o saldo vira ficção. A peça entra no estoque e sai na mesma hora, porque ela tem dono:
+aquele carro. O que fica é o cadastro, com código e preço, e na próxima vez é só escolher
+da lista.
+
 Em **Peças para comprar** (dono e atendente) fica a fila, da mais urgente para a menos:
 carro parado sem dia marcado primeiro, depois o prazo vencido, depois o resto. Cada linha
 diz qual carro está esperando.

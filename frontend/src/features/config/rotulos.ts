@@ -15,6 +15,14 @@ export interface RotuloConfig {
    * que precisa vir antes do que ela controla — declare aqui.
    */
   ordem?: number
+  /**
+   * Escolha fechada: a tela mostra botoes em vez de campo de texto.
+   *
+   * O tipo no banco continua TEXTO — o check constraint so aceita seis tipos
+   * e nao vale altera-lo por isto, do mesmo jeito que `cor`. Quem conhece os
+   * valores validos e quem os interpreta, e essa e a tela.
+   */
+  opcoes?: { valor: string; rotulo: string; descricao?: string }[]
 }
 
 export const ROTULOS: Record<string, RotuloConfig> = {
@@ -198,9 +206,32 @@ export const ROTULOS: Record<string, RotuloConfig> = {
     descricao: 'O botão AGENDAR CARRO, a faixa de segurança e o contorno do elevador. O texto por cima fica preto ou branco sozinho, pelo contraste.',
     cor: true,
   },
+  'app.patio_formato': {
+    rotulo: 'Formato da vaga no pátio',
+    descricao: 'Não existe formato certo: depende de quantos carros sua oficina tem e de como você olha o pátio.',
+    ordem: 1,
+    opcoes: [
+      {
+        valor: 'CARTAO',
+        rotulo: 'Cartão',
+        descricao: 'Vaga alta, com o carro, o mecânico, o tempo e os alertas. Cabe menos na tela, mas você lê tudo sem abrir a OS.',
+      },
+      {
+        valor: 'COMPACTO',
+        rotulo: 'Compacto',
+        descricao: 'Retângulo baixo, com placa e situação. Cabe o triplo de carros na tela — bom para oficina cheia.',
+      },
+      {
+        valor: 'PLANTA',
+        rotulo: 'Planta',
+        descricao: 'Cada vaga ocupa o tamanho que você deu a ela na planta, com o carro visto de cima. Parece o pátio de verdade.',
+      },
+    ],
+  },
   'app.patio_colunas': {
     rotulo: 'Colunas da planta do pátio',
     descricao: 'Quantas vagas cabem lado a lado quando você arruma a planta pelo cadeado.',
+    ordem: 2,
   },
   'app.modo_tv': {
     rotulo: 'Habilitar o modo TV',

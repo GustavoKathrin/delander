@@ -61,7 +61,16 @@ public final class OsDtos {
             @Valid ClienteRapido novoCliente,
             UUID veiculoId,
             @Valid VeiculoRapido novoVeiculo,
-            @NotBlank(message = "Descreva o problema relatado pelo cliente") String queixa,
+            /**
+             * O que o cliente falou. Opcional de proposito.
+             *
+             * Nem toda entrada tem relato: revisao de 10 mil km, carro que
+             * volta para terminar o que ficou, cliente que so deixa a chave.
+             * Quando era obrigatorio, o atendente digitava "problema." para
+             * destravar a tela — e o campo passava a existir sem valer nada,
+             * que e pior do que estar vazio.
+             */
+            @Size(max = 2000) String queixa,
             Prioridade prioridade,
             LocalDate dataAgendada,
             LocalDate previsaoEntrega,
@@ -193,7 +202,30 @@ public final class OsDtos {
             String statusDescricao,
             BigDecimal valor,
             boolean apontamentoAberto,
-            OffsetDateTime apontamentoInicio) {
+            OffsetDateTime apontamentoInicio,
+            /** Por que este servico nao vai ser feito. Nulo quando nao foi cancelado. */
+            String motivoCancelamento,
+            OffsetDateTime canceladoEm,
+            /** O que a pessoa pode fazer com este servico agora. */
+            List<StatusItem> proximosStatus) {
+    }
+
+    /**
+     * Mudar o estado de um servico direto da tela do carro.
+     *
+     * Mesmos quatro campos da transicao de OS, e de proposito: quem le um
+     * reconhece o outro. `horasEstimadas` e o unico extra, e so serve para
+     * `EM_EXECUCAO`, que delega ao apontamento.
+     */
+    public record ItemTransicaoRequisicao(
+            @NotNull(message = "Informe o novo status") StatusItem status,
+            /** So para PAUSADO: e daqui que sai o relatorio do que trava a oficina. */
+            UUID motivoParadaId,
+            /** PAUSADO: o que travou. CANCELADO: por que nao vai ser feito. */
+            @Size(max = 400) String descricao,
+            Boolean visivelCliente,
+            @DecimalMin(value = "0.1", message = "A estimativa precisa ser maior que zero")
+            BigDecimal horasEstimadas) {
     }
 
     public record ApontamentoResposta(

@@ -17,6 +17,8 @@ public final class PecaDtos {
             @NotBlank(message = "Informe a peca") @Size(max = 200) String descricao,
             @DecimalMin(value = "0.01", message = "Quantidade precisa ser maior que zero") BigDecimal quantidade,
             @Size(max = 160) String fornecedor,
+            /** Peca do catalogo. Nulo = avulsa, valendo pela descricao. */
+            UUID pecaCatalogoId,
             StatusPeca status,
             /** Nulo assume COMPRAR: o caso que exige trabalho de alguem. */
             OrigemPeca origem,

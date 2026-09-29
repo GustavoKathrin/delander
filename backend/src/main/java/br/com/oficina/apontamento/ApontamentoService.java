@@ -16,6 +16,7 @@ import br.com.oficina.ordemservico.OrdemServico;
 import br.com.oficina.ordemservico.OrdemServicoRepository;
 import br.com.oficina.ordemservico.OsItem;
 import br.com.oficina.ordemservico.OsItemRepository;
+import br.com.oficina.ordemservico.ReconciliacaoOs;
 import br.com.oficina.ordemservico.StatusItem;
 import br.com.oficina.ordemservico.StatusOs;
 import br.com.oficina.parada.Parada;
@@ -62,6 +63,7 @@ public class ApontamentoService {
     private final CompartilhamentoService compartilhamentoService;
     private final EventoService eventoService;
     private final ConfiguracaoService config;
+    private final ReconciliacaoOs reconciliacao;
     private final Contexto contexto;
     private final Clock clock;
 
@@ -74,6 +76,7 @@ public class ApontamentoService {
                               CompartilhamentoService compartilhamentoService,
                               EventoService eventoService,
                               ConfiguracaoService config,
+                              ReconciliacaoOs reconciliacao,
                               Contexto contexto,
                               Clock clock) {
         this.repository = repository;
@@ -85,6 +88,7 @@ public class ApontamentoService {
         this.compartilhamentoService = compartilhamentoService;
         this.eventoService = eventoService;
         this.config = config;
+        this.reconciliacao = reconciliacao;
         this.contexto = contexto;
         this.clock = clock;
     }
@@ -261,14 +265,7 @@ public class ApontamentoService {
                 motivo == null ? null : Map.of("motivo", motivo.getNome(),
                         "categoria", motivo.getCategoria().name()));
 
-        // se ninguem mais esta trabalhando na OS e o motivo bloqueia, a OS fica PAUSADA
-        boolean alguemTrabalhando = repository.listarPorOs(os.getId()).stream().anyMatch(Apontamento::aberto);
-        if (!alguemTrabalhando && os.getStatus() == StatusOs.EM_EXECUCAO) {
-            os.setStatus(StatusOs.PAUSADO);
-            osRepository.save(os);
-            eventoService.registrar(oficinaId, os.getId(), EventoService.STATUS_ALTERADO,
-                    "Em execucao -> Pausado", true);
-        }
+        reconciliacao.reconciliar(os, oficinaId, agora);
 
         return montarCard(item, null, agora);
     }
@@ -304,30 +301,11 @@ public class ApontamentoService {
                         .formatted(item.getDescricao(), trabalhadas, item.getHorasEstimadas()),
                 true, Map.of("trabalhadas", trabalhadas, "estimadas", item.getHorasEstimadas()));
 
-        // todos os itens concluidos -> o carro esta pronto e passa a contar
-        // o tempo de "aguardando retirada", que e o que entope o patio.
-        boolean todosConcluidos = os.getItens().stream()
-                .filter(i -> i.getStatus() != StatusItem.CANCELADO)
-                .allMatch(i -> i.getStatus() == StatusItem.CONCLUIDO);
-
-        if (todosConcluidos && !os.getStatus().finalizada()
-                && os.getStatus() != StatusOs.PRONTO_AGUARDANDO_RETIRADA) {
-            encerrarParadaAberta(os, agora);
-            StatusOs de = os.getStatus();
-            os.setStatus(StatusOs.PRONTO_AGUARDANDO_RETIRADA);
-            os.setProntoEm(agora);
-            osRepository.save(os);
-            eventoService.registrar(oficinaId, os.getId(), EventoService.STATUS_ALTERADO,
-                    "%s -> %s".formatted(de.descricao(), StatusOs.PRONTO_AGUARDANDO_RETIRADA.descricao()),
-                    true);
-        } else if (os.getStatus() == StatusOs.EM_EXECUCAO) {
-            boolean alguemTrabalhando = repository.listarPorOs(os.getId()).stream()
-                    .anyMatch(Apontamento::aberto);
-            if (!alguemTrabalhando) {
-                os.setStatus(StatusOs.PAUSADO);
-                osRepository.save(os);
-            }
-        }
+        // A conta de "o carro esta pronto" / "o carro parou" mora no
+        // ReconciliacaoOs, compartilhada com os botoes da tela da OS. Duas
+        // copias dela divergiriam no primeiro ajuste — e e ela que carrega a
+        // guarda contra concluir uma OS sem nenhum servico vivo.
+        reconciliacao.reconciliar(os, oficinaId, agora);
 
         return montarCard(item, null, agora);
     }

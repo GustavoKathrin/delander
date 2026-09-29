@@ -140,6 +140,28 @@ export interface ParadaOs {
   visivelCliente: boolean
 }
 
+/**
+ * Uma peça cadastrada, com o que a oficina tem na prateleira.
+ *
+ * O saldo não é digitado no dia a dia: sobe quando uma compra chega e desce
+ * quando a peça vai para um carro. Editar à mão existe para o dia em que
+ * alguém conta a prateleira e acerta o que o sistema errou.
+ */
+export interface PecaCatalogo {
+  id: string
+  codigo?: string
+  descricao: string
+  fabricante?: string
+  valorSugerido?: number
+  quantidadeEstoque: number
+  estoqueMinimo: number
+  /** Tem na prateleira agora. */
+  temEstoque: boolean
+  /** Ainda tem, mas já chegou no mínimo. */
+  acabando: boolean
+  ativo: boolean
+}
+
 export interface PecaOs {
   id: string
   descricao: string

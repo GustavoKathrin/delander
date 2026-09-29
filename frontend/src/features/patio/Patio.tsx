@@ -42,6 +42,24 @@ const TIPO_VAGA = 'application/x-delander-vaga'
 
 type Densidade = 'detalhado' | 'visual'
 
+/**
+ * Formato da vaga, escolhido pelo dono em Configuracoes.
+ *
+ * Nao e preferencia de quem olha (isso e a densidade, que fica no navegador):
+ * e como a oficina desenha o proprio patio, e vale para todo mundo que abre
+ * a tela. Oficina de cinco vagas quer a foto do carro; a de vinte quer todos
+ * na tela; quem usa como planta quer a vaga do tamanho do espaco real.
+ */
+type FormatoVaga = 'CARTAO' | 'COMPACTO' | 'PLANTA'
+
+/** Altura da celula da grade, em pixels, por formato. */
+const ALTURA_VAGA: Record<FormatoVaga, number> = {
+  CARTAO: 248,
+  COMPACTO: 96,
+  // Planta usa a mesma altura de coluna para a vaga 1x1 ficar quadrada.
+  PLANTA: 140,
+}
+
 /** Preferência de quem olha, não regra da oficina: fica no navegador. */
 function densidadeGuardada(): Densidade {
   try {
@@ -108,6 +126,12 @@ export default function Patio() {
   const [agendar, setAgendar] = useState<{ vagaId?: string; data?: string } | null>(null)
 
   const [densidade, setDensidade] = useState<Densidade>(densidadeGuardada)
+  // Valor invalido cai em CARTAO: a tela nunca some porque alguem digitou
+  // errado no banco.
+  const formatoBruto = texto(CHAVES.patioFormato, 'CARTAO')
+  const formato: FormatoVaga =
+    formatoBruto === 'COMPACTO' || formatoBruto === 'PLANTA' ? formatoBruto : 'CARTAO'
+  const alturaVaga = ALTURA_VAGA[formato]
   const [modoEdicao, setModoEdicao] = useState(false)
   const [posicoes, setPosicoes] = useState<Record<string, Posicao>>({})
   const [vagaArrastada, setVagaArrastada] = useState<string | null>(null)
@@ -246,7 +270,7 @@ export default function Patio() {
     if (!caixa || !atual) return
 
     const largura = larguraCelula()
-    const altura = 248 + 12
+    const altura = alturaVaga + 12
     const coluna = Math.min(
       Math.max(Math.floor((e.clientX - caixa.left) / (largura + 12)) + 1, 1),
       colunas,
@@ -426,7 +450,10 @@ export default function Patio() {
           )}
           style={
             plantaArrumada
-              ? { gridTemplateColumns: `repeat(${colunas}, minmax(0,1fr))`, gridAutoRows: 'minmax(248px, auto)' }
+              ? {
+                  gridTemplateColumns: `repeat(${colunas}, minmax(0,1fr))`,
+                  gridAutoRows: `minmax(${alturaVaga}px, auto)`,
+                }
               : undefined
           }
           onDragOver={(e) => {
@@ -441,6 +468,8 @@ export default function Patio() {
               key={vaga.id}
               vaga={vaga}
               densidade={densidade}
+              formato={formato}
+              alturaVaga={alturaVaga}
               posicao={plantaArrumada ? posicoesAtuais[vaga.id] : undefined}
               modoEdicao={modoEdicao}
               movendo={vagaArrastada === vaga.id}
@@ -657,6 +686,8 @@ function Indicador({
 function CelulaVaga({
   vaga,
   densidade,
+  formato,
+  alturaVaga,
   posicao,
   modoEdicao,
   movendo,
@@ -675,6 +706,8 @@ function CelulaVaga({
 }: {
   vaga: Vaga
   densidade: Densidade
+  formato: FormatoVaga
+  alturaVaga: number
   posicao?: Posicao
   modoEdicao: boolean
   movendo: boolean
@@ -691,7 +724,12 @@ function CelulaVaga({
   onSubir: () => void
   onDescer: () => void
 }) {
-  const visual = densidade === 'visual'
+  // A densidade (detalhado/visual) só vale no formato cartão: compacto e
+  // planta não têm altura para o modo detalhado, e deixar o interruptor
+  // mandar neles faria a vaga transbordar em vez de mostrar mais.
+  const visual = formato !== 'CARTAO' || densidade === 'visual'
+  const compacto = formato === 'COMPACTO'
+  const planta = formato === 'PLANTA'
   const situacao = vaga.situacao as SituacaoVaga
   const reservada = situacao === 'RESERVADO'
   const noElevador = vaga.reserva?.status === 'EM_USO'
@@ -726,7 +764,7 @@ function CelulaVaga({
     const partida = { x: e.clientX, y: e.clientY }
     const inicial = { largura: posicao?.largura ?? 1, altura: posicao?.altura ?? 1 }
     const celula = larguraCelula()
-    const alturaCelula = 248 + 12
+    const alturaCelula = alturaVaga + 12
     const elemento = e.currentTarget as HTMLElement
     elemento.setPointerCapture(e.pointerId)
 
@@ -761,23 +799,31 @@ function CelulaVaga({
         onMoverInicio()
       }}
       onDragEnd={onMoverFim}
-      style={
-        posicao
+      style={{
+        // A altura mínima vem do formato e não de uma classe fixa: era o mesmo
+        // 248 repetido em quatro lugares, e mudar um sem os outros desalinhava
+        // a grade do arrastar.
+        minHeight: alturaVaga,
+        ...(posicao
           ? {
               gridColumn: `${posicao.coluna} / span ${posicao.largura}`,
               gridRow: `${posicao.linha} / span ${posicao.altura}`,
             }
-          : undefined
-      }
+          : undefined),
+      }}
       className={cx(
         'group relative flex flex-col overflow-hidden rounded-lg text-left transition',
-        'min-h-[248px]',
         // a borda carrega a SITUACAO (azul andando, ambar parado, verde pronto).
         // alerta critico entra como tarja vermelha na lateral, para nao apagar
         // a leitura de estado deixando todo card igual.
         os
           ? cx('border-2 bg-white shadow-md hover:shadow-lg', cores.borda)
           : 'vaga-livre bg-stone-100/60 hover:bg-stone-100',
+        // Compacto é o formato de quem tem muito carro na oficina: a vaga
+        // não cresce com o conteúdo, ela corta. O que não cabe está na OS,
+        // a um clique — e o que importa de longe (placa, cor da situação,
+        // LED) fica sempre nas duas primeiras linhas.
+        compacto && 'max-h-24',
         // Elevador ganha um anel amarelo POR FORA da borda de situacao: o anel
         // diz "isto e equipamento", a borda continua dizendo o estado.
         vaga.tipo === 'ELEVADOR' && 'ring-2 ring-faixa ring-offset-1 ring-offset-piso',
@@ -876,7 +922,14 @@ function CelulaVaga({
       </div>
 
       {/* piso da vaga com o carro */}
-      <div className="pointer-events-none relative z-10 flex flex-1 items-center justify-center py-2">
+      <div
+        className={cx(
+          'pointer-events-none relative z-10 flex items-center justify-center',
+          // No compacto o piso não estica: `min-height` é piso, não teto, e
+          // com `flex-1` a vaga voltava a ter a altura do cartão por dentro.
+          compacto ? 'flex-none py-1' : 'flex flex-1 py-2',
+        )}
+      >
         {vaga.tipo === 'ELEVADOR' && (
           <MarcaElevador
             comCarro={noElevador}
@@ -900,7 +953,12 @@ function CelulaVaga({
             title={podeAgendar && !modoEdicao ? 'Arraste para outra vaga' : undefined}
             className={cx(podeAgendar && !modoEdicao && 'cursor-grab active:cursor-grabbing')}
           >
-            <CarroTopo cor={os.cor} largura={visual ? 74 : 54} titulo={` `} />
+            {/* No compacto o carro sai: de cima ele ocupa mais altura do que
+                a vaga inteira tem, e a placa já identifica o carro. A cor
+                continua sendo lida — está na borda da vaga. */}
+            {!compacto && (
+              <CarroTopo cor={os.cor} largura={planta ? 44 : visual ? 74 : 54} titulo={` `} />
+            )}
           </span>
         ) : futuro ? (
           <span className="flex flex-col items-center gap-1 opacity-45">
@@ -932,8 +990,10 @@ function CelulaVaga({
           <Placa placa={os.placa} tamanho="sm" />
           {!visual && <p className="truncate text-[11px] text-slate-600">{os.veiculo}</p>}
 
-          {/* quem está com o carro: a informação que o dono mais procura */}
-          {os.mecanicos.length > 0 ? (
+          {/* No compacto e na planta, a vaga é a placa e a cor da situação —
+              quem está com o carro fica no title e dentro da OS. Espremer o
+              avatar num retângulo de 96px daria uma tarja ilegível. */}
+          {compacto || planta ? null : os.mecanicos.length > 0 ? (
             <div
               className="flex items-center gap-1.5 rounded-md bg-slate-100 px-1.5 py-1"
               title={os.mecanicos.join(", ")}
@@ -1016,7 +1076,7 @@ function CelulaVaga({
       )}
 
       {/* elevador: o que falta para descer, e a ação de subir/descer */}
-      {vaga.tipo === 'ELEVADOR' && podeAgendar && (
+      {!compacto && !planta && vaga.tipo === 'ELEVADOR' && podeAgendar && (
         <div className="pointer-events-none relative z-10 px-2 pb-1.5">
           {noElevador ? (
             <div className="flex items-center gap-1.5">
@@ -1054,29 +1114,33 @@ function CelulaVaga({
         </div>
       )}
 
-      {/* rodapé: quando libera */}
-      <div
-        className={cx(
-          'fonte-display pointer-events-none relative z-10 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider',
-          !os
-            ? 'bg-stone-200/70 text-stone-600'
-            : atrasado
-              ? 'bg-red-600 text-white'
-              : 'bg-slate-100 text-slate-700',
-        )}
-      >
-        {futuro ? (
-          <span className="capitalize">livre hoje · {vaga.liberaEmRotulo}</span>
-        ) : !os ? (
-          'disponível agora'
-        ) : atrasado ? (
-          'previsão vencida'
-        ) : (
-          <>
-            libera <span className="capitalize text-slate-900">{vaga.liberaEmRotulo}</span>
-          </>
-        )}
-      </div>
+      {/* rodapé: quando libera.
+          Sai na planta: lá a vaga tem o tamanho do espaço real, e uma tarja
+          de texto no pé descaracteriza o desenho. Quem quer a data abre a OS. */}
+      {!planta && (
+        <div
+          className={cx(
+            'fonte-display pointer-events-none relative z-10 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider',
+            !os
+              ? 'bg-stone-200/70 text-stone-600'
+              : atrasado
+                ? 'bg-red-600 text-white'
+                : 'bg-slate-100 text-slate-700',
+          )}
+        >
+          {futuro ? (
+            <span className="capitalize">livre hoje · {vaga.liberaEmRotulo}</span>
+          ) : !os ? (
+            'disponível agora'
+          ) : atrasado ? (
+            'previsão vencida'
+          ) : (
+            <>
+              libera <span className="capitalize text-slate-900">{vaga.liberaEmRotulo}</span>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

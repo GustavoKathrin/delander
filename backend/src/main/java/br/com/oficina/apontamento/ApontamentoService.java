@@ -449,11 +449,8 @@ public class ApontamentoService {
         if (item.getFuncionario() != null && contexto.gerencia()) {
             return item.getFuncionario();
         }
-        if (item.getEspecialidade() != null && !eu.atende(item.getEspecialidade().getId())) {
-            throw new RegraNegocioException(
-                    "Voce nao tem a especialidade '%s' no cadastro."
-                            .formatted(item.getEspecialidade().getNome()));
-        }
+        // Sem trava por especialidade: ela informa quem chamar, nao decide
+        // quem pode pegar. Quem esta com o carro na frente comeca o servico.
         return eu;
     }
 

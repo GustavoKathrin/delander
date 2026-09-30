@@ -157,6 +157,26 @@ export default function Configuracoes() {
                     )
                   }
 
+                  // Os dias da semana em botões, e não o array cru.
+                  //
+                  // O campo mostrava `[1,2,3,4,5,6]` e esperava que alguém
+                  // digitasse JSON válido para dizer que a oficina não abre no
+                  // sábado. Uma vírgula fora do lugar e o servidor cai no
+                  // padrão de segunda a sexta, em silêncio — a oficina passaria
+                  // a recusar sábado sem ninguém entender por quê.
+                  if (rotulo.dias) {
+                    return (
+                      <div key={item.chave} className="py-3">
+                        <Campo rotulo={rotulo.rotulo} dica={rotulo.descricao}>
+                          <SeletorDeDias
+                            valor={valor}
+                            onChange={(novo) => mudar(item.chave, novo)}
+                          />
+                        </Campo>
+                      </div>
+                    )
+                  }
+
                   // Escolha fechada: botões com a explicação de cada opção em
                   // vez de um campo onde dá para digitar qualquer coisa. Quem
                   // escolhe formato de tela precisa saber o que muda antes de
@@ -969,5 +989,85 @@ function Catalogo() {
         </div>
       </Modal>
     </Cartao>
+  )
+}
+
+/**
+ * Os dias em que a oficina abre.
+ *
+ * O valor no banco continua sendo JSON (`[1,2,3,4,5,6]`, 1 = segunda), porque
+ * é o que o servidor lê e o que a capacidade do dia usa. O que muda é só quem
+ * escreve: aqui, e não a pessoa.
+ *
+ * Valor quebrado não apaga a escolha nem explode a tela — cai no vazio e a
+ * primeira marcação já grava JSON válido de novo.
+ */
+function SeletorDeDias({
+  valor,
+  onChange,
+}: {
+  valor: string
+  onChange: (valor: string) => void
+}) {
+  const DIAS = [
+    { n: 1, curto: 'Seg', longo: 'segunda-feira' },
+    { n: 2, curto: 'Ter', longo: 'terça-feira' },
+    { n: 3, curto: 'Qua', longo: 'quarta-feira' },
+    { n: 4, curto: 'Qui', longo: 'quinta-feira' },
+    { n: 5, curto: 'Sex', longo: 'sexta-feira' },
+    { n: 6, curto: 'Sáb', longo: 'sábado' },
+    { n: 7, curto: 'Dom', longo: 'domingo' },
+  ]
+
+  let marcados: number[] = []
+  try {
+    const lido: unknown = JSON.parse(valor || '[]')
+    if (Array.isArray(lido)) {
+      marcados = lido.map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 7)
+    }
+  } catch {
+    /* valor quebrado: começa vazio, e marcar já conserta */
+  }
+
+  function alternar(n: number) {
+    const novo = marcados.includes(n)
+      ? marcados.filter((d) => d !== n)
+      : [...marcados, n].sort((a, b) => a - b)
+    onChange(JSON.stringify(novo))
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1.5">
+        {DIAS.map((dia) => {
+          const aberto = marcados.includes(dia.n)
+          return (
+            <button
+              key={dia.n}
+              type="button"
+              onClick={() => alternar(dia.n)}
+              aria-pressed={aberto}
+              title={aberto ? `Abre ${dia.longo}` : `Fechado ${dia.longo}`}
+              className={cx(
+                'h-10 w-14 rounded-lg text-sm font-medium ring-1 transition',
+                aberto
+                  ? 'bg-marca-600 text-white ring-marca-600'
+                  : 'bg-white text-slate-400 ring-slate-300 hover:bg-slate-50',
+              )}
+            >
+              {dia.curto}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Zero dia aberto não é erro de digitação, é uma oficina que nunca abre:
+          a agenda inteira para de sugerir dia e ninguém liga uma coisa à outra. */}
+      {marcados.length === 0 && (
+        <p className="mt-1.5 text-xs text-red-700">
+          Nenhum dia marcado: a agenda não vai conseguir sugerir data nenhuma.
+        </p>
+      )}
+    </div>
   )
 }

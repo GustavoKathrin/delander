@@ -754,12 +754,14 @@ public class OrdemServicoService {
         if (!funcionario.isAtivo()) {
             throw new RegraNegocioException("Funcionario inativo nao pode receber servicos.");
         }
-        if (item.getEspecialidade() != null && !funcionario.atende(item.getEspecialidade().getId())) {
-            throw new RegraNegocioException(
-                    "%s nao tem a especialidade '%s'. Ajuste o cadastro do funcionario ou escolha outro."
-                            .formatted(funcionario.getNome(), item.getEspecialidade().getNome()));
-        }
-
+        // A especialidade e informativa, e nao uma trava.
+        //
+        // Ela ajuda a escolher quem chamar — a bolinha colorida na linha do
+        // servico existe para isso. Mas oficina de verdade nao funciona por
+        // credencial: quem esta livre pega o carro, e o eletricista que hoje
+        // so tem "Motor" no cadastro segura uma suspensao sem drama. Travar
+        // por isso obrigaria a mexer no cadastro do funcionario no meio do
+        // expediente, para destravar uma tela que nao precisava travar.
         item.setFuncionario(funcionario);
         itemRepository.save(item);
 

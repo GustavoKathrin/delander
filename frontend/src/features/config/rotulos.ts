@@ -23,6 +23,12 @@ export interface RotuloConfig {
    * valores validos e quem os interpreta, e essa e a tela.
    */
   opcoes?: { valor: string; rotulo: string; descricao?: string }[]
+  /**
+   * Esta chave guarda os dias da semana (JSON de 1 a 7). A tela mostra
+   * botoes de dia em vez do array cru — ninguem digita [1,2,3,4,5,6] sem
+   * errar a virgula uma vez.
+   */
+  dias?: boolean
 }
 
 export const ROTULOS: Record<string, RotuloConfig> = {
@@ -34,7 +40,8 @@ export const ROTULOS: Record<string, RotuloConfig> = {
   },
   'capacidade.dias_funcionamento': {
     rotulo: 'Dias de funcionamento',
-    descricao: 'Números do dia da semana: 1 = segunda ... 7 = domingo.',
+    descricao: 'Marque os dias em que a oficina abre. O dia desmarcado some da agenda e do cálculo de capacidade.',
+    dias: true,
   },
   'capacidade.hora_abertura': { rotulo: 'Horário de abertura' },
   'capacidade.hora_fechamento': { rotulo: 'Horário de fechamento' },

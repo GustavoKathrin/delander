@@ -25,6 +25,7 @@ import {
   useAviso,
 } from '../../components/ui'
 import { CampoMarca } from '../../components/CampoMarca'
+import { SeletorCor } from '../../components/oficina'
 import { dataCompleta, horas, moeda } from '../../lib/format'
 
 interface ServicoEscolhido {
@@ -43,6 +44,8 @@ export default function Checkin() {
   const [cliente, setCliente] = useState<Cliente | null>(null)
   const [novoCliente, setNovoCliente] = useState({ nome: '', telefone: '', documento: '', email: '' })
   const [criandoCliente, setCriandoCliente] = useState(false)
+  /** CPF e e-mail ficam escondidos ate alguem precisar emitir nota. */
+  const [maisDadosCliente, setMaisDadosCliente] = useState(false)
 
   const [veiculo, setVeiculo] = useState<VeiculoResumo | null>(null)
   const [novoVeiculo, setNovoVeiculo] = useState({
@@ -235,19 +238,43 @@ export default function Checkin() {
                   placeholder="(11) 90000-0000"
                 />
               </Campo>
-              <Campo rotulo="CPF/CNPJ">
-                <Entrada
-                  value={novoCliente.documento}
-                  onChange={(e) => setNovoCliente({ ...novoCliente, documento: e.target.value })}
-                />
-              </Campo>
-              <Campo rotulo="E-mail">
-                <Entrada
-                  type="email"
-                  value={novoCliente.email}
-                  onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
-                />
-              </Campo>
+              {/* CPF e e-mail entram so quando alguem precisa deles.
+                  No balcao, com o cliente de pe esperando, o que importa e
+                  quem e e por onde avisar quando ficar pronto -- documento e
+                  assunto de nota fiscal, e nota fiscal nao se emite na
+                  chegada. Os quatro campos juntos faziam a tela parecer
+                  cadastro de banco. */}
+              {maisDadosCliente ? (
+                <>
+                  <Campo rotulo="CPF/CNPJ">
+                    <Entrada
+                      autoFocus
+                      inputMode="numeric"
+                      value={novoCliente.documento}
+                      onChange={(e) =>
+                        setNovoCliente({ ...novoCliente, documento: e.target.value })
+                      }
+                    />
+                  </Campo>
+                  <Campo rotulo="E-mail">
+                    <Entrada
+                      type="email"
+                      value={novoCliente.email}
+                      onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
+                    />
+                  </Campo>
+                </>
+              ) : (
+                <div className="sm:col-span-2">
+                  <button
+                    type="button"
+                    onClick={() => setMaisDadosCliente(true)}
+                    className="text-sm font-medium text-marca-700 underline-offset-2 hover:underline"
+                  >
+                    + CPF/CNPJ e e-mail (para nota fiscal)
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -396,19 +423,26 @@ export default function Checkin() {
                     onChange={(e) => setNovoVeiculo({ ...novoVeiculo, ano: e.target.value })}
                   />
                 </Campo>
-                <Campo rotulo="Cor">
-                  <Entrada
-                    value={novoVeiculo.cor}
-                    onChange={(e) => setNovoVeiculo({ ...novoVeiculo, cor: e.target.value })}
-                  />
-                </Campo>
                 <Campo rotulo="KM de entrada">
                   <Entrada
                     type="number"
+                    inputMode="numeric"
                     value={novoVeiculo.km}
                     onChange={(e) => setNovoVeiculo({ ...novoVeiculo, km: e.target.value })}
                   />
                 </Campo>
+
+                {/* A cor ocupa a linha inteira: sao bolinhas, nao um campo, e
+                    espremida em um terco da largura ela quebraria em quatro
+                    fileiras. */}
+                <div className="sm:col-span-3">
+                  <Campo rotulo="Cor" dica="É esta cor que pinta o carro na planta do pátio">
+                    <SeletorCor
+                      valor={novoVeiculo.cor}
+                      onChange={(cor) => setNovoVeiculo({ ...novoVeiculo, cor })}
+                    />
+                  </Campo>
+                </div>
               </div>
             ) : (
               <div className="space-y-2">

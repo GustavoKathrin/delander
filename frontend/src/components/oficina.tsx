@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import { cx } from './ui'
 
 // ==================================================================== cores
@@ -25,6 +27,93 @@ export function corDoVeiculo(cor?: string | null): string {
   if (!cor) return '#9aa0a8'
   const chave = cor.trim().toLowerCase()
   return CORES_VEICULO[chave] ?? CORES_VEICULO[chave.split(' ')[0]] ?? '#9aa0a8'
+}
+
+/** As cores que a planta do patio sabe pintar, na ordem em que aparecem. */
+export const CORES_CONHECIDAS = Object.keys(CORES_VEICULO)
+
+/**
+ * Escolher a cor tocando, em vez de digitando.
+ *
+ * O campo era texto livre, e a planta do patio so entende os 16 nomes da
+ * tabela acima: quem escrevesse "azul metalico" ou "cinza chumbo" via o carro
+ * nascer CINZA generico na planta, sem erro nenhum na tela para explicar.
+ * Tocar a bolinha acaba com isso -- o que se ve na hora de cadastrar e
+ * exatamente a cor que vai aparecer no patio.
+ *
+ * O campo de texto continua existindo atras de "outra", porque rosa e roxo
+ * nao estao na tabela e carro dessa cor existe.
+ */
+export function SeletorCor({
+  valor,
+  onChange,
+}: {
+  valor: string
+  onChange: (cor: string) => void
+}) {
+  const conhecida = CORES_CONHECIDAS.includes(valor.trim().toLowerCase())
+  const [livre, setLivre] = useState(valor !== '' && !conhecida)
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {CORES_CONHECIDAS.map((nome) => {
+          const escolhida = !livre && valor.trim().toLowerCase() === nome
+          return (
+            <button
+              key={nome}
+              type="button"
+              title={nome}
+              aria-label={nome}
+              aria-pressed={escolhida}
+              onClick={() => {
+                setLivre(false)
+                onChange(escolhida ? '' : nome)
+              }}
+              // size-9 com anel externo: alvo de 36px mais a folga do anel,
+              // perto dos 44px recomendados, sem virar um tabuleiro gigante.
+              className={cx(
+                'size-9 rounded-full ring-2 ring-offset-2 transition',
+                escolhida ? 'ring-marca-600' : 'ring-slate-200 hover:ring-slate-400',
+              )}
+              style={{ backgroundColor: CORES_VEICULO[nome] }}
+            />
+          )
+        })}
+        <button
+          type="button"
+          aria-pressed={livre}
+          onClick={() => {
+            setLivre(true)
+            onChange('')
+          }}
+          className={cx(
+            'h-9 rounded-full px-3 text-xs font-medium ring-2 ring-offset-2 transition',
+            livre
+              ? 'bg-slate-700 text-white ring-marca-600'
+              : 'bg-white text-slate-600 ring-slate-200 hover:ring-slate-400',
+          )}
+        >
+          outra
+        </button>
+      </div>
+
+      {livre ? (
+        <input
+          autoFocus
+          value={valor}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Ex.: rosa"
+          aria-label="Outra cor"
+          className="h-10 w-full rounded-lg px-3 text-sm ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-marca-500"
+        />
+      ) : (
+        <p className="text-xs text-slate-500">
+          {valor ? `Cor escolhida: ${valor}` : 'Toque na cor do carro'}
+        </p>
+      )}
+    </div>
+  )
 }
 
 export function canais(hex: string): [number, number, number] {

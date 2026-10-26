@@ -71,9 +71,18 @@ ninguém cola em conversa nenhuma.
 
 ### A equipe e o apelido
 
-`APP_EQUIPE_SENHA_PADRAO` é a senha com que **Delander, Gustavo, a secretária, Tonny e
-Kevim** nascem no primeiro start. Preencha no painel do Render com uma senha de
-verdade e troque a de cada um em **Funcionários** depois do primeiro acesso.
+**Delander, Gustavo, a secretária, Tonny e Kevim** nascem no primeiro start com a
+senha **`12345678`**, por decisão do dono — assim a equipe entra sem depender de
+configurar nada.
+
+O que isso custa, dito claramente: enquanto o repositório for público, essa senha
+está publicada junto com o endereço do sistema. Duas saídas, e qualquer uma
+resolve:
+
+- **Trocar a senha de cada um em Funcionários** depois do primeiro acesso. Até
+  isso acontecer, qualquer um dos cinco entra como qualquer outro.
+- **Definir `APP_EQUIPE_SENHA_PADRAO`** no painel do Render. A variável tem
+  prioridade sobre o padrão, então a senha real nunca entra no repositório.
 
 Eles entram pelo **apelido**, não pelo e-mail:
 

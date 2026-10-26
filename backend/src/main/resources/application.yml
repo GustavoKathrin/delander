@@ -48,12 +48,16 @@ app:
   # Senha com que a equipe nasce no primeiro start. Quem entra usa o apelido:
   # tonny, kevim, delander, gustavo, secretaria.
   #
-  # SEM valor padrao de proposito. Um padrao escrito aqui vai junto para o
-  # repositorio, e na internet aberta isso significa que qualquer pessoa que
-  # achar a URL entra como dono. Vazio, a carga nao roda e ninguem e criado --
-  # falhar fechado. Preencha APP_EQUIPE_SENHA_PADRAO no painel do Render (e no
-  # .env para rodar na sua maquina).
-  equipe-senha-padrao: ${APP_EQUIPE_SENHA_PADRAO:}
+  # O padrao e fraco de proposito -- foi decisao do dono, para a equipe entrar
+  # sem depender de configurar nada. O preco esta dito com todas as letras:
+  # enquanto o repositorio for publico, esta senha esta publicada junto com o
+  # endereco do sistema, e trocar a senha de cada um em Funcionarios depois do
+  # primeiro acesso e o que fecha essa porta.
+  #
+  # APP_EQUIPE_SENHA_PADRAO continua tendo prioridade: definir essa variavel
+  # no painel do Render substitui o padrao sem mexer em codigo, e e o caminho
+  # para quando a oficina quiser uma senha de verdade.
+  equipe-senha-padrao: ${APP_EQUIPE_SENHA_PADRAO:12345678}
   carga-demo: ${APP_CARGA_DEMO:false}
   cors-origens: ${APP_CORS_ORIGENS:http://localhost:5173,http://localhost:3000}
   url-publica: ${APP_URL_PUBLICA:http://localhost:5173}

@@ -98,9 +98,15 @@ export default function FilaEspera() {
             <Clock className="size-3.5" aria-hidden />
             Próxima vaga
           </p>
-          <p className="text-xl font-bold text-slate-900">
-            {fila.proximaVagaLivre ? dataCompleta(fila.proximaVagaLivre) : '—'}
+          {/* "hoje" / "amanha" / "qui 30/10", o mesmo rotulo que o Patio
+              mostra. A data crua ("26/10/2026") obrigava o dono a fazer conta
+              de calendario para descobrir que a proxima vaga era HOJE. */}
+          <p className="text-xl font-bold capitalize text-slate-900">
+            {fila.proximaVagaLivreRotulo || '—'}
           </p>
+          {fila.proximaVagaLivre && (
+            <p className="text-[11px] text-slate-400">{dataCompleta(fila.proximaVagaLivre)}</p>
+          )}
           <p className="text-[11px] text-slate-500">
             {fila.proximaVagaLivre
               ? 'primeiro dia com box livre'
@@ -174,9 +180,12 @@ function LinhaFila({
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
+          {/* A placa e o caminho para a OS -- e era um alvo de 20px de
+              altura. O -my-2 py-2 engorda a area de toque sem empurrar a
+              linha para baixo: o alvo cresce, o layout nao muda. */}
           <Link
             to={`/os/${os.id}`}
-            className="font-mono text-sm font-semibold text-slate-900 hover:text-marca-700"
+            className="-my-3 inline-flex items-center py-3 font-mono text-sm font-semibold text-slate-900 hover:text-marca-700"
           >
             {os.placa}
           </Link>
@@ -209,12 +218,12 @@ function LinhaFila({
 
         {podeAlocar && item.entradaPrevista && (
           <Botao
-            tamanho="sm"
+            tamanho="toque"
             carregando={alocando}
             onClick={() => onAlocar(item.entradaPrevista!)}
             title="Coloca o carro na agenda nesse dia"
           >
-            <CalendarPlus className="size-3.5" aria-hidden />
+            <CalendarPlus className="size-4" aria-hidden />
             Agendar
           </Botao>
         )}

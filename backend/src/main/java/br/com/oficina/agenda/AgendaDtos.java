@@ -78,6 +78,14 @@ public final class AgendaDtos {
             List<ItemFila> itens,
             BigDecimal backlogHoras,
             LocalDate proximaVagaLivre,
+            /**
+             * A mesma data em linguagem de gente: "hoje", "amanha", "qui 30/10".
+             *
+             * O Patio ja mostrava assim e a Fila mostrava a data crua
+             * ("26/10/2026") -- duas telas, o mesmo dado, e o dono tendo que
+             * fazer conta de calendario numa delas para saber que era hoje.
+             */
+            String proximaVagaLivreRotulo,
             int vagasLivresHoje,
             int vagasTotal) {
     }

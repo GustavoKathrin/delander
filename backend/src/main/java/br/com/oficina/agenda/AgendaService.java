@@ -186,6 +186,7 @@ public class AgendaService {
 
         AgendaDtos.CapacidadeDia hojeCap =
                 capacidadeService.capacidadeDoPeriodo(oficinaId, hoje, hoje).get(hoje);
+        LocalDate proximaFila = capacidadeService.proximaVagaLivre(oficinaId);
 
         return new AgendaDtos.Fila(
                 itens,
@@ -193,7 +194,8 @@ public class AgendaService {
                         .map(AgendaDtos.ItemFila::horasNecessarias)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .setScale(2, RoundingMode.HALF_UP),
-                capacidadeService.proximaVagaLivre(oficinaId),
+                proximaFila,
+                proximaFila == null ? "sem vaga em 90 dias" : rotuloDeData(proximaFila, hoje),
                 hojeCap == null ? 0 : Math.max(hojeCap.boxesTotal() - hojeCap.boxesOcupados(), 0),
                 hojeCap == null ? 0 : hojeCap.boxesTotal());
     }

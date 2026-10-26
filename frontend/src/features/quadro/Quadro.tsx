@@ -151,11 +151,38 @@ export default function Quadro() {
         </AjudaDaTela>
       </div>
 
-      {/* ---------------- colunas da semana ---------------- */}
+      {/* ---------------- colunas da semana ----------------
+
+          As colunas dividem a largura em vez de terem 240px fixos.
+
+          Antes eram oito colunas rigidas de 240px -- fila mais sete dias --,
+          o que da 2020px de conteudo. Numa janela de 769px apareciam TRES: a
+          fila, segunda e terca. Cinco dias ficavam fora da tela.
+
+          Isso quebrava a razao de existir da tela. O proprio texto de ajuda
+          diz "o numero embaixo dela e quanto de trabalho ja foi prometido
+          contra o que a equipe da conta" -- comparar segunda com sexta e o
+          trabalho que se faz aqui, e nao dava, porque as duas nunca
+          apareciam juntas. E largura fixa tambem desperdicava: num monitor de
+          1680px as colunas continuavam com 240px e sobrava espaco vazio.
+
+          Agora: flex-1 com base zero divide o que houver, e o min-w segura o
+          minimo para a placa caber. Cabendo, a semana inteira aparece; nao
+          cabendo, o overflow-x continua ali e rola -- so que mostrando mais
+          dias do que antes. */}
       <div className="min-h-0 flex-1 overflow-x-auto rolagem-suave p-4">
-        <div className="flex h-full min-h-0 gap-3" style={{ minWidth: '980px' }}>
-          {/* fila sem dia definido */}
-          <div className="flex w-60 flex-none flex-col">
+        {/* min-w-full e o que faz o flex-1 das colunas valer de alguma coisa.
+            Sem ele, um container flex dentro de overflow-x-auto se dimensiona
+            pelo CONTEUDO: nao existe "espaco sobrando" para distribuir, e as
+            colunas ficavam paradas no min-w mesmo num monitor largo -- 1484px
+            de conteudo para 1425px de area, rolando por 59px a toa. Com
+            min-w-full a faixa comeca com a largura do pai e so passa disso
+            quando os minimos realmente nao cabem. */}
+        <div className="flex h-full min-h-0 min-w-full gap-3">
+          {/* Fila sem dia definido. Mais estreita que um dia de proposito:
+              nao e um dia, e ocupando a mesma largura ela empurrava um dia
+              inteiro para fora da tela. */}
+          <div className="flex w-48 flex-none flex-col">
             <div
               className={cx(
                 'mb-2 rounded-lg bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200',
@@ -225,7 +252,7 @@ export default function Quadro() {
             const ordens = filtrar(dia)
             const cap = dia.capacidade
             return (
-              <div key={dia.data} className="flex w-60 flex-none flex-col">
+              <div key={dia.data} className="flex min-w-[156px] flex-1 basis-0 flex-col">
                 <div
                   className={cx(
                     'mb-2 rounded-lg px-3 py-2 shadow-sm ring-1',

@@ -285,6 +285,8 @@ export interface Fila {
   itens: ItemFila[]
   backlogHoras: number
   proximaVagaLivre?: string
+  /** A mesma data em linguagem de gente: "hoje", "amanhã", "qui 30/10". */
+  proximaVagaLivreRotulo: string
   vagasLivresHoje: number
   vagasTotal: number
 }

@@ -61,6 +61,22 @@ const ALTURA_VAGA: Record<FormatoVaga, number> = {
   PLANTA: 140,
 }
 
+/**
+ * Altura da celula no modo Visual, quando o formato e CARTAO.
+ *
+ * O botao "Visual" simplificava o conteudo do cartao mas a linha da grade
+ * continuava com os mesmos 248px, entao a pagina terminava exatamente da
+ * mesma altura -- medido: 1764px nas duas opcoes, num viewport de 768. Quem
+ * apertava "Visual" esperando ver mais pátio via o mesmo pedaco de sempre, e
+ * o controle virava enfeite.
+ *
+ * Planta que obriga a rolar deixa de ser planta: o valor desta tela e bater o
+ * olho e ver a oficina inteira. Com 164px cabem tres fileiras onde cabia uma
+ * e meia, e o cartao simplificado (rotulo, carro, placa) nao precisa de mais
+ * que isso.
+ */
+const ALTURA_VAGA_VISUAL = 164
+
 /** Preferência de quem olha, não regra da oficina: fica no navegador. */
 function densidadeGuardada(): Densidade {
   try {
@@ -132,7 +148,10 @@ export default function Patio() {
   const formatoBruto = texto(CHAVES.patioFormato, 'CARTAO')
   const formato: FormatoVaga =
     formatoBruto === 'COMPACTO' || formatoBruto === 'PLANTA' ? formatoBruto : 'CARTAO'
-  const alturaVaga = ALTURA_VAGA[formato]
+  // No formato cartao a densidade manda na altura da linha; nos outros
+  // formatos ela ja e compacta e nao ha o que encolher.
+  const alturaVaga =
+    formato === 'CARTAO' && densidade === 'visual' ? ALTURA_VAGA_VISUAL : ALTURA_VAGA[formato]
   const [modoEdicao, setModoEdicao] = useState(false)
   const [posicoes, setPosicoes] = useState<Record<string, Posicao>>({})
   const [vagaArrastada, setVagaArrastada] = useState<string | null>(null)
@@ -350,7 +369,17 @@ export default function Patio() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            {/* densidade: preferência de quem olha */}
+            {/* Densidade: preferência de quem olha -- e só aparece onde ela
+                muda alguma coisa.
+
+                Nos formatos COMPACTO e PLANTA a vaga já é pequena e o modo
+                detalhado não cabe nela, então a célula ignora o interruptor
+                (veja `visual` em CelulaVaga). O botão continuava na tela
+                assim mesmo: apertar "Visual" numa oficina em formato planta
+                dava exatamente a mesma página -- medido, 1764px nas duas
+                opções. Controle que não pode mudar nada ensina a pessoa a
+                desconfiar dos outros controles. */}
+            {formato === 'CARTAO' && (
             <div className="flex overflow-hidden rounded-md ring-1 ring-white/20">
               {(['detalhado', 'visual'] as const).map((d) => (
                 <button
@@ -375,6 +404,7 @@ export default function Patio() {
                 </button>
               ))}
             </div>
+            )}
 
             {/* cadeado: só faz sentido em tela que comporta a planta */}
             {gerencia && telaLarga && !modoEdicao && (
@@ -1056,10 +1086,27 @@ function CelulaVaga({
             </div>
           )}
 
+          {/* Na planta, o alerta vira UMA linha com reticências; o texto
+              inteiro fica no title e dentro da OS.
+
+              Ele era a maior fonte de altura da célula: "Sem nenhum
+              apontamento há 34 dia(s)" quebrava em três linhas e empurrava a
+              vaga de 140 para 271px. Numa planta, isso significa menos da
+              metade da oficina visível de uma vez -- e planta que obriga a
+              rolar deixa de ser planta.
+
+              O sinal que importa a dois metros de distância é "tem alerta
+              aqui", e esse continua inteiro: tarja vermelha na lateral,
+              ícone, cor. O texto é para quem chegou perto. */}
           {critico && (
-            <p className="flex items-start gap-1 text-[10px] leading-tight text-red-600">
-              <AlertTriangle className="mt-px size-3 flex-none" aria-hidden />
-              {os.alertas.find((a) => a.severidade === 'ALTA')?.texto}
+            <p
+              className="flex items-center gap-1 text-[10px] leading-tight text-red-600"
+              title={os.alertas.find((a) => a.severidade === 'ALTA')?.texto}
+            >
+              <AlertTriangle className="size-3 flex-none" aria-hidden />
+              <span className={cx(planta && 'truncate')}>
+                {os.alertas.find((a) => a.severidade === 'ALTA')?.texto}
+              </span>
             </p>
           )}
 

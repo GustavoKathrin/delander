@@ -113,31 +113,38 @@ export function LinhaServico({
         )}
 
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          {/* Tonal, nao primario: a cor cheia da marca pertence ao proximo
+              passo DA ORDEM, la em cima. Este "Iniciar" liga o cronometro de
+              UM servico -- coisa diferente, e sair identico ao de cima era a
+              origem da confusao ("dois Iniciar, qual e qual?").
+
+              44px nos tres: sao as acoes que o mecanico aperta de luva, com o
+              tablet na mao, varias vezes por carro. */}
           {pode('EM_EXECUCAO') && (
-            <Botao variante="primario" tamanho="sm" carregando={salvando} onClick={onIniciar}>
-              <Play className="size-3.5" aria-hidden />
+            <Botao variante="tonal" tamanho="toque" carregando={salvando} onClick={onIniciar}>
+              <Play className="size-4" aria-hidden />
               {item.status === 'PAUSADO' ? 'Retomar' : 'Iniciar'}
             </Botao>
           )}
           {pode('PAUSADO') && (
             <Botao
               variante="secundario"
-              tamanho="sm"
+              tamanho="toque"
               carregando={salvando}
               onClick={() => onAcao('PAUSAR')}
             >
-              <PauseCircle className="size-3.5" aria-hidden />
+              <PauseCircle className="size-4" aria-hidden />
               Pausar
             </Botao>
           )}
           {pode('CONCLUIDO') && (
             <Botao
               variante="sucesso"
-              tamanho="sm"
+              tamanho="toque"
               carregando={salvando}
               onClick={() => onAcao('CONCLUIR')}
             >
-              <Check className="size-3.5" aria-hidden />
+              <Check className="size-4" aria-hidden />
               Concluir
             </Botao>
           )}
@@ -148,11 +155,23 @@ export function LinhaServico({
             <button
               type="button"
               onClick={onRegistrarTrabalho}
-              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+              className="flex h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
             >
-              <MessageSquarePlus className="size-3.5" aria-hidden />
+              <MessageSquarePlus className="size-4" aria-hidden />
               Anotar
             </button>
+          )}
+
+          {/* ---- a partir daqui, desfazer ----
+
+              Separado por uma barra vertical e empurrado para depois de tudo.
+              Antes, "Cancelar" e a lixeira ficavam colados em "Concluir", os
+              tres com 28px de altura: a mao de luva que mira Concluir e erra
+              dois dedos para a direita apagava o servico. A barra nao impede
+              o toque errado, mas tira os destrutivos da zona onde o dedo cai
+              por habito, e o tamanho deixa de ser armadilha. */}
+          {((pode('CANCELADO') && gerencia) || (gerencia && !cancelado && !concluido)) && (
+            <span className="mx-0.5 h-6 w-px flex-none bg-slate-200" aria-hidden />
           )}
 
           {/* Cancelar em vermelho, como o dono pediu, mas em texto e não em
@@ -162,9 +181,9 @@ export function LinhaServico({
             <button
               type="button"
               onClick={() => onAcao('CANCELAR')}
-              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50"
+              className="flex h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-red-700 transition hover:bg-red-50"
             >
-              <AlertTriangle className="size-3.5" aria-hidden />
+              <AlertTriangle className="size-4" aria-hidden />
               Cancelar
             </button>
           )}
@@ -177,7 +196,7 @@ export function LinhaServico({
               type="button"
               onClick={onRemover}
               title="Lancei errado — tirar da lista"
-              className="rounded p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+              className="grid size-11 flex-none place-items-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
               aria-label={`Remover ${item.descricao}`}
             >
               <Trash2 className="size-4" aria-hidden />

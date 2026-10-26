@@ -129,7 +129,7 @@ export default function Layout() {
                       onClick={() => setMenuAberto(false)}
                       className={({ isActive }) =>
                         cx(
-                          'flex items-center gap-2.5 rounded px-2.5 py-2 text-sm transition',
+                          'flex min-h-11 items-center gap-2.5 rounded px-2.5 py-2 text-sm transition',
                           isActive
                             ? 'bg-faixa font-semibold sobre-destaque'
                             : 'text-zinc-300 hover:bg-white/10 hover:text-white',
@@ -150,7 +150,7 @@ export default function Layout() {
               href="/tv"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2.5 rounded px-2.5 py-2 text-sm text-zinc-400 transition hover:bg-white/10 hover:text-white"
+              className="flex min-h-11 items-center gap-2.5 rounded px-2.5 py-2 text-sm text-zinc-400 transition hover:bg-white/10 hover:text-white"
             >
               <Monitor className="size-4 flex-none" aria-hidden />
               Modo TV
@@ -172,7 +172,7 @@ export default function Layout() {
               reabrirAjudas()
               navegar(0)
             }}
-            className="mt-2 flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-zinc-400 transition hover:bg-white/10 hover:text-white"
+            className="mt-2 flex min-h-11 w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-zinc-400 transition hover:bg-white/10 hover:text-white"
           >
             <Lightbulb className="size-4" aria-hidden />
             Como funciona
@@ -180,7 +180,7 @@ export default function Layout() {
           <button
             type="button"
             onClick={sair}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-zinc-400 transition hover:bg-white/10 hover:text-white"
+            className="flex min-h-11 w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-zinc-400 transition hover:bg-white/10 hover:text-white"
           >
             <LogOut className="size-4" aria-hidden />
             Sair

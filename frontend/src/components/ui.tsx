@@ -19,11 +19,28 @@ export function cx(...classes: (string | false | null | undefined)[]): string {
 
 // ------------------------------------------------------------------ botao
 
-type Variante = 'primario' | 'secundario' | 'fantasma' | 'perigo' | 'sucesso'
-type Tamanho = 'sm' | 'md' | 'lg' | 'xl'
+type Variante = 'primario' | 'tonal' | 'secundario' | 'fantasma' | 'perigo' | 'sucesso'
+type Tamanho = 'sm' | 'toque' | 'md' | 'lg' | 'xl'
 
 const VARIANTES: Record<Variante, string> = {
+  /**
+   * UM por tela, e so um: o proximo passo.
+   *
+   * Cor cheia da marca e uma promessa — "e por aqui que se segue". Usada
+   * duas vezes na mesma tela, ela deixa de prometer: era o caso da OS, onde
+   * "Iniciar diagnostico" (que move a ordem inteira) e "Iniciar" (que liga o
+   * cronometro de um servico) saiam identicos, no mesmo preto.
+   */
   primario: 'bg-marca-600 text-white hover:bg-marca-700 focus-visible:outline-marca-600 shadow-sm',
+  /**
+   * A acao principal DAQUELA LINHA, nao da tela.
+   *
+   * Mesma familia de cor do primario, intensidade baixa: continua sendo
+   * obvio que ali se age, e continua claro que nao e o passo da tela. E o
+   * degrau que faltava entre "cheio" e "so contorno".
+   */
+  tonal:
+    'bg-marca-50 text-marca-700 ring-1 ring-marca-200 hover:bg-marca-100 focus-visible:outline-marca-600',
   secundario:
     'bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 focus-visible:outline-slate-400',
   fantasma: 'text-slate-600 hover:bg-slate-100 focus-visible:outline-slate-400',
@@ -33,6 +50,13 @@ const VARIANTES: Record<Variante, string> = {
 
 const TAMANHOS: Record<Tamanho, string> = {
   sm: 'h-8 px-3 text-xs gap-1.5',
+  /**
+   * 44px: o minimo para dedo, e aqui o dedo esta dentro de uma luva de
+   * mecanico. Medicao que motivou isto: 41 dos 42 botoes da tela de OS
+   * estavam abaixo de 44px, a maioria em 32px, e entre eles a lixeira que
+   * apaga servico -- 28px. Errar o alvo custava refazer lancamento.
+   */
+  toque: 'h-11 px-4 text-sm gap-2',
   md: 'h-10 px-4 text-sm gap-2',
   lg: 'h-12 px-5 text-base gap-2',
   xl: 'h-16 px-6 text-lg gap-3 font-semibold',

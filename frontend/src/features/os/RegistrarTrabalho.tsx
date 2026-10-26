@@ -130,11 +130,11 @@ export function RegistrarTrabalho({ os }: { os: DetalheOs }) {
         />
 
         <div className="flex flex-wrap items-center gap-2">
-          <Botao variante="secundario" tamanho="sm" onClick={() => cameraRef.current?.click()}>
+          <Botao variante="secundario" tamanho="toque" onClick={() => cameraRef.current?.click()}>
             <Camera className="size-4" aria-hidden />
             Câmera
           </Botao>
-          <Botao variante="secundario" tamanho="sm" onClick={() => galeriaRef.current?.click()}>
+          <Botao variante="secundario" tamanho="toque" onClick={() => galeriaRef.current?.click()}>
             <Images className="size-4" aria-hidden />
             Escolher fotos
           </Botao>
@@ -188,6 +188,7 @@ export function RegistrarTrabalho({ os }: { os: DetalheOs }) {
 
         <Botao
           className="w-full"
+          tamanho="toque"
           disabled={!pronto}
           carregando={registrar.isPending}
           onClick={() => registrar.mutate()}

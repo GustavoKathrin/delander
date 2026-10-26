@@ -493,9 +493,14 @@ export default function DetalheOs() {
         {/* ---------------- coluna principal ---------------- */}
         <div className="space-y-4 lg:col-span-2">
           <Cartao>
+            {/* A descricao diz o ESCOPO, nao so a contagem.
+                O botao grande la em cima move a ordem inteira; os botoes
+                daqui mexem num servico so. Eram dois "Iniciar" sem nada
+                escrito explicando a diferenca -- e "1 item(ns)" ainda por
+                cima entregava que ninguem tinha olhado o texto. */}
             <CartaoTitulo
               titulo="Serviços"
-              descricao={`${os.itens.length} item(ns) · ${horas(r.horasEstimadas)} estimadas`}
+              descricao={`${os.itens.length === 1 ? '1 serviço' : `${os.itens.length} serviços`} · ${horas(r.horasEstimadas)} estimadas · os botões abaixo valem para cada serviço, um por um`}
               acao={
                 gerencia && (
                   <Botao

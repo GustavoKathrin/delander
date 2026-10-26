@@ -126,7 +126,7 @@ export function ChecklistEntrada({ os }: { os: DetalheOs }) {
                   onClick={() => marcar(item.id, true)}
                   aria-label={`${item.descricao}: sem problema`}
                   className={cx(
-                    'grid size-9 place-items-center rounded-lg ring-1 transition',
+                    'grid size-11 place-items-center rounded-lg ring-1 transition',
                     r.ok === true
                       ? 'bg-emerald-500 text-white ring-emerald-500'
                       : 'bg-white text-slate-400 ring-slate-300 hover:bg-slate-50',
@@ -139,7 +139,7 @@ export function ChecklistEntrada({ os }: { os: DetalheOs }) {
                   onClick={() => marcar(item.id, false)}
                   aria-label={`${item.descricao}: tem ressalva`}
                   className={cx(
-                    'grid size-9 place-items-center rounded-lg ring-1 transition',
+                    'grid size-11 place-items-center rounded-lg ring-1 transition',
                     r.ok === false
                       ? 'bg-red-500 text-white ring-red-500'
                       : 'bg-white text-slate-400 ring-slate-300 hover:bg-slate-50',
@@ -210,7 +210,7 @@ export function ChecklistEntrada({ os }: { os: DetalheOs }) {
           />
           <Botao
             variante="secundario"
-            tamanho="sm"
+            tamanho="toque"
             className="ml-auto"
             carregando={enviarFotos.isPending}
             onClick={() => cameraRef.current?.click()}
@@ -220,7 +220,7 @@ export function ChecklistEntrada({ os }: { os: DetalheOs }) {
           </Botao>
           <Botao
             variante="secundario"
-            tamanho="sm"
+            tamanho="toque"
             carregando={enviarFotos.isPending}
             onClick={() => galeriaRef.current?.click()}
           >
@@ -250,7 +250,7 @@ export function ChecklistEntrada({ os }: { os: DetalheOs }) {
       </div>
 
       <div className="border-t border-slate-200 p-4">
-        <Botao className="w-full" carregando={salvar.isPending} onClick={() => salvar.mutate()}>
+        <Botao className="w-full" tamanho="toque" carregando={salvar.isPending} onClick={() => salvar.mutate()}>
           Salvar checklist
         </Botao>
       </div>

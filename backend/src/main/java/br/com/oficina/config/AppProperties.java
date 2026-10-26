@@ -9,6 +9,12 @@ import java.util.List;
 public record AppProperties(
         Jwt jwt,
         Admin admin,
+        /**
+         * Senha com que a equipe (Tonny, Kevim, Delander, Gustavo, secretaria)
+         * e criada no primeiro start. Vazia desliga a carga -- util em
+         * ambiente onde os usuarios ja existem e ninguem quer runner mexendo.
+         */
+        String equipeSenhaPadrao,
         boolean cargaDemo,
         String corsOrigens,
         String urlPublica,

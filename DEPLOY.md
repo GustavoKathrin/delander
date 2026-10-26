@@ -37,8 +37,20 @@ o embute no jar. Um serviço em vez de dois, sem CORS e sem URL de API para conf
 Três coisas, e nenhuma é surpresa depois:
 
 1. **Dorme.** Sem acesso por 15 minutos, o serviço desliga. O primeiro clique depois
-   disso espera **cerca de 1 minuto**. Para demonstrar, tudo bem — mande o link e abra
-   antes. Para a oficina usar todo dia, não serve: aí é o plano pago (~US$ 7/mês).
+   disso espera **cerca de 1 minuto**.
+
+   Isso agora tem remédio de graça: o workflow
+   [`manter-acordado.yml`](.github/workflows/manter-acordado.yml) visita o serviço de
+   10 em 10 minutos, **das 7h às 19h, de segunda a sábado**. Nesse intervalo ninguém
+   espera. Fora dele o serviço dorme de propósito — o plano grátis dá 750 horas por
+   mês e manter acordado 24h consome ~730, sem folga para nada.
+
+   Para o workflow funcionar, o repositório precisa estar no GitHub e as Actions
+   ligadas. O agendador do GitHub atrasa alguns minutos quando a fila está cheia; como
+   a margem é de 15 minutos e a visita é de 10 em 10, um atraso ocasional não derruba.
+
+   Quem abrir às 6h da manhã ainda espera — mas agora a tela **diz** que o servidor
+   está acordando, em vez de girar um spinner mudo que parece sistema quebrado.
 2. **Não guarda arquivo.** O plano grátis não tem disco. O banco inteiro sobrevive
    (carros, OS, leituras, wiki, configurações), mas o **PDF do scanner e as fotos da
    wiki somem** a cada deploy ou reinício. Resolver isso é mandar arquivo para um
@@ -56,6 +68,28 @@ nasce vazia, sem esses logins.
 
 O `APP_JWT_SECRET` **o Render sorteia sozinho** (`generateValue: true`): ninguém digita,
 ninguém cola em conversa nenhuma.
+
+### A equipe e o apelido
+
+`APP_EQUIPE_SENHA_PADRAO` é a senha com que **Delander, Gustavo, a secretária, Tonny e
+Kevim** nascem no primeiro start. Preencha no painel do Render com uma senha de
+verdade e troque a de cada um em **Funcionários** depois do primeiro acesso.
+
+Eles entram pelo **apelido**, não pelo e-mail:
+
+| Entra como | Quem é | Papel |
+|---|---|---|
+| `delander` | Delander | Dono |
+| `gustavo` | Gustavo | Dono |
+| `secretaria` | Secretária | Recepção |
+| `tonny` | Tonny | Mecânico |
+| `kevim` | Kevim | Mecânico |
+
+Os dois mecânicos já nascem com ficha de funcionário — é dela que saem a agenda, o
+apontamento de hora e a alocação no pátio. Dono e recepção não pegam serviço, então
+não entram na bancada.
+
+O e-mail continua valendo para entrar. Ninguém é obrigado a decorar nada novo.
 
 ---
 

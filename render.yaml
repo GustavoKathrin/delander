@@ -52,6 +52,13 @@ services:
       # Volta ao padrao seguro (6). O 3 do compose existe so para o teste local.
       - key: APP_SENHA_MINIMA
         value: "6"
+      # Senha com que a equipe (Delander, Gustavo, secretaria, Tonny, Kevim)
+      # nasce no primeiro start. Eles entram pelo APELIDO -- tonny, kevim --
+      # e nao pelo e-mail, que e o ponto: mecanico de luva nao digita e-mail.
+      # Preencha no painel e troque cada senha em Funcionarios depois.
+      # Vazio nao cria ninguem.
+      - key: APP_EQUIPE_SENHA_PADRAO
+        sync: false
 
       # ---------------- comportamento ----------------
       # Desligado: isto aqui e a oficina de verdade, nao a vitrine. Com

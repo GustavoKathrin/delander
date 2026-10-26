@@ -1,6 +1,7 @@
 package br.com.oficina.demo;
 
 import br.com.oficina.config.AppProperties;
+import br.com.oficina.usuario.LoginUsuario;
 import br.com.oficina.usuario.Papel;
 import br.com.oficina.usuario.Usuario;
 import br.com.oficina.usuario.UsuarioRepository;
@@ -48,6 +49,7 @@ public class CargaInicial implements ApplicationRunner {
         dono.setOficinaId(OFICINA_PADRAO);
         dono.setNome(props.admin().nome());
         dono.setEmail(email);
+        dono.setLogin(LoginUsuario.derivarDe(email));
         dono.setSenhaHash(passwordEncoder.encode(props.admin().senha()));
         dono.setPapel(Papel.DONO);
         dono.setAtivo(true);

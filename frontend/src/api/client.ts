@@ -1,6 +1,19 @@
 import type { TokenResposta } from '../types'
 
-const BASE = '/api'
+/**
+ * Para onde as chamadas vao.
+ *
+ * Sem VITE_API_BASE fica '/api', e a Vercel reescreve esse caminho para o
+ * Render. Funciona, mas cada chamada passa por um intermediario: medido, a
+ * MESMA requisicao de login levou 6,16 s pelo desvio e 2,76 s indo direto.
+ * Num sistema onde cada tela faz varias consultas, isso se acumula.
+ *
+ * Preenchendo VITE_API_BASE com a URL do Render, o navegador fala direto com
+ * o backend. Exige que o backend aceite a origem do site em APP_CORS_ORIGENS,
+ * por isso o padrao continua sendo o caminho antigo: quem nao configurar os
+ * dois lados nao fica sem sistema, so sem o ganho.
+ */
+const BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || '/api'
 const CHAVE_SESSAO = 'oficina.sessao'
 
 export interface Sessao {
@@ -150,10 +163,13 @@ export async function api<T>(caminho: string, opcoes: Opcoes = {}): Promise<T> {
   return (await res.json()) as T
 }
 
-export async function entrar(email: string, senha: string): Promise<Sessao> {
+/** O identificador e o apelido ("tonny") ou o e-mail. O backend aceita os dois. */
+export async function entrar(identificador: string, senha: string): Promise<Sessao> {
   const dados = await api<TokenResposta>('/auth/login', {
     metodo: 'POST',
-    corpo: { email, senha },
+    // "email" vai junto por compatibilidade: durante o deploy, backend novo e
+    // tela velha convivem por alguns minutos.
+    corpo: { identificador, email: identificador, senha },
     publico: true,
   })
   const sessao: Sessao = {

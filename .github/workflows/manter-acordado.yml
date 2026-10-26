@@ -1,0 +1,52 @@
+# ---------------------------------------------------------------------------
+# Mantem o servidor acordado no horario da oficina.
+#
+# O plano gratuito do Render desliga o servico depois de 15 minutos sem
+# acesso, e religar leva perto de um minuto. Quem abre o sistema as 7h da
+# manha pagava essa espera todo dia, olhando para um spinner.
+#
+# A solucao e uma visita de dez em dez minutos. Mas NAO 24 horas por dia:
+#
+#   - o plano gratuito da 750 horas de servico por mes. Acordado o tempo todo
+#     sao ~730, e qualquer segundo servico na conta estoura o limite;
+#   - de madrugada nao tem ninguem na oficina para esperar.
+#
+# Entao a visita acontece das 7h as 19h (horario de Brasilia), de segunda a
+# sabado: ~310 horas por mes, com folga larga. Fora disso o servidor dorme, e
+# quem entrar a essa hora ve o aviso honesto da tela de carregamento.
+#
+# Limitacao conhecida: o agendador do GitHub e "melhor esforco" e pode
+# atrasar alguns minutos quando a fila esta cheia. Como a margem aqui e de 15
+# minutos e a visita e de 10 em 10, um atraso ocasional nao derruba nada.
+# ---------------------------------------------------------------------------
+name: Manter acordado
+
+on:
+  schedule:
+    # UTC. 10:00-22:00 UTC = 07:00-19:00 em Brasilia (UTC-3).
+    # Segunda (1) a sabado (6).
+    - cron: '*/10 10-22 * * 1-6'
+  workflow_dispatch:
+
+# Se uma visita anterior ainda estiver rodando, a nova cancela a antiga em vez
+# de empilhar: duas visitas ao mesmo tempo nao acordam o servidor duas vezes.
+concurrency:
+  group: manter-acordado
+  cancel-in-progress: true
+
+jobs:
+  visitar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Bater no health check
+        run: |
+          # --max-time 120: quando o servico esta dormindo, a resposta demora
+          # de verdade. Desistir aos 30 s abortaria justamente a chamada que
+          # esta acordando ele -- o contrario do que este job existe para fazer.
+          codigo=$(curl -s -o /dev/null -w '%{http_code}' --max-time 120 \
+            https://delander.onrender.com/actuator/health || echo "000")
+          echo "health respondeu: $codigo"
+          if [ "$codigo" != "200" ]; then
+            echo "::warning::health check nao respondeu 200 (veio $codigo)"
+          fi

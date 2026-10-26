@@ -254,11 +254,45 @@ export function Barra({
 
 // ------------------------------------------------------------------ estados
 
-export function Carregando({ texto = 'Carregando...' }: { texto?: string }) {
+/**
+ * Espera honesta.
+ *
+ * O servidor roda em plano gratuito e dorme depois de 15 minutos parado;
+ * acordar leva ate um minuto. Um spinner girando calado por esse tempo nao
+ * parece "carregando", parece quebrado -- e quem acha que quebrou recarrega a
+ * pagina, o que joga fora a espera e recomeca tudo.
+ *
+ * Passados alguns segundos, o componente para de girar calado e explica.
+ */
+export function Carregando({
+  texto = 'Carregando...',
+  segundosAteAvisar = 4,
+}: {
+  texto?: string
+  segundosAteAvisar?: number
+}) {
+  const [demorando, setDemorando] = useState(false)
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setDemorando(true), segundosAteAvisar * 1000)
+    return () => window.clearTimeout(id)
+  }, [segundosAteAvisar])
+
   return (
-    <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
-      <Loader2 className="size-4 animate-spin" aria-hidden />
-      {texto}
+    <div className="flex flex-col items-center justify-center gap-3 py-12 text-sm text-slate-500">
+      <span className="flex items-center gap-2">
+        <Loader2 className="size-4 animate-spin" aria-hidden />
+        {texto}
+      </span>
+      {demorando && (
+        <p
+          role="status"
+          className="max-w-xs rounded-md bg-amber-50 px-3 py-2 text-center text-xs leading-relaxed text-amber-900"
+        >
+          O servidor estava dormindo e está acordando. Isso leva até um minuto na
+          primeira vez do dia. <strong>Não recarregue</strong> — recarregar recomeça a espera.
+        </p>
+      )}
     </div>
   )
 }

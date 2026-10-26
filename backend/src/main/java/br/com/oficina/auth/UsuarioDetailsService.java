@@ -30,10 +30,14 @@ public class UsuarioDetailsService implements UserDetailsService {
         this.funcionarioRepository = funcionarioRepository;
     }
 
+    /**
+     * O identificador pode ser o apelido ("tonny") ou o e-mail. Quem decide e
+     * quem digita: o mecanico usa o apelido, o dono costuma usar o e-mail.
+     */
     @Override
     @Transactional(readOnly = true)
-    public UsuarioAutenticado loadUserByUsername(String email) throws UsernameNotFoundException {
-        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email)
+    public UsuarioAutenticado loadUserByUsername(String identificador) throws UsernameNotFoundException {
+        Usuario usuario = usuarioRepository.findByLoginOuEmail(identificador)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario nao encontrado."));
         return montar(usuario);
     }

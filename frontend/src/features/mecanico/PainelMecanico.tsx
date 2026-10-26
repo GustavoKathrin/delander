@@ -42,6 +42,8 @@ export default function PainelMecanico() {
 
   const [iniciando, setIniciando] = useState<MeuServico | null>(null)
   const [estimativa, setEstimativa] = useState('')
+  /** Teclado numerico escondido ate alguem pedir um tempo fora dos atalhos. */
+  const [tempoLivre, setTempoLivre] = useState(false)
   const [pausando, setPausando] = useState<MeuServico | null>(null)
   const [motivoId, setMotivoId] = useState('')
   const [observacao, setObservacao] = useState('')
@@ -194,7 +196,12 @@ export default function PainelMecanico() {
               agora={agora}
               onIniciar={() => {
                 setErro(undefined)
-                setEstimativa(String(servico.horasEstimadas ?? 1))
+                const previsto = servico.horasEstimadas ?? 1
+                setEstimativa(String(previsto))
+                // Se o tempo que veio da OS nao e um dos atalhos, ja abre o
+                // teclado -- senao o valor apareceria sem nenhum botao aceso,
+                // e nao daria para saber de onde ele saiu.
+                setTempoLivre(![0.5, 1, 2, 3, 4, 6, 8].includes(previsto))
                 setIniciando(servico)
               }}
             />
@@ -224,39 +231,73 @@ export default function PainelMecanico() {
           </>
         }
       >
+        {/* Botao primeiro, campo depois.
+            Antes era o contrario: um campo numerico de passo 0,25 em cima e os
+            atalhos embaixo, como complemento. Mas quem esta aqui acabou de
+            calcar a luva e vai responder "umas duas horas" -- nao "1.75". O
+            teclado numerico so aparece para quem realmente quer um valor
+            quebrado, e ai e ele que vira o complemento. */}
         <div className="space-y-4">
           <Campo
             rotulo="Quanto tempo você acha que vai gastar?"
             obrigatorio={flag(CHAVES.exigirEstimativa)}
             dica="É essa previsão que o dono usa para prometer prazo ao cliente."
           >
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {[0.5, 1, 2, 3, 4, 6, 8].map((valor) => {
+                const escolhido = Number(estimativa) === valor
+                return (
+                  <button
+                    key={valor}
+                    type="button"
+                    aria-pressed={escolhido}
+                    onClick={() => {
+                      setEstimativa(String(valor))
+                      setTempoLivre(false)
+                    }}
+                    className={cx(
+                      // h-14: alvo de dedo com luva. O minimo recomendado e
+                      // 44px; aqui sobra porque errar o botao custa refazer.
+                      'h-14 rounded-xl text-base font-semibold ring-1 transition',
+                      escolhido
+                        ? 'bg-marca-600 text-white ring-marca-600'
+                        : 'bg-white text-slate-700 ring-slate-300 hover:bg-slate-50 active:bg-slate-100',
+                    )}
+                  >
+                    {horas(valor)}
+                  </button>
+                )
+              })}
+              <button
+                type="button"
+                aria-pressed={tempoLivre}
+                onClick={() => setTempoLivre(true)}
+                className={cx(
+                  'h-14 rounded-xl text-base font-semibold ring-1 transition',
+                  tempoLivre
+                    ? 'bg-slate-700 text-white ring-slate-700'
+                    : 'bg-white text-slate-600 ring-slate-300 hover:bg-slate-50 active:bg-slate-100',
+                )}
+              >
+                Outro
+              </button>
+            </div>
+          </Campo>
+
+          {tempoLivre && (
             <Entrada
               type="number"
               step="0.25"
               min="0.25"
               inputMode="decimal"
+              autoFocus
+              aria-label="Tempo em horas"
               className="text-lg"
               value={estimativa}
               onChange={(e) => setEstimativa(e.target.value)}
             />
-          </Campo>
-          <div className="flex flex-wrap gap-2">
-            {[0.5, 1, 2, 3, 4, 6, 8].map((valor) => (
-              <button
-                key={valor}
-                type="button"
-                onClick={() => setEstimativa(String(valor))}
-                className={cx(
-                  'h-9 rounded-lg px-3 text-sm ring-1 transition',
-                  Number(estimativa) === valor
-                    ? 'bg-marca-600 text-white ring-marca-600'
-                    : 'bg-white text-slate-700 ring-slate-300 hover:bg-slate-50',
-                )}
-              >
-                {horas(valor)}
-              </button>
-            ))}
-          </div>
+          )}
+
           <AvisoErro mensagem={erro} />
         </div>
       </Modal>

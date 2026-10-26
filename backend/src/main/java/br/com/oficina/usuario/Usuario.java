@@ -21,6 +21,13 @@ public class Usuario extends BaseEntity {
     @Column(name = "email", nullable = false, length = 180)
     private String email;
 
+    /**
+     * Apelido de entrada: "tonny", "kevim". Serve para o mecanico entrar sem
+     * digitar e-mail no tablet. O e-mail continua valendo no login.
+     */
+    @Column(name = "login", nullable = false, length = 40)
+    private String login;
+
     @Column(name = "senha_hash", nullable = false, length = 120)
     private String senhaHash;
 

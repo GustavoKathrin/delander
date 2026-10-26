@@ -8,6 +8,7 @@ import br.com.oficina.common.RecursoNaoEncontradoException;
 import br.com.oficina.common.RegraNegocioException;
 import br.com.oficina.config.AppProperties;
 import br.com.oficina.configuracao.ConfiguracaoService;
+import br.com.oficina.usuario.LoginUsuario;
 import br.com.oficina.usuario.Papel;
 import br.com.oficina.usuario.Usuario;
 import br.com.oficina.usuario.UsuarioRepository;
@@ -118,10 +119,36 @@ public class FuncionarioService {
         usuario.setOficinaId(oficinaId);
         usuario.setNome(req.nome().trim());
         usuario.setEmail(email);
+        usuario.setLogin(definirLogin(req.acesso().login(), email, req.nome()));
         usuario.setSenhaHash(passwordEncoder.encode(req.acesso().senha()));
         usuario.setPapel(req.acesso().papel() == null ? Papel.MECANICO : req.acesso().papel());
         usuario.setAtivo(req.ativo() == null || req.ativo());
         return usuarioRepository.save(usuario);
+    }
+
+    /**
+     * Escolhe o apelido e garante que ele e unico.
+     *
+     * A ordem e: o que o dono digitou, senao o pedaco antes do @, senao o
+     * primeiro nome. Se ja existir alguem com esse apelido, acrescenta um
+     * numero em vez de recusar o cadastro -- quem esta cadastrando o
+     * funcionario quer terminar a tarefa, nao resolver conflito de apelido.
+     */
+    private String definirLogin(String informado, String email, String nome) {
+        String base = LoginUsuario.resolver(informado, email);
+        if (base.isEmpty()) {
+            base = LoginUsuario.normalizar(nome == null ? "" : nome.split("\\s+")[0]);
+        }
+        if (base.isEmpty()) {
+            base = "usuario";
+        }
+        String candidato = base;
+        int sufixo = 1;
+        while (usuarioRepository.existsByLoginIgnoreCase(candidato)) {
+            sufixo++;
+            candidato = base + sufixo;
+        }
+        return candidato;
     }
 
     private void atualizarAcesso(UUID usuarioId, FuncionarioDtos.Requisicao req) {
@@ -136,6 +163,15 @@ public class FuncionarioService {
 
         usuario.setNome(req.nome().trim());
         usuario.setEmail(email);
+        // Apelido so muda quando o dono digita um novo. Deixar em branco nao
+        // apaga o que a pessoa ja usa para entrar.
+        String novoLogin = LoginUsuario.normalizar(req.acesso().login());
+        if (!novoLogin.isEmpty() && !novoLogin.equalsIgnoreCase(usuario.getLogin())) {
+            if (usuarioRepository.existsByLoginIgnoreCase(novoLogin)) {
+                throw new RegraNegocioException("Ja existe um usuario com o apelido " + novoLogin + ".");
+            }
+            usuario.setLogin(novoLogin);
+        }
         if (req.acesso().papel() != null) {
             usuario.setPapel(req.acesso().papel());
         }
@@ -196,6 +232,7 @@ public class FuncionarioService {
                 funcionario.isAtivo(),
                 funcionario.getUsuarioId(),
                 usuario.map(Usuario::getEmail).orElse(null),
+                usuario.map(Usuario::getLogin).orElse(null),
                 usuario.map(Usuario::getPapel).orElse(null),
                 usuario.map(u -> u.getPapel().descricao()).orElse(null),
                 funcionario.getEspecialidades().stream()

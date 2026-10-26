@@ -45,6 +45,10 @@ app:
     email: ${APP_ADMIN_EMAIL:dono@oficina.local}
     senha: ${APP_ADMIN_SENHA:oficina123}
     nome: ${APP_ADMIN_NOME:Dono da Oficina}
+  # Senha com que a equipe nasce no primeiro start. Deixe vazio para nao criar
+  # ninguem. Quem entra usa o apelido: tonny, kevim, delander, gustavo,
+  # secretaria.
+  equipe-senha-padrao: ${APP_EQUIPE_SENHA_PADRAO:delander2026}
   carga-demo: ${APP_CARGA_DEMO:false}
   cors-origens: ${APP_CORS_ORIGENS:http://localhost:5173,http://localhost:3000}
   url-publica: ${APP_URL_PUBLICA:http://localhost:5173}

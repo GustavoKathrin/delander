@@ -9,7 +9,7 @@ interface ContextoAuth {
   ehMecanico: boolean
   /** Quem registra a resposta do cliente ao orcamento: atendente, gerente ou dono. */
   podeAtender: boolean
-  entrarComSenha: (email: string, senha: string) => Promise<void>
+  entrarComSenha: (identificador: string, senha: string) => Promise<void>
   encerrar: () => Promise<void>
 }
 
@@ -40,8 +40,8 @@ export function ProvedorAuth({ children }: { children: ReactNode }) {
       ehMecanico: sessao?.usuario?.papel === 'MECANICO',
       podeAtender:
         (sessao?.usuario?.gerencia ?? false) || sessao?.usuario?.papel === 'RECEPCAO',
-      entrarComSenha: async (email, senha) => {
-        const nova = await entrar(email, senha)
+      entrarComSenha: async (identificador, senha) => {
+        const nova = await entrar(identificador, senha)
         setSessao(nova)
       },
       encerrar: async () => {

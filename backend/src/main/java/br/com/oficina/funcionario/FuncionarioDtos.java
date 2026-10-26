@@ -16,9 +16,16 @@ public final class FuncionarioDtos {
     private FuncionarioDtos() {
     }
 
-    /** Acesso ao sistema (opcional: funcionario pode existir sem login). */
+    /**
+     * Acesso ao sistema (opcional: funcionario pode existir sem login).
+     *
+     * O apelido e o que o mecanico digita para entrar. Quando vem vazio, o
+     * servico deriva do e-mail -- assim o dono nao e obrigado a pensar em
+     * mais um campo se nao quiser.
+     */
     public record AcessoRequisicao(
             @Email(message = "E-mail invalido") @Size(max = 180) String email,
+            @Size(max = 40) String login,
             @Size(max = 72) String senha,
             Papel papel) {
     }
@@ -42,6 +49,7 @@ public final class FuncionarioDtos {
                            boolean ativo,
                            UUID usuarioId,
                            String email,
+                           String login,
                            Papel papel,
                            String papelDescricao,
                            List<CadastroDtos.EspecialidadeResposta> especialidades) {

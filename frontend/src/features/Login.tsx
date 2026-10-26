@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../lib/auth'
@@ -6,13 +6,24 @@ import { AvisoErro, Botao, Campo, Cartao, Entrada } from '../components/ui'
 import { ErroApi } from '../api/client'
 import { LogoDelander } from '../components/LogoDelander'
 
+/**
+ * Depois de quantos segundos parar de fingir que esta quase e avisar que o
+ * servidor esta acordando. Entrada normal leva menos de 1 s; passando disso,
+ * quase sempre e o servidor saindo do sono do plano gratuito.
+ */
+const SEGUNDOS_ATE_AVISAR = 4
+
 export default function Login() {
   const { autenticado, entrarComSenha } = useAuth()
   const navegar = useNavigate()
-  const [email, setEmail] = useState('')
+  const [identificador, setIdentificador] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState<string>()
   const [enviando, setEnviando] = useState(false)
+  const [acordandoServidor, setAcordandoServidor] = useState(false)
+  const temporizador = useRef<number>()
+
+  useEffect(() => () => window.clearTimeout(temporizador.current), [])
 
   if (autenticado) return <Navigate to="/" replace />
 
@@ -20,14 +31,20 @@ export default function Login() {
     e.preventDefault()
     setErro(undefined)
     setEnviando(true)
+    temporizador.current = window.setTimeout(
+      () => setAcordandoServidor(true),
+      SEGUNDOS_ATE_AVISAR * 1000,
+    )
     try {
-      await entrarComSenha(email.trim(), senha)
+      await entrarComSenha(identificador.trim(), senha)
       navegar('/', { replace: true })
     } catch (falha) {
       setErro(
         falha instanceof ErroApi ? falha.message : 'Não foi possível entrar. Tente novamente.',
       )
     } finally {
+      window.clearTimeout(temporizador.current)
+      setAcordandoServidor(false)
       setEnviando(false)
     }
   }
@@ -44,15 +61,22 @@ export default function Login() {
 
         <Cartao className="p-5">
           <form onSubmit={enviar} className="space-y-4">
-            <Campo rotulo="E-mail" obrigatorio>
+            {/* type="text", nao "email": o mecanico entra como "tonny", e o
+                navegador recusaria isso sozinho num campo de e-mail, antes de
+                a requisicao sair. */}
+            <Campo rotulo="Usuário ou e-mail" obrigatorio>
               <Entrada
-                type="email"
+                type="text"
+                inputMode="text"
                 autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 required
                 autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="voce@oficina.com.br"
+                value={identificador}
+                onChange={(e) => setIdentificador(e.target.value)}
+                placeholder="tonny"
               />
             </Campo>
 
@@ -69,8 +93,19 @@ export default function Login() {
 
             <AvisoErro mensagem={erro} />
 
+            {/* Spinner mudo por um minuto parece sistema quebrado, e a pessoa
+                recarrega a pagina -- o que recomeca a espera do zero. Dizer o
+                que esta acontecendo e quanto falta e o que segura o dedo. */}
+            {acordandoServidor && (
+              <p className="rounded-md bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+                O servidor estava dormindo e está acordando agora. Isso leva até um
+                minuto na primeira entrada do dia. <strong>Não recarregue a página</strong> —
+                recarregar recomeça a espera.
+              </p>
+            )}
+
             <Botao type="submit" bloco tamanho="lg" carregando={enviando}>
-              Entrar
+              {enviando ? 'Entrando...' : 'Entrar'}
             </Botao>
           </form>
         </Cartao>

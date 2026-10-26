@@ -96,9 +96,30 @@ public class SecurityConfig {
                 && !caminho.startsWith("/swagger-ui");
     }
 
+    /**
+     * Custo do BCrypt.
+     *
+     * Estava 12. Num servidor normal, custo 12 leva ~250 ms e e uma escolha
+     * boa. Na maquina gratuita onde este sistema roda (fracao de uma CPU
+     * compartilhada), o MESMO calculo levava ~2,5 s -- medido: um login com
+     * senha ERRADA demorava 2,76 s, e errar senha e o caminho mais comum do
+     * dia a dia. Pior: cada tentativa prendia a CPU inteira por esse tempo,
+     * entao duas pessoas entrando juntas esperavam em fila.
+     *
+     * Custo 10 e o padrao do proprio Spring Security e o minimo recomendado
+     * pela OWASP para BCrypt. Sao 4x menos rodadas (2^12 / 2^10), o que poe o
+     * login abaixo de 1 s na mesma maquina. Quem quiser apertar paga em
+     * hospedagem, nao em espera do mecanico.
+     *
+     * Hash antigo continua sendo conferido no custo em que foi gravado -- o
+     * BCrypt guarda o custo dentro do hash. O AuthService regrava no custo
+     * novo na primeira entrada de cada pessoa.
+     */
+    public static final int BCRYPT_CUSTO = 10;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
+        return new BCryptPasswordEncoder(BCRYPT_CUSTO);
     }
 
     @Bean

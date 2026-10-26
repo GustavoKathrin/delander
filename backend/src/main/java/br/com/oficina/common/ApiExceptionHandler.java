@@ -64,10 +64,17 @@ public class ApiExceptionHandler {
                 "Nao foi possivel interpretar os dados enviados.", req);
     }
 
+    /**
+     * Mensagem fixa de proposito: a excecao sabe se o usuario nao existe ou se
+     * a senha e que estava errada, e contar isso entregaria de graca quais
+     * logins existem. O texto fala em "usuario" e nao em "e-mail" porque a
+     * entrada aceita o apelido -- dizer "e-mail incorreto" para quem digitou
+     * "tonny" manda procurar erro no lugar errado.
+     */
     @ExceptionHandler(BadCredentialsException.class)
     public ProblemDetail credenciaisInvalidas(BadCredentialsException ex, HttpServletRequest req) {
         return montar(HttpStatus.UNAUTHORIZED, "Credenciais invalidas",
-                "E-mail ou senha incorretos.", req);
+                "Usuario ou senha incorretos.", req);
     }
 
     /**

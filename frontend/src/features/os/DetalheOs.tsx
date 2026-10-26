@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -64,6 +64,7 @@ import { CarroTopo, Placa } from '../../components/oficina'
 import ModalCompartilhar from './ModalCompartilhar'
 import { RegistrarTrabalho } from './RegistrarTrabalho'
 import { ChecklistEntrada } from './ChecklistEntrada'
+import { RequisitosDaEtapa } from './RequisitosDaEtapa'
 import { AjudaDaTela } from '../../components/AjudaDaTela'
 import { EtapasDaOs } from './EtapasDaOs'
 import { LinhaServico } from './LinhaServico'
@@ -162,6 +163,10 @@ export default function DetalheOs() {
   const [motivoParadaId, setMotivoParadaId] = useState('')
   const [descricaoParada, setDescricaoParada] = useState('')
   const [paradaVisivel, setParadaVisivel] = useState(true)
+  const blocoFotos = useRef<HTMLDivElement>(null)
+  const irParaFotos = () =>
+    blocoFotos.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
   const [adicionandoServico, setAdicionandoServico] = useState(false)
   const [adicionandoPeca, setAdicionandoPeca] = useState(false)
   /** O serviço cujo motivo estamos perguntando, e para qual ação. */
@@ -449,6 +454,14 @@ export default function DetalheOs() {
             rotulo={rotuloDaAcao}
             salvando={transicionar.isPending}
             onAcionar={acionar}
+            requisitos={
+              <RequisitosDaEtapa
+                os={os}
+                onAdicionarServico={() => setAdicionandoServico(true)}
+                onAdicionarPeca={() => setAdicionandoPeca(true)}
+                onIrParaFotos={irParaFotos}
+              />
+            }
           />
         </div>
 
@@ -690,7 +703,9 @@ export default function DetalheOs() {
           {/* Ordem de propósito: o checklist vem antes porque ele trava o
               início do serviço, e registrar trabalho vem antes da linha do
               tempo porque é a ação, não o relato. */}
-          <ChecklistEntrada os={os} />
+          <div ref={blocoFotos} className="scroll-mt-4">
+            <ChecklistEntrada os={os} />
+          </div>
 
           {/* O registro solto continua, para o que é do carro e não de um
               serviço só — "cliente ligou perguntando", "levei para o teste".

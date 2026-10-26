@@ -1,5 +1,5 @@
 import { AlertTriangle, Check, ChevronDown, PauseCircle, Wrench } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Botao, cx } from '../../components/ui'
 import type { StatusOs } from '../../types'
 
@@ -80,6 +80,7 @@ export function EtapasDaOs({
   rotulo,
   salvando,
   onAcionar,
+  requisitos,
 }: {
   status: StatusOs
   /** Já filtrado por perfil por quem chama: aqui só entra o que a pessoa pode. */
@@ -87,6 +88,15 @@ export function EtapasDaOs({
   rotulo: (de: StatusOs, para: StatusOs) => string
   salvando: boolean
   onAcionar: (destino: StatusOs) => void
+  /**
+   * O que falta para sair desta etapa, com a ação de cada pendência.
+   *
+   * Entra AQUI DENTRO, entre a régua e o botão, e não num cartão solto lá
+   * embaixo: é a etapa que define o que precisa estar pronto, e separar as
+   * duas coisas era justamente o que fazia a tela parecer uma pilha de
+   * cartões sem ordem.
+   */
+  requisitos?: ReactNode
 }) {
   const [abertas, setAbertas] = useState(false)
   // Fecha de novo quando o carro anda: as opcoes de outra etapa nao sao as
@@ -182,6 +192,8 @@ export function EtapasDaOs({
           Serviço parado — retome quando destravar
         </p>
       ) : null}
+
+      {requisitos}
 
       {/* ---------------- o próximo passo ---------------- */}
       {avancos.length > 0 && (

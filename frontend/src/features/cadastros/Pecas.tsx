@@ -19,7 +19,7 @@ import {
 import { AjudaDaTela } from '../../components/AjudaDaTela'
 import { Placa } from '../../components/oficina'
 import { ReporPrateleira } from './ReporPrateleira'
-import { dataCompleta } from '../../lib/format'
+import { dataCompleta, diasTexto } from '../../lib/format'
 import type { PecaCatalogo, PecaPendente } from '../../types'
 
 /**
@@ -106,7 +106,7 @@ export default function Pecas() {
   const emRisco = pecas.filter((p) => p.emRisco)
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 p-4 pb-24">
+    <div className="mx-auto max-w-5xl space-y-4 p-4 pb-24">
       <header>
         <h1 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
           <ShoppingCart className="size-5 text-slate-400" aria-hidden />
@@ -129,8 +129,14 @@ export default function Pecas() {
         <p className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-800 ring-1 ring-red-200">
           <AlertTriangle className="mt-0.5 size-4 flex-none" aria-hidden />
           <span>
-            <strong>{emRisco.length} peça(s) em risco</strong>
-            {travando.length > 0 && ` · ${travando.length} trava(m) o começo de um serviço`}.
+            <strong>
+              {emRisco.length === 1 ? '1 peça em risco' : `${emRisco.length} peças em risco`}
+            </strong>
+            {travando.length > 0 &&
+              (travando.length === 1
+                ? ' · 1 trava o começo de um serviço'
+                : ` · ${travando.length} travam o começo de um serviço`)}
+            .
             Vale cobrar o fornecedor hoje.
           </span>
         </p>
@@ -142,7 +148,7 @@ export default function Pecas() {
           descricao={
             pecas.length === 0
               ? undefined
-              : `${pecas.length} peça(s) · da mais urgente para a menos`
+              : `${pecas.length === 1 ? '1 peça' : `${pecas.length} peças`} · da mais urgente para a menos`
           }
         />
 
@@ -358,8 +364,8 @@ function LinhaDaFila({
           </p>
 
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-            <Link to={`/os/${peca.osId}`} className="hover:underline">
-              <Placa placa={peca.placa} tamanho="sm" />
+            <Link to={`/os/${peca.osId}`} className="-my-2 inline-flex items-center py-2 hover:underline">
+              <Placa placa={peca.placa} tamanho="md" />
             </Link>
             <span>{peca.cliente}</span>
             {peca.fornecedor && <span>· {peca.fornecedor}</span>}
@@ -387,10 +393,10 @@ function LinhaDaFila({
                 precisa até {dataCompleta(peca.comprarAte)}
                 {peca.diasDeFolga != null &&
                   (peca.diasDeFolga < 0
-                    ? ` · ${Math.abs(peca.diasDeFolga)} dia(s) atrasado`
+                    ? ` · ${diasTexto(Math.abs(peca.diasDeFolga))} de atraso`
                     : peca.diasDeFolga === 0
                       ? ' · é hoje'
-                      : ` · ${peca.diasDeFolga} dia(s)`)}
+                      : ` · faltam ${diasTexto(peca.diasDeFolga)}`)}
               </span>
             ) : null}
 
@@ -413,11 +419,11 @@ function LinhaDaFila({
             {peca.statusDescricao}
           </Etiqueta>
           {peca.status === 'SOLICITADA' && (
-            <Botao variante="secundario" tamanho="sm" carregando={salvando} onClick={onComprei}>
+            <Botao variante="secundario" tamanho="toque" carregando={salvando} onClick={onComprei}>
               Comprei
             </Botao>
           )}
-          <Botao variante="sucesso" tamanho="sm" carregando={salvando} onClick={onChegou}>
+          <Botao variante="sucesso" tamanho="toque" carregando={salvando} onClick={onChegou}>
             Chegou
           </Botao>
         </div>

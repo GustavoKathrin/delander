@@ -126,7 +126,25 @@ export default function PainelMecanico() {
 
   const lista = consulta.data ?? []
   const rodando = useMemo(() => lista.filter((s) => s.apontamentoAbertoId), [lista])
-  const pendentes = useMemo(() => lista.filter((s) => !s.apontamentoAbertoId), [lista])
+  /**
+   * Servico parado no meio nao e servico na fila.
+   *
+   * Os dois caiam juntos em "Na fila", com o mesmo botao "Iniciar". Mas um
+   * deles e um carro que ja esta aberto na bancada, com 22h de apontamento
+   * e as pecas espalhadas — "iniciar" ali e a palavra errada, e a estimativa
+   * que o modal pedia ja tinha sido dada. Separar os dois e dizer "Retomar"
+   * custa um cabecalho e economiza um passo inteiro no caso mais comum.
+   */
+  const parados = useMemo(
+    () => lista.filter((s) => !s.apontamentoAbertoId && s.horasTrabalhadas > 0),
+    [lista],
+  )
+  const pendentes = useMemo(
+    () => lista.filter((s) => !s.apontamentoAbertoId && s.horasTrabalhadas <= 0),
+    [lista],
+  )
+  /** Retomar nao pergunta tempo de novo: a estimativa ja existe. */
+  const retomando = iniciando !== null && iniciando.horasTrabalhadas > 0
 
   if (consulta.isLoading) return <Carregando texto="Buscando seus serviços..." />
 
@@ -154,8 +172,12 @@ export default function PainelMecanico() {
         <Cartao>
           <Vazio
             icone={<ClipboardCheck className="size-10" />}
-            titulo="Nenhum serviço na sua fila"
-            descricao="Quando o dono atribuir um serviço a você, ele aparece aqui."
+            titulo={gerencia ? 'Nenhum serviço aberto na oficina' : 'Nenhum serviço na sua fila'}
+            descricao={
+              gerencia
+                ? 'Nenhum carro tem serviço pendente, em execução ou pausado neste momento.'
+                : 'Quando o dono atribuir um serviço a você, ele aparece aqui.'
+            }
           />
         </Cartao>
       )}
@@ -180,6 +202,25 @@ export default function PainelMecanico() {
                 setErro(undefined)
                 setObservacao('')
                 setConcluindo(servico)
+              }}
+            />
+          ))}
+        </section>
+      )}
+
+      {parados.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-amber-800">Parados no meio</h2>
+          {parados.map((servico) => (
+            <CartaoServico
+              key={servico.itemId}
+              servico={servico}
+              agora={agora}
+              onIniciar={() => {
+                setErro(undefined)
+                setEstimativa(String(servico.horasEstimadas ?? 1))
+                setTempoLivre(false)
+                setIniciando(servico)
               }}
             />
           ))}
@@ -213,7 +254,7 @@ export default function PainelMecanico() {
       <Modal
         aberto={iniciando !== null}
         onFechar={() => setIniciando(null)}
-        titulo="Começar o serviço"
+        titulo={retomando ? 'Retomar o serviço' : 'Começar o serviço'}
         descricao={iniciando ? `${iniciando.placa} — ${iniciando.descricao}` : undefined}
         rodape={
           <>
@@ -226,7 +267,7 @@ export default function PainelMecanico() {
               onClick={() => iniciando && iniciar.mutate(iniciando)}
             >
               <Play className="size-4" aria-hidden />
-              Iniciar agora
+              {retomando ? 'Retomar agora' : 'Iniciar agora'}
             </Botao>
           </>
         }
@@ -238,6 +279,20 @@ export default function PainelMecanico() {
             teclado numerico so aparece para quem realmente quer um valor
             quebrado, e ai e ele que vira o complemento. */}
         <div className="space-y-4">
+          {/* Retomar nao pergunta tempo de novo.
+              O servico parado no meio ja tem estimativa dada e horas
+              apontadas; repetir a pergunta e um passo a mais com a luva na
+              mao, e a resposta certa e sempre a mesma que ja esta la. */}
+          {retomando && (
+            <p className="rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-slate-600 ring-1 ring-slate-200">
+              Já tem{' '}
+              <strong className="text-slate-900">{horas(iniciando?.horasTrabalhadas)}</strong>{' '}
+              apontadas neste serviço, previsto em {horas(iniciando?.horasEstimadas)}. O cronômetro
+              continua de onde parou.
+            </p>
+          )}
+
+          {!retomando && (
           <Campo
             rotulo="Quanto tempo você acha que vai gastar?"
             obrigatorio={flag(CHAVES.exigirEstimativa)}
@@ -283,8 +338,9 @@ export default function PainelMecanico() {
               </button>
             </div>
           </Campo>
+          )}
 
-          {tempoLivre && (
+          {!retomando && tempoLivre && (
             <Entrada
               type="number"
               step="0.25"
@@ -437,6 +493,10 @@ function CartaoServico({
   const rodando = Boolean(servico.apontamentoAbertoId && servico.apontamentoInicio)
   const estimativa = servico.horasEstimadasInformadas ?? servico.horasEstimadas
   const decorridoTexto = rodando ? decorrido(servico.apontamentoInicio!, agora) : null
+  /** Ja tem hora apontada: o carro esta aberto na bancada, nao na fila. */
+  const jaMexeram = !rodando && servico.horasTrabalhadas > 0
+  const excedente = servico.horasTrabalhadas - servico.horasEstimadas
+  const estourou = !rodando && servico.horasEstimadas > 0 && excedente > 0
   const passouDaEstimativa =
     rodando &&
     estimativa > 0 &&
@@ -454,7 +514,11 @@ function CartaoServico({
                 <Placa placa={servico.placa} tamanho="md" />
               </Link>
               {servico.precisaElevador && <SeloElevador estado="PRECISA" />}
-              <span className="text-sm text-slate-500">{servico.veiculo}</span>
+              {/* Sem modelo cadastrado o servidor devolve a propria placa, e o
+                  cartao saia "[KLM4C88] KLM4C88". */}
+              {servico.veiculo !== servico.placa && (
+                <span className="text-sm text-slate-500">{servico.veiculo}</span>
+              )}
               {servico.prioridade !== 'NORMAL' && (
                 <Etiqueta className={CORES_PRIORIDADE[servico.prioridade]}>
                   {servico.prioridade}
@@ -520,6 +584,18 @@ function CartaoServico({
               aria-label="Cronômetro ativo"
             />
           </div>
+        ) : estourou ? (
+          /*
+           * 22h59 apontadas num servico previsto em 6h sairam no mesmo cinza
+           * de 12px que "0min apontadas de 2h30" — o cartao nao distinguia
+           * um servico intacto de um que ja consumiu quase quatro vezes o
+           * previsto. Quem precisa saber disso antes de pegar a chave de
+           * roda e justamente quem esta olhando este cartao.
+           */
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900 ring-1 ring-amber-200">
+            {horas(servico.horasTrabalhadas)} já apontadas — {horas(excedente)} a mais que as{' '}
+            {horas(servico.horasEstimadas)} previstas
+          </p>
         ) : (
           <p className="mt-3 text-xs text-slate-500">
             {horas(servico.horasTrabalhadas)} já apontadas de {horas(servico.horasEstimadas)}{' '}
@@ -537,7 +613,7 @@ function CartaoServico({
             className="flex flex-1 items-center justify-center gap-2 bg-marca-600 py-4 text-base font-semibold text-white transition hover:bg-marca-700"
           >
             <Play className="size-5" aria-hidden />
-            Iniciar
+            {jaMexeram ? 'Retomar' : 'Iniciar'}
           </button>
         )}
         {onPausar && (

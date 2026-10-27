@@ -78,7 +78,7 @@ export function ReporPrateleira() {
           titulo="Repor prateleira"
           descricao="Peça pedida para o estoque, sem carro. Quando chega, ela fica."
           acao={
-            <Botao tamanho="sm" onClick={() => setPedindo({})}>
+            <Botao tamanho="toque" onClick={() => setPedindo({})}>
               <PackagePlus className="size-3.5" aria-hidden />
               Pedir peça
             </Botao>
@@ -122,14 +122,14 @@ export function ReporPrateleira() {
                 {p.status === 'SOLICITADA' && (
                   <Botao
                     variante="secundario"
-                    tamanho="sm"
+                    tamanho="toque"
                     carregando={marcarComprada.isPending}
                     onClick={() => marcarComprada.mutate(p)}
                   >
                     Comprei
                   </Botao>
                 )}
-                <Botao variante="sucesso" tamanho="sm" onClick={() => setRecebendo(p)}>
+                <Botao variante="sucesso" tamanho="toque" onClick={() => setRecebendo(p)}>
                   Chegou
                 </Botao>
               </li>
@@ -160,7 +160,7 @@ export function ReporPrateleira() {
                     {p.quantidadeEstoque} na prateleira · mínimo {p.estoqueMinimo}
                   </p>
                 </div>
-                <Botao variante="secundario" tamanho="sm" onClick={() => setPedindo({ sugestao: p })}>
+                <Botao variante="secundario" tamanho="toque" onClick={() => setPedindo({ sugestao: p })}>
                   Pedir
                 </Botao>
               </li>

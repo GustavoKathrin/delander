@@ -13,7 +13,7 @@ import {
   cx,
   useAviso,
 } from '../../components/ui'
-import { CORES_PRIORIDADE, CORES_STATUS, dataCompleta, diasTexto, horas } from '../../lib/format'
+import { CORES_PRIORIDADE, CORES_STATUS, dataCompleta, diasTexto, horas, plural } from '../../lib/format'
 import { useAuth } from '../../lib/auth'
 import { CHAVES, useConfig } from '../../lib/config'
 
@@ -59,7 +59,7 @@ export default function FilaEspera() {
           <ListOrdered className="size-5 text-slate-400" aria-hidden />
           Fila de espera
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-600">
           Carros que entraram e ainda não têm dia marcado, na ordem de prioridade e chegada. A data
           prevista considera a vaga liberando quando o carro que está nela sai.
         </p>
@@ -67,7 +67,7 @@ export default function FilaEspera() {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Cartao className="p-4">
-          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400">
+          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-500">
             <Inbox className="size-3.5" aria-hidden />
             Na fila
           </p>
@@ -76,14 +76,14 @@ export default function FilaEspera() {
         </Cartao>
 
         <Cartao className="p-4">
-          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400">
+          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-500">
             <ParkingCircle className="size-3.5" aria-hidden />
             Vagas livres agora
           </p>
           <p
             className={cx(
               'text-xl font-bold',
-              fila.vagasLivresHoje === 0 ? 'text-red-600' : 'text-emerald-600',
+              fila.vagasLivresHoje === 0 ? 'text-red-600' : 'text-emerald-700',
             )}
           >
             {fila.vagasLivresHoje} de {fila.vagasTotal}
@@ -94,7 +94,7 @@ export default function FilaEspera() {
         </Cartao>
 
         <Cartao className="p-4">
-          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400">
+          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-500">
             <Clock className="size-3.5" aria-hidden />
             Próxima vaga
           </p>
@@ -105,7 +105,7 @@ export default function FilaEspera() {
             {fila.proximaVagaLivreRotulo || '—'}
           </p>
           {fila.proximaVagaLivre && (
-            <p className="text-[11px] text-slate-400">{dataCompleta(fila.proximaVagaLivre)}</p>
+            <p className="text-[11px] text-slate-500">{dataCompleta(fila.proximaVagaLivre)}</p>
           )}
           <p className="text-[11px] text-slate-500">
             {fila.proximaVagaLivre
@@ -117,7 +117,7 @@ export default function FilaEspera() {
 
       {semVaga.length > 0 && (
         <div className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-900 ring-1 ring-amber-200">
-          {semVaga.length} carro(s) da fila não cabem nos próximos 90 dias com a capacidade atual.
+          {plural(semVaga.length, 'carro')} da fila não {semVaga.length === 1 ? 'cabe' : 'cabem'} nos próximos 90 dias com a capacidade atual.
           Ou a oficina precisa entregar mais rápido, ou esses clientes precisam de outra data — e o
           sistema está dizendo isso antes de você prometer prazo.
         </div>
@@ -198,14 +198,14 @@ function LinhaFila({
           )}
         </div>
         {os.queixa && <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">{os.queixa}</p>}
-        <p className="text-[11px] text-slate-400">
+        <p className="text-[11px] text-slate-500">
           esperando {diasTexto(item.diasEsperando)} · precisa de {horas(item.horasNecessarias)}
         </p>
       </div>
 
       <div className="flex flex-none items-center gap-3">
         <div className="text-right">
-          <p className="text-[11px] uppercase tracking-wide text-slate-400">Entrada prevista</p>
+          <p className="text-[11px] uppercase tracking-wide text-slate-500">Entrada prevista</p>
           <p
             className={cx(
               'text-sm font-semibold capitalize',

@@ -26,7 +26,7 @@ import {
 import { CarroTopo, Placa } from '../../components/oficina'
 import { CampoMarca } from '../../components/CampoMarca'
 import { QuatroSemanas } from './QuatroSemanas'
-import { horas, moeda } from '../../lib/format'
+import { horas, moeda, plural } from '../../lib/format'
 
 interface VeiculoPorPlaca {
   id: string
@@ -621,7 +621,7 @@ export default function PainelAgendar({
               <div>
                 <p className="mb-1.5 text-xs font-medium text-slate-700">
                   Serviços a fazer
-                  <span className="ml-1 font-normal text-slate-400">
+                  <span className="ml-1 font-normal text-slate-500">
                     (o valor daqui vira o orçamento da OS)
                   </span>
                 </p>
@@ -654,7 +654,7 @@ export default function PainelAgendar({
 
                         <div className="mt-1.5 grid grid-cols-[72px_96px_1fr] gap-2">
                           <label className="block">
-                            <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-slate-400">
+                            <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-slate-500">
                               Horas
                             </span>
                             <Entrada
@@ -669,7 +669,7 @@ export default function PainelAgendar({
                             />
                           </label>
                           <label className="block">
-                            <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-slate-400">
+                            <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-slate-500">
                               Valor R$
                             </span>
                             <Entrada
@@ -684,7 +684,7 @@ export default function PainelAgendar({
                             />
                           </label>
                           <label className="block min-w-0">
-                            <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-slate-400">
+                            <span className="mb-0.5 block text-[10px] uppercase tracking-wide text-slate-500">
                               Mecânico
                             </span>
                             <Selecao
@@ -856,7 +856,7 @@ export default function PainelAgendar({
                       ) : filaElevador.data && filaElevador.data.itens.length > 0 ? (
                         <div className="rounded-md bg-white px-2 py-1.5 ring-1 ring-slate-200">
                           <p className="text-[11px] font-semibold text-slate-700">
-                            {filaElevador.data.itens.length} carro(s) na frente ·{' '}
+                            {plural(filaElevador.data.itens.length, 'carro')} na frente ·{' '}
                             <span className="capitalize">
                               {filaElevador.data.proximoLivreRotulo}
                             </span>
@@ -867,7 +867,7 @@ export default function PainelAgendar({
                                 key={i.os.id}
                                 className="flex items-center gap-1.5 text-[11px] text-slate-500"
                               >
-                                <span className="font-bold text-slate-400">{i.posicao}º</span>
+                                <span className="font-bold text-slate-500">{i.posicao}º</span>
                                 <span className="font-mono font-semibold text-slate-700">
                                   {i.os.placa}
                                 </span>

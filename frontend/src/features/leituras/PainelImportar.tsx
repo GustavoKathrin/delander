@@ -22,6 +22,7 @@ import {
 } from '../../components/ui'
 import { Placa } from '../../components/oficina'
 import { TabelaScanner } from './TabelaScanner'
+import { plural } from '../../lib/format'
 
 interface VeiculoPorPlaca {
   id: string
@@ -318,7 +319,7 @@ export default function PainelImportar({
                     'Modelo não identificado'}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  {totalDeItens} itens em {modulos.length} módulo(s)
+                  {plural(totalDeItens, 'item', 'ns')} em {plural(modulos.length, 'módulo')}
                   {previa.km ? ` · ${previa.km.toLocaleString('pt-BR')} km` : ''}
                   {previa.ferramenta ? ` · ${previa.ferramenta}` : ''}
                   {previa.ferramentaVersao ? ` ${previa.ferramentaVersao}` : ''}
@@ -431,7 +432,7 @@ export default function PainelImportar({
                     {existentes.data!.map((l) => (
                       <option key={l.id} value={l.id}>
                         {l.tipoDescricao}
-                        {l.condicao ? ` · ${l.condicao}` : ''} ({l.modulos} módulo(s))
+                        {l.condicao ? ` · ${l.condicao}` : ''} ({plural(l.modulos, 'módulo')})
                       </option>
                     ))}
                   </Selecao>

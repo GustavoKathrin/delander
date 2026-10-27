@@ -1,5 +1,6 @@
 package br.com.oficina.ordemservico;
 
+import br.com.oficina.common.Texto;
 import br.com.oficina.apontamento.Apontamento;
 import br.com.oficina.apontamento.ApontamentoRepository;
 import br.com.oficina.arquivo.ArquivoOsRepository;
@@ -352,7 +353,7 @@ public class OrdemServicoService {
         eventoService.registrar(oficinaId, os.getId(), EventoService.OBSERVACAO,
                 comRessalva == 0
                         ? "Checklist de entrada preenchido, sem ressalvas."
-                        : "Checklist de entrada preenchido com %d ressalva(s).".formatted(comRessalva),
+                        : "Checklist de entrada preenchido com %s.".formatted(Texto.plural(comRessalva, "ressalva")),
                 true);
 
         return detalhe(os.getId());
@@ -413,9 +414,9 @@ public class OrdemServicoService {
             long semResposta = itens.stream().filter(i -> i.getOk() == null).count();
             if (semResposta > 0) {
                 throw new RegraNegocioException(
-                        ("Faltam %d item(ns) do checklist de entrada. Ele registra como o carro chegou — "
+                        ("Faltam %s do checklist de entrada. Ele registra como o carro chegou — "
                                 + "preenchido depois de abrir o carro, não protege a oficina de reclamação "
-                                + "de avaria que já existia.").formatted(semResposta));
+                                + "de avaria que já existia.").formatted(Texto.plural(semResposta, "item", "itens")));
             }
         }
 

@@ -7,7 +7,7 @@ import type { DiaQuadro, Quadro as QuadroTipo } from '../../types'
 import { useAuth } from '../../lib/auth'
 import { CHAVES, useConfig } from '../../lib/config'
 import { Botao, Carregando, Cartao, Etiqueta, Selecao, Vazio, cx, useAviso } from '../../components/ui'
-import { corSemaforo, dataCurta, horas, textoSemaforo } from '../../lib/format'
+import { corSemaforo, dataCurta, horas, plural, textoSemaforo } from '../../lib/format'
 import CardOs from './CardOs'
 
 function segundaDaSemana(base = new Date()): string {
@@ -118,8 +118,8 @@ export default function Quadro() {
               <LayoutGrid className="size-4 text-slate-400" aria-hidden />
               Semana de {quadro.titulo}
             </h1>
-            <p className="text-xs text-slate-500">
-              {quadro.semana.carros} carro(s) alocado(s) · {horas(quadro.semana.horasAlocadas)} de{' '}
+            <p className="text-xs text-slate-600">
+              {plural(quadro.semana.carros, 'carro alocado')} · {horas(quadro.semana.horasAlocadas)} de{' '}
               {horas(quadro.semana.horasDisponiveis)} ·{' '}
               <span className={textoSemaforo(quadro.semana.semaforo)}>
                 {quadro.semana.percentual}% da capacidade
@@ -226,7 +226,7 @@ export default function Quadro() {
               }}
             >
               {quadro.fila.length === 0 ? (
-                <p className="px-2 py-6 text-center text-[11px] text-slate-400">
+                <p className="px-2 py-6 text-center text-[11px] text-slate-500">
                   Nenhum carro esperando vaga.
                 </p>
               ) : (
@@ -282,7 +282,7 @@ export default function Quadro() {
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold capitalize text-slate-800">
                       {dia.diaSemana}{' '}
-                      <span className="font-normal text-slate-500">{dataCurta(dia.data)}</span>
+                      <span className="font-normal text-slate-600">{dataCurta(dia.data)}</span>
                     </p>
                     <span
                       className={cx('size-2.5 rounded-full', corSemaforo(cap.semaforo))}
@@ -303,7 +303,7 @@ export default function Quadro() {
                           style={{ width: `${Math.min(cap.percentual, 100)}%` }}
                         />
                       </div>
-                      <p className="mt-1 text-[11px] text-slate-500">
+                      <p className="mt-1 text-[11px] text-slate-600">
                         {horas(cap.horasAlocadas)}/{horas(cap.horasDisponiveis)} ·{' '}
                         {cap.boxesTotal > 0
                           ? `${cap.boxesOcupados}/${cap.boxesTotal} boxes`
@@ -316,7 +316,7 @@ export default function Quadro() {
                       )}
                     </>
                   ) : (
-                    <p className="mt-1 text-[11px] text-slate-400">Oficina fechada</p>
+                    <p className="mt-1 text-[11px] text-slate-500">Oficina fechada</p>
                   )}
                 </div>
 
@@ -336,7 +336,7 @@ export default function Quadro() {
                   }}
                 >
                   {ordens.length === 0 ? (
-                    <p className="px-2 py-6 text-center text-[11px] text-slate-400">
+                    <p className="px-2 py-6 text-center text-[11px] text-slate-500">
                       {dia.funciona ? 'Dia livre' : '—'}
                     </p>
                   ) : (

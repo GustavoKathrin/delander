@@ -4,6 +4,7 @@ import { Camera, Eye, EyeOff, Images, Send, X } from 'lucide-react'
 import { api, ErroApi } from '../../api/client'
 import { AreaTexto, Botao, Cartao, CartaoTitulo, cx, useAviso } from '../../components/ui'
 import type { DetalheOs } from '../../types'
+import { plural } from '../../lib/format'
 
 /**
  * O mecânico conta o que está fazendo.
@@ -73,7 +74,7 @@ export function RegistrarTrabalho({ os }: { os: DetalheOs }) {
           // mentira. O que a pessoa precisa saber é quantas fotos faltaram.
           const motivo = erro instanceof ErroApi ? erro.message : 'falha no envio'
           throw new Error(
-            `Trabalho registrado, mas ${fotos.length - enviadas} de ${fotos.length} foto(s) não subiram: ${motivo}`,
+            `Trabalho registrado, mas ${fotos.length - enviadas} de ${plural(fotos.length, 'foto')} não subiram: ${motivo}`,
           )
         }
       }
@@ -84,7 +85,7 @@ export function RegistrarTrabalho({ os }: { os: DetalheOs }) {
       setFotos([])
       limparInputs()
       void queryClient.invalidateQueries({ queryKey: ['os', os.resumo.id] })
-      avisar(quantas > 0 ? `Trabalho registrado com ${quantas} foto(s).` : 'Trabalho registrado.')
+      avisar(quantas > 0 ? `Trabalho registrado com ${plural(quantas, 'foto')}.` : 'Trabalho registrado.')
     },
     onError: (erro: Error) => {
       // O texto pode ter entrado mesmo com a foto falhando; recarrega para a
@@ -182,7 +183,7 @@ export function RegistrarTrabalho({ os }: { os: DetalheOs }) {
                 </button>
               </span>
             ))}
-            <span className="text-xs font-medium text-slate-500">{fotos.length} foto(s)</span>
+            <span className="text-xs font-medium text-slate-500">{plural(fotos.length, 'foto')}</span>
           </div>
         )}
 

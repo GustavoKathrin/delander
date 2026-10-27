@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../../api/client'
 import type { CapacidadeDia } from '../../types'
 import { cx } from '../../components/ui'
+import { plural } from '../../lib/format'
 
 /**
  * Como está cada semana, em uma olhada.
@@ -91,7 +92,7 @@ export function QuatroSemanas({
         {DIAS.map((d) => (
           <div
             key={d}
-            className="text-center text-[10px] font-semibold uppercase tracking-wide text-slate-400"
+            className="text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500"
           >
             {d}
           </div>
@@ -112,7 +113,7 @@ export function QuatroSemanas({
               title={
                 fechado
                   ? 'Oficina fechada'
-                  : `${livres} vaga(s) livre(s) · ${info!.percentual}% da capacidade · o que aperta: ${info!.limitante}`
+                  : `${plural(livres, 'vaga livre')} · ${info!.percentual}% da capacidade · o que aperta: ${info!.limitante}`
               }
               className={cx(
                 // Alvo grande de proposito: isto e clicado de pe, no balcao
@@ -139,7 +140,7 @@ export function QuatroSemanas({
       </div>
 
       {consulta.isLoading && (
-        <p className="mt-2 text-center text-[11px] text-slate-400">Calculando a capacidade...</p>
+        <p className="mt-2 text-center text-[11px] text-slate-500">Calculando a capacidade...</p>
       )}
     </div>
   )

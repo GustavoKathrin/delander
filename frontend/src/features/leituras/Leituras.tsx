@@ -13,7 +13,7 @@ import {
   useAviso,
 } from '../../components/ui'
 import { Placa } from '../../components/oficina'
-import { dataHora } from '../../lib/format'
+import { dataHora, plural } from '../../lib/format'
 import PainelImportar from './PainelImportar'
 
 interface Pagina {
@@ -103,7 +103,7 @@ export default function Leituras() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-slate-900">Leituras do scanner</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-600">
             Os dados dos módulos guardados por carro e por modelo. Achar o MAP de um Civic 2014
             deixa de exigir plugar o scanner de novo.
           </p>
@@ -193,8 +193,8 @@ export default function Leituras() {
                 {g.motores.length > 0 && (
                   <span className="text-xs text-slate-500">{g.motores.join(' · ')}</span>
                 )}
-                <span className="ml-auto text-[11px] text-slate-400">
-                  {g.oficiais.length + g.outras.length} leitura(s)
+                <span className="ml-auto text-[11px] text-slate-500">
+                  {plural(g.oficiais.length + g.outras.length, 'leitura')}
                 </span>
               </header>
 
@@ -212,7 +212,7 @@ export default function Leituras() {
                       Oficial — valores de referência
                     </p>
                     <p className="truncate text-[11px] text-emerald-800/80">
-                      {l.modulos} módulo(s) · {l.itens} itens ·{' '}
+                      {plural(l.modulos, 'módulo')} · {plural(l.itens, 'item', 'ns')} ·{' '}
                       {l.motorLigado ? 'motor ligado' : 'motor desligado'}
                       {l.momentoTeste ? ` · ${dataHora(l.momentoTeste)}` : ''}
                     </p>

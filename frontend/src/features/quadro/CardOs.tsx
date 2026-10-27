@@ -44,7 +44,7 @@ export default function CardOs({ os, arrastavel = false, compacto = false, onArr
         {os.paradaMotivo && (
           <PauseCircle className="size-3.5 flex-none text-orange-500" aria-label="Pausado" />
         )}
-        <span className="ml-auto text-[11px] text-slate-400">#{os.numero}</span>
+        <span className="ml-auto text-[11px] text-slate-500">#{os.numero}</span>
         {os.compartilhado && (
           <Link2 className="size-3 flex-none text-slate-400" aria-label="Link com o cliente ativo" />
         )}

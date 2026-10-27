@@ -90,7 +90,7 @@ export default function ArtigoWiki() {
               </div>
             )}
 
-            <p className="mt-2 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-slate-500">
               {a.autor ? `${a.autor} · ` : ''}
               {dataCurta(a.atualizadoEm ?? a.criadoEm)}
               {!a.publicado && ' · rascunho'}
@@ -160,7 +160,7 @@ export default function ArtigoWiki() {
                 <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
                   {l.condicao ?? l.modeloDescricao}
                 </span>
-                <span className="flex-none text-xs text-slate-400">{l.itens} itens</span>
+                <span className="flex-none text-xs text-slate-500">{l.itens} itens</span>
               </Link>
             ))}
           </div>

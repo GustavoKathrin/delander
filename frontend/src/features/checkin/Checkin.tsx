@@ -26,7 +26,7 @@ import {
 } from '../../components/ui'
 import { CampoMarca } from '../../components/CampoMarca'
 import { SeletorCor } from '../../components/oficina'
-import { dataCompleta, horas, moeda } from '../../lib/format'
+import { dataCompleta, horas, moeda, plural } from '../../lib/format'
 
 interface ServicoEscolhido {
   catalogoServicoId: string
@@ -187,7 +187,7 @@ export default function Checkin() {
     <div className="mx-auto max-w-3xl space-y-4 p-4 pb-24">
       <header>
         <h1 className="text-lg font-semibold text-slate-900">Novo atendimento</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-600">
           Cliente, carro, problema e dia — em uma tela só. O sistema já sugere o primeiro dia com
           folga.
         </p>
@@ -216,7 +216,7 @@ export default function Checkin() {
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-slate-900">{cliente.nome}</p>
                 <p className="truncate text-xs text-slate-500">
-                  {cliente.telefone ?? 'sem telefone'} · {cliente.veiculos.length} veículo(s)
+                  {cliente.telefone ?? 'sem telefone'} · {plural(cliente.veiculos.length, 'veículo')}
                 </p>
               </div>
               <Check className="ml-auto size-5 flex-none text-emerald-600" aria-hidden />
@@ -512,7 +512,7 @@ export default function Checkin() {
                 Serviços previstos
                 {horasTotais > 0 && (
                   <span className="ml-2 font-normal text-slate-500">
-                    {horas(horasTotais)} estimada(s)
+                    {horas(horasTotais)} estimadas
                   </span>
                 )}
               </p>
@@ -544,7 +544,7 @@ export default function Checkin() {
                         }
                         className="w-20 rounded-md border-0 bg-white px-2 py-1 text-right text-xs ring-1 ring-slate-300 focus:ring-2 focus:ring-marca-600"
                       />
-                      <span className="text-xs text-slate-400">h</span>
+                      <span className="text-xs text-slate-500">h</span>
                       {s.valor !== undefined && (
                         <span className="w-24 text-right text-xs text-slate-500">
                           {moeda(s.valor)}
@@ -587,7 +587,7 @@ export default function Checkin() {
                   </option>
                 ))}
               </Selecao>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-500">
                 Dá para abrir a OS sem serviços e detalhar depois do diagnóstico.
               </p>
             </div>
@@ -631,7 +631,7 @@ export default function Checkin() {
                         dataAgendada === s.data ? 'text-marca-100' : 'text-slate-500',
                       )}
                     >
-                      {horas(s.horasLivres)} livres · {s.vagasLivres} vaga(s)
+                      {horas(s.horasLivres)} livres · {plural(s.vagasLivres, 'vaga')}
                     </span>
                   </button>
                 ))}

@@ -107,7 +107,7 @@ export function BuscaPeca({
                         {peca.descricao}
                       </span>
                       {peca.codigo && (
-                        <span className="block text-[11px] text-slate-400">{peca.codigo}</span>
+                        <span className="block text-[11px] text-slate-500">{peca.codigo}</span>
                       )}
                     </span>
                     <span

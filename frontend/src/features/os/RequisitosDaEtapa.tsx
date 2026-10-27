@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 
 import { cx } from '../../components/ui'
 import type { DetalheOs, StatusOs } from '../../types'
+import { plural } from '../../lib/format'
 
 /**
  * O que falta para sair desta etapa.
@@ -119,7 +120,7 @@ function pendenciasDaEtapa(
           {
             chave: 'servicos',
             rotulo:
-              servicos.length === 0 ? 'Nenhum serviço para executar' : `${servicos.length} serviço(s) aprovados`,
+              servicos.length === 0 ? 'Nenhum serviço para executar' : `${plural(servicos.length, 'serviço')} ${servicos.length === 1 ? 'aprovado' : 'aprovados'}`,
             pronto: servicos.length > 0,
             porque: 'Não há o que executar sem serviço lançado.',
             acao: {

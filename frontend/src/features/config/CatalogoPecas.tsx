@@ -16,7 +16,7 @@ import {
   cx,
   useAviso,
 } from '../../components/ui'
-import { moeda } from '../../lib/format'
+import { moeda, plural } from '../../lib/format'
 import type { PecaCatalogo } from '../../types'
 
 /**
@@ -76,7 +76,7 @@ export default function CatalogoPecas() {
         <p className="mx-4 mt-3 flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900 ring-1 ring-amber-200">
           <AlertTriangle className="mt-0.5 size-4 flex-none" aria-hidden />
           <span>
-            {faltando.length > 0 && <strong>{faltando.length} peça(s) zerada(s)</strong>}
+            {faltando.length > 0 && <strong>{plural(faltando.length, 'peça zerada')}</strong>}
             {faltando.length > 0 && acabando.length > 0 && ' · '}
             {acabando.length > 0 && `${acabando.length} acabando`}. Vale olhar antes de prometer
             prazo para o cliente.

@@ -35,7 +35,7 @@ export default function Wiki() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-slate-900">Wiki da oficina</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-600">
             O que já deu certo aqui, escrito por quem resolveu. O artigo fica ligado ao modelo —
             o próximo Civic 2014 com o mesmo sintoma cai nele.
           </p>
@@ -83,7 +83,7 @@ export default function Wiki() {
               <div className="flex items-start gap-2">
                 <h2 className="min-w-0 flex-1 text-sm font-semibold text-slate-900">{a.titulo}</h2>
                 {a.fotos > 0 && (
-                  <span className="flex flex-none items-center gap-0.5 text-[11px] text-slate-400">
+                  <span className="flex flex-none items-center gap-0.5 text-[11px] text-slate-500">
                     <Image className="size-3.5" aria-hidden />
                     {a.fotos}
                   </span>
@@ -104,7 +104,7 @@ export default function Wiki() {
                 </div>
               )}
 
-              <p className="mt-2 text-[11px] text-slate-400">
+              <p className="mt-2 text-[11px] text-slate-500">
                 {a.autor ? `${a.autor} · ` : ''}
                 {dataCurta(a.atualizadoEm ?? a.criadoEm)}
                 {!a.publicado && ' · rascunho'}

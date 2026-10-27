@@ -84,6 +84,13 @@ resolve:
 - **Definir `APP_EQUIPE_SENHA_PADRAO`** no painel do Render. A variável tem
   prioridade sobre o padrão, então a senha real nunca entra no repositório.
 
+A tela de Funcionários tem **duas listas**, e isso não é enfeite. Em cima, quem
+pega serviço — Tonny e Kevim — porque a jornada de quem tem ficha é somada como
+capacidade de mão de obra da oficina. Embaixo, **"Entram no sistema, mas não
+pegam serviço"**: Delander, Gustavo e a secretária, com o botão **Trocar senha**.
+Eles ficam fora da primeira lista de propósito: cadastrar o dono como mão de obra
+faria o sistema prometer prazo que a bancada não cobre.
+
 Eles entram pelo **apelido**, não pelo e-mail:
 
 | Entra como | Quem é | Papel |

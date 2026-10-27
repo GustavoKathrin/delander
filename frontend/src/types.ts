@@ -503,6 +503,22 @@ export interface Funcionario {
   especialidades: Especialidade[]
 }
 
+/**
+ * Conta que entra no sistema sem ficha de funcionario.
+ *
+ * Dono, gerencia e recepcao. Ficam fora da ficha porque a jornada de quem
+ * tem ficha vira capacidade de mao de obra da oficina.
+ */
+export interface UsuarioSemBancada {
+  id: string
+  nome: string
+  email: string
+  login: string
+  papel: Papel
+  papelDescricao: string
+  ativo: boolean
+}
+
 export interface ConfiguracaoItem {
   chave: string
   valor: string

@@ -22,7 +22,7 @@ import {
   useAviso,
 } from '../../components/ui'
 import { CampoMarca } from '../../components/CampoMarca'
-import { CORES_STATUS, dataCompleta, horas } from '../../lib/format'
+import { CORES_STATUS, dataCompleta, horas, plural } from '../../lib/format'
 
 export default function Clientes() {
   const avisar = useAviso()
@@ -177,7 +177,7 @@ export default function Clientes() {
                 descricao={
                   cliente.veiculos.length === 0
                     ? 'Um cliente pode ter nenhum, um ou vários'
-                    : `${cliente.veiculos.length} cadastrado(s)`
+                    : plural(cliente.veiculos.length, 'carro cadastrado')
                 }
                 acao={
                   <Botao
@@ -291,16 +291,16 @@ export default function Clientes() {
                   className="block rounded-lg p-3 ring-1 ring-slate-200 transition hover:bg-slate-50"
                 >
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-slate-400">OS #{os.numero}</span>
+                    <span className="text-xs text-slate-500">OS #{os.numero}</span>
                     <Etiqueta className={CORES_STATUS[os.status].chip}>{os.statusDescricao}</Etiqueta>
                     <span className="ml-auto text-xs text-slate-500">
                       {horas(os.horasTrabalhadas)} de mão de obra
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-slate-700">{os.queixa ?? 'Sem relato'}</p>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     {os.dataAgendada ? `Agendado ${dataCompleta(os.dataAgendada)} · ` : ''}
-                    {os.diasNaOficina} dia(s) na oficina
+                    {plural(os.diasNaOficina, 'dia')} na oficina
                   </p>
                 </Link>
               </li>

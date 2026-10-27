@@ -15,7 +15,7 @@ import type { ReactNode } from 'react'
 import { api } from '../../api/client'
 import type { Alerta, ResumoOs } from '../../types'
 import { Botao, Carregando, Cartao, Etiqueta, Vazio, cx } from '../../components/ui'
-import { CORES_STATUS, dataCompleta, horas, telefoneWhatsapp } from '../../lib/format'
+import { CORES_STATUS, dataCompleta, horas, plural, telefoneWhatsapp } from '../../lib/format'
 import { CHAVES, useConfig } from '../../lib/config'
 
 /**
@@ -215,10 +215,10 @@ export default function Radar() {
             </span>
           )}
         </div>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-600">
           Separado por quem resolve, não por cor de alerta. Um carro entra aqui depois de{' '}
-          {numero(CHAVES.diasSemMovimentacao, 3)} dia(s) sem nenhum apontamento, ou{' '}
-          {numero(CHAVES.diasProntoSemRetirada, 2)} dia(s) pronto sem ninguém buscar.
+          {plural(numero(CHAVES.diasSemMovimentacao, 3), 'dia')} sem nenhum apontamento, ou{' '}
+          {plural(numero(CHAVES.diasProntoSemRetirada, 2), 'dia')} pronto sem ninguém buscar.
         </p>
       </header>
 
@@ -247,7 +247,7 @@ export default function Radar() {
                 {grupo.linhas.length}
               </span>
             </h2>
-            <p className="text-xs text-slate-500">{grupo.explicacao}</p>
+            <p className="text-xs text-slate-600">{grupo.explicacao}</p>
           </div>
           <div className="space-y-2">
             {grupo.linhas.map(({ os, principal }) => (
@@ -336,7 +336,7 @@ function LinhaRadar({
             </p>
           )}
 
-          <p className="mt-1 pl-5.5 text-[11px] text-slate-400">
+          <p className="mt-1 pl-5.5 text-[11px] text-slate-500">
             {os.diasNaOficina} dias na oficina · {horas(os.horasTrabalhadas)} de mão de obra
             {os.horasParado > 0 && ` · ${horas(os.horasParado)} parado`}
             {os.previsaoEntrega && ` · entrega prometida ${dataCompleta(os.previsaoEntrega)}`}
@@ -356,7 +356,7 @@ function LinhaRadar({
             </AcaoLink>
           )}
           {chamaCliente && !whatsapp && (
-            <span className="text-xs text-slate-400">sem telefone cadastrado</span>
+            <span className="text-xs text-slate-500">sem telefone cadastrado</span>
           )}
           {ehPeca && (
             <AcaoLink para="/pecas" destaque>

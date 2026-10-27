@@ -1,5 +1,6 @@
 package br.com.oficina.wiki;
 
+import br.com.oficina.usuario.UsuarioRepository;
 import br.com.oficina.arquivo.ArmazenamentoArquivos;
 import br.com.oficina.common.Contexto;
 import br.com.oficina.common.RecursoNaoEncontradoException;
@@ -32,17 +33,20 @@ public class WikiService {
     private final WikiArquivoRepository arquivoRepository;
     private final VeiculoRepository veiculoRepository;
     private final ArmazenamentoArquivos armazenamento;
+    private final UsuarioRepository usuarioRepository;
     private final Contexto contexto;
 
     public WikiService(WikiArtigoRepository repository,
                        WikiArquivoRepository arquivoRepository,
                        VeiculoRepository veiculoRepository,
                        ArmazenamentoArquivos armazenamento,
+                       UsuarioRepository usuarioRepository,
                        Contexto contexto) {
         this.repository = repository;
         this.arquivoRepository = arquivoRepository;
         this.veiculoRepository = veiculoRepository;
         this.armazenamento = armazenamento;
+        this.usuarioRepository = usuarioRepository;
         this.contexto = contexto;
     }
 
@@ -207,6 +211,24 @@ public class WikiService {
         return artigo;
     }
 
+    /**
+     * O e-mail e um bom identificador de auditoria e um pessimo nome de autor.
+     *
+     * A ficha de auditoria guarda "dono@oficina.local", porque e-mail nao
+     * muda quando a pessoa troca de sobrenome e dois Josés nao viram o mesmo
+     * registro. Mas o cartao da wiki mostrava isso como assinatura, e o
+     * mecanico que abre a tela quer saber que foi o Carlos quem escreveu.
+     * A troca acontece aqui, na saida, sem mexer no que fica gravado.
+     */
+    private String nomeDoAutor(String criadoPor) {
+        if (criadoPor == null || criadoPor.isBlank()) {
+            return null;
+        }
+        return usuarioRepository.findByEmailIgnoreCase(criadoPor)
+                .map(br.com.oficina.usuario.Usuario::getNome)
+                .orElse(criadoPor);
+    }
+
     private WikiDtos.Resumo resumo(WikiArtigo a) {
         String corpo = a.getCorpo() == null ? "" : a.getCorpo().strip();
         String previa = corpo.length() > TAMANHO_PREVIA
@@ -216,7 +238,7 @@ public class WikiService {
         return new WikiDtos.Resumo(
                 a.getId(), a.getTitulo(), a.alcance(),
                 a.getMarca(), a.getModelo(), a.getMotor(), a.getAnoDe(), a.getAnoAte(),
-                a.getTags(), a.isPublicado(), a.getCriadoPor(),
+                a.getTags(), a.isPublicado(), nomeDoAutor(a.getCriadoPor()),
                 a.getCriadoEm() == null ? null : a.getCriadoEm().atOffset(java.time.ZoneOffset.UTC),
                 a.getAtualizadoEm() == null ? null : a.getAtualizadoEm().atOffset(java.time.ZoneOffset.UTC),
                 arquivoRepository.findByWikiArtigoIdOrderByOrdem(a.getId()).size(),

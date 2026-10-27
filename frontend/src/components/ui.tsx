@@ -45,7 +45,7 @@ const VARIANTES: Record<Variante, string> = {
     'bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 focus-visible:outline-slate-400',
   fantasma: 'text-slate-600 hover:bg-slate-100 focus-visible:outline-slate-400',
   perigo: 'bg-red-600 text-white hover:bg-red-700 focus-visible:outline-red-600 shadow-sm',
-  sucesso: 'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:outline-emerald-600 shadow-sm',
+  sucesso: 'bg-emerald-700 text-white hover:bg-emerald-800 focus-visible:outline-emerald-700 shadow-sm',
 }
 
 const TAMANHOS: Record<Tamanho, string> = {
@@ -163,7 +163,7 @@ export function Campo({
       {erro ? (
         <span className="mt-1 block text-xs text-red-600">{erro}</span>
       ) : (
-        dica && <span className="mt-1 block text-xs text-slate-400">{dica}</span>
+        dica && <span className="mt-1 block text-xs text-slate-500">{dica}</span>
       )}
     </label>
   )

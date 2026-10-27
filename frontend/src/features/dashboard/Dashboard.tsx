@@ -25,7 +25,7 @@ import {
 import { api } from '../../api/client'
 import type { Painel } from '../../types'
 import { Barra, Botao, Carregando, Cartao, CartaoTitulo, Etiqueta, Vazio, cx } from '../../components/ui'
-import { dataCurta, dataLocal, diasTexto, horas } from '../../lib/format'
+import { dataCurta, dataLocal, diasTexto, horas, plural } from '../../lib/format'
 
 /**
  * Paleta categorica validada (scripts/validate_palette.js):
@@ -102,7 +102,7 @@ export default function Dashboard() {
       {/* ---------------- cabecalho ---------------- */}
       <header>
         <h1 className="text-lg font-semibold text-slate-900">Painel do dono</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-600">
           Por que o pátio não esvazia — em números, não em impressão.
         </p>
       </header>
@@ -116,7 +116,7 @@ export default function Dashboard() {
         seletor fica encostado so no que ele realmente muda.
       */}
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
           Agora no pátio
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -159,7 +159,7 @@ export default function Dashboard() {
             valor={`${r.elevadoresOcupados} de ${r.elevadoresTotal}`}
             detalhe={
               r.naFilaDoElevador > 0
-                ? `em uso agora · ${r.naFilaDoElevador} carro(s) com hora marcada para subir`
+                ? `em uso agora · ${plural(r.naFilaDoElevador, 'carro')} com hora marcada para subir`
                 : 'em uso agora · ninguém na fila para subir'
             }
             barra={Math.round((r.elevadoresOcupados * 100) / r.elevadoresTotal)}
@@ -180,7 +180,7 @@ export default function Dashboard() {
 
       {/* ---------------- a partir daqui, o periodo escolhido ---------------- */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
           Nos últimos {dias} dias
         </h2>
         <div className="flex gap-1.5">
@@ -333,7 +333,14 @@ export default function Dashboard() {
                   height={28}
                   iconType="circle"
                   iconSize={8}
-                  wrapperStyle={{ fontSize: 12, color: COR_TEXTO_EIXO }}
+                  wrapperStyle={{ fontSize: 12 }}
+                  /* O recharts pinta o texto da legenda com a cor da serie, e
+                     o ambar sobre branco da 2,15:1 -- "Recebidos" ficava
+                     praticamente ilegivel. A bolinha continua ambar, que e o
+                     que liga a legenda a barra; a palavra vai em chumbo. */
+                  formatter={(valor: string) => (
+                    <span style={{ color: '#334155' }}>{valor}</span>
+                  )}
                 />
                 <Bar dataKey="recebidos" name="Recebidos" fill={COR_RECEBIDOS} radius={[4, 4, 0, 0]} maxBarSize={22}>
                   <LabelList dataKey="recebidos" position="top" fill="#334155" fontSize={11} />
@@ -520,7 +527,7 @@ export default function Dashboard() {
             <span className="font-semibold text-slate-900">
               {quandoEhIsso(r.primeiraFolga.data, r.primeiraFolga.rotulo)}
             </span>{' '}
-            — {horas(r.primeiraFolga.horasLivres)} livres e {r.primeiraFolga.vagasLivres} vaga(s),
+            — {horas(r.primeiraFolga.horasLivres)} livres e {plural(r.primeiraFolga.vagasLivres, 'vaga')},
             com o dia em {r.primeiraFolga.percentualOcupacao}% da capacidade.
           </p>
         </Cartao>

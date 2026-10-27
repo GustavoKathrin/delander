@@ -3,7 +3,7 @@ import { AlertTriangle, PauseCircle } from 'lucide-react'
 import { api } from '../../api/client'
 import type { Quadro } from '../../types'
 import { Carregando, cx, useTique } from '../../components/ui'
-import { corSemaforo, dataCurta, decorrido, horas } from '../../lib/format'
+import { corSemaforo, dataCurta, decorrido, horas, plural } from '../../lib/format'
 import { LogoDelander } from '../../components/LogoDelander'
 
 /** Quadro do dia em tela cheia, para pendurar um monitor na oficina. */
@@ -35,7 +35,7 @@ export default function ModoTv() {
         <div>
           <LogoDelander altura={40} variante="escuro" />
           <p className="mt-1 text-sm text-slate-400">
-            {quadro.semana.carros} carro(s) na semana · {horas(quadro.semana.horasAlocadas)} de{' '}
+            {plural(quadro.semana.carros, 'carro')} na semana · {horas(quadro.semana.horasAlocadas)} de{' '}
             {horas(quadro.semana.horasDisponiveis)} · fila de {horas(quadro.backlogHoras)}
           </p>
         </div>

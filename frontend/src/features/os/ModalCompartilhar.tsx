@@ -5,7 +5,7 @@ import { Copy, MessageCircle, RefreshCw } from 'lucide-react'
 import { api } from '../../api/client'
 import type { CompartilhamentoOs, DetalheOs } from '../../types'
 import { Botao, Interruptor, Modal, cx, useAviso } from '../../components/ui'
-import { dataCompleta, telefoneWhatsapp } from '../../lib/format'
+import { dataCompleta, plural, telefoneWhatsapp } from '../../lib/format'
 
 /** Rotulos amigaveis para as chaves de escopo do link publico. */
 /**
@@ -206,7 +206,7 @@ export default function ModalCompartilhar({ aberto, onFechar, os }: Props) {
               <p className="text-[11px] text-slate-500">
                 {link.expiraEm ? `Expira em ${dataCompleta(link.expiraEm)}` : 'Sem data de expiração'}
                 {' · '}
-                {link.totalAcessos} acesso(s)
+                {plural(link.totalAcessos, 'acesso')}
                 {link.pin && ` · código de acesso: ${link.pin}`}
               </p>
             </div>
@@ -279,7 +279,7 @@ export default function ModalCompartilhar({ aberto, onFechar, os }: Props) {
             />
           </div>
 
-          <p className={cx('text-[11px] text-slate-400')}>
+          <p className={cx('text-[11px] text-slate-500')}>
             O endereço contém um código aleatório de 32 bytes. Quem tiver o link vê a situação
             desta OS — por isso o acesso é somente leitura, expira e pode ser desligado a qualquer
             momento.

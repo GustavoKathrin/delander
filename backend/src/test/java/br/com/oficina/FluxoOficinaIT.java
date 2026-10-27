@@ -60,6 +60,8 @@ class FluxoOficinaIT {
     private ObjectMapper json;
 
     private String token;
+    /** Muda quando o teste de troca de senha roda. */
+    private String senhaDoAdmin = "teste123456";
 
     @Test
     @Order(1)
@@ -508,12 +510,73 @@ class FluxoOficinaIT {
         throw new AssertionError("Servico %s nao esta na OS".formatted(itemId));
     }
 
+    @Test
+    @Order(8)
+    @DisplayName("conta sem ficha de funcionario aparece na lista e pode trocar a senha")
+    void contaSemBancadaTrocaSenha() throws Exception {
+        String auth = token();
+
+        // O admin entra no sistema e NAO tem ficha de funcionario: a jornada
+        // de quem tem ficha vira capacidade de mao de obra, e somar o dono ali
+        // faria a oficina prometer prazo que a bancada nao cobre. Antes disso
+        // existir, essas contas nao apareciam em tela nenhuma -- e a senha
+        // delas so era trocavel por variavel de ambiente no servidor.
+        JsonNode contas = buscar("/api/usuarios/sem-bancada", auth);
+        JsonNode admin = null;
+        for (JsonNode conta : contas) {
+            if ("dono.teste@oficina.local".equals(conta.get("email").asText())) {
+                admin = conta;
+            }
+        }
+        assertThat(admin).as("o dono administrador precisa aparecer entre as contas sem ficha")
+                .isNotNull();
+        assertThat(admin.get("login").asText()).isNotBlank();
+
+        // Trocar a senha, e provar pelo login que a nova vale e a antiga nao.
+        mvc.perform(MockMvcRequestBuilders.put("/api/usuarios/" + admin.get("id").asText())
+                        .header("Authorization", "Bearer " + auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "nome", "Dono da Oficina",
+                                "senha", "outrasenha987"))))
+                .andExpect(status().isOk());
+
+        mvc.perform(MockMvcRequestBuilders.post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "identificador", admin.get("login").asText(),
+                                "senha", "outrasenha987"))))
+                .andExpect(status().isOk());
+
+        mvc.perform(MockMvcRequestBuilders.post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "identificador", admin.get("login").asText(),
+                                "senha", "teste123456"))))
+                .andExpect(status().isUnauthorized());
+
+        // Nao da para rebaixar o unico dono ativo: a oficina ficaria sem
+        // ninguem capaz de mexer em configuracao, e sem volta pela tela.
+        mvc.perform(MockMvcRequestBuilders.put("/api/usuarios/" + admin.get("id").asText())
+                        .header("Authorization", "Bearer " + auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "nome", "Dono da Oficina",
+                                "papel", "RECEPCAO"))))
+                .andExpect(status().isConflict());
+
+        // A senha mudou debaixo do token antigo; os proximos testes, se
+        // houver, precisam de um novo.
+        senhaDoAdmin = "outrasenha987";
+        token = null;
+    }
+
     // ------------------------------------------------------------------ apoio
 
     private String token() throws Exception {
         if (token == null) {
             JsonNode resposta = enviar("/api/auth/login",
-                    Map.of("email", "dono.teste@oficina.local", "senha", "teste123456"), null);
+                    Map.of("email", "dono.teste@oficina.local", "senha", senhaDoAdmin), null);
             token = resposta.get("accessToken").asText();
         }
         return token;

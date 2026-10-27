@@ -15,7 +15,7 @@ import {
   cx,
 } from '../../components/ui'
 import { Placa } from '../../components/oficina'
-import { dataHora } from '../../lib/format'
+import { dataHora, plural } from '../../lib/format'
 import { TabelaScanner } from './TabelaScanner'
 
 export default function DetalheLeitura() {
@@ -118,12 +118,12 @@ export default function DetalheLeitura() {
             )}
 
             <p className="mt-2 text-xs text-slate-500">
-              {r.modulos} módulo(s) · {r.itens} itens
+              {plural(r.modulos, 'módulo')} · {plural(r.itens, 'item', 'ns')}
               {r.km ? ` · ${r.km.toLocaleString('pt-BR')} km` : ''}
               {r.momentoTeste ? ` · ${dataHora(r.momentoTeste)}` : ''}
             </p>
             {leitura.ferramenta && (
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500">
                 {leitura.ferramenta} {leitura.ferramentaVersao ?? ''}
                 {leitura.numeroRelatorio ? ` · relatório ${leitura.numeroRelatorio}` : ''}
               </p>
@@ -196,7 +196,7 @@ export default function DetalheLeitura() {
                   <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
                     {l.condicao ?? l.modeloDescricao}
                   </span>
-                  <span className="text-xs text-slate-400">{l.itens} itens</span>
+                  <span className="text-xs text-slate-500">{l.itens} itens</span>
                 </Link>
               ))}
           </div>

@@ -66,6 +66,26 @@ export function decorrido(inicioIso: string, agora: number = Date.now()): string
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+/**
+ * Plural de verdade, em vez de "2 peca(s)".
+ *
+ * O numero esta sempre ali, no codigo, uma linha acima do texto -- nao ha
+ * razao nenhuma para a tela falar com parenteses. E o tipo de detalhe que
+ * sozinho nao atrapalha ninguem e que, repetido vinte vezes, e exatamente o
+ * que faz um sistema parecer generico e inacabado.
+ *
+ *   plural(1, 'peça')              -> "1 peça"
+ *   plural(3, 'peça')              -> "3 peças"
+ *   plural(2, 'alteração', 'ões')  -> "2 alterações"
+ */
+export function plural(quantidade: number, singular: string, terminacao = 's'): string {
+  if (quantidade === 1) return `1 ${singular}`
+  const base = terminacao.startsWith('õ') || terminacao.startsWith('ã') || terminacao === 'ns'
+    ? singular.slice(0, singular.length - (terminacao === 'ns' ? 1 : 2))
+    : singular
+  return `${quantidade} ${base}${terminacao}`
+}
+
 export function diasTexto(dias: number): string {
   if (dias <= 0) return 'hoje'
   return dias === 1 ? '1 dia' : `${dias} dias`

@@ -112,7 +112,7 @@ export default function Pecas() {
           <ShoppingCart className="size-5 text-slate-400" aria-hidden />
           Peças para comprar
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-600">
           Cada linha aqui é um carro esperando. Só aparece peça de orçamento já aprovado
           pelo cliente — comprar antes do sim é ficar com a peça na mão.
         </p>

@@ -1,6 +1,7 @@
 package br.com.oficina.leitura;
 
 import br.com.oficina.common.RegraNegocioException;
+import br.com.oficina.common.Texto;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -101,8 +102,8 @@ public class AnalisadorPorColunas implements EstrategiaDeRelatorio {
 
         RelatorioScanner.Qualidade qualidade = QualidadeDaLeitura.medir(modulos, NOME);
         if (!qualidade.confiavel()) {
-            avisos.add("Faltaram %d linha(s) numeradas de %d."
-                    .formatted(qualidade.faltando().size(), qualidade.esperados()));
+            avisos.add("Faltaram %s numeradas de %d."
+                    .formatted(Texto.plural(qualidade.faltando().size(), "linha"), qualidade.esperados()));
         }
         return new RelatorioScanner.Previa(cabecalho, modulos, avisos, qualidade);
     }

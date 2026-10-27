@@ -4,6 +4,7 @@ import { Camera, Check, ClipboardCheck, Images, X } from 'lucide-react'
 import { api, ErroApi } from '../../api/client'
 import { Botao, Cartao, CartaoTitulo, Entrada, cx, useAviso } from '../../components/ui'
 import type { DetalheOs } from '../../types'
+import { plural } from '../../lib/format'
 
 /**
  * O checklist de entrada: como o carro chegou.
@@ -43,7 +44,7 @@ export function ChecklistEntrada({ os }: { os: DetalheOs }) {
       if (cameraRef.current) cameraRef.current.value = ''
       if (galeriaRef.current) galeriaRef.current.value = ''
       void queryClient.invalidateQueries({ queryKey: ['os', os.resumo.id] })
-      avisar(`${arquivos.length} foto(s) de entrada registrada(s).`)
+      avisar(`${plural(arquivos.length, 'foto')} de entrada ${arquivos.length === 1 ? 'registrada' : 'registradas'}.`)
     },
     onError: (erro: Error) =>
       avisar(erro instanceof ErroApi ? erro.message : 'Não foi possível enviar.', 'erro'),

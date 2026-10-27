@@ -226,12 +226,12 @@ export default function FichaOs() {
         <div>
           <div className="border-t border-slate-400 pt-1.5">
             {r.clienteNome}
-            <div className="text-[10px] text-slate-400">Cliente — retirada do veículo</div>
+            <div className="text-[10px] text-slate-500">Cliente — retirada do veículo</div>
           </div>
         </div>
       </section>
 
-      <footer className="mt-8 border-t border-slate-200 pt-2 text-center text-[10px] text-slate-400">
+      <footer className="mt-8 border-t border-slate-200 pt-2 text-center text-[10px] text-slate-500">
         {nomeOficina} · Ficha da OS nº {r.numero} · placa {r.placa}
       </footer>
     </div>
@@ -249,7 +249,7 @@ function Titulo({ children }: { children: React.ReactNode }) {
 function Linha({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wide text-slate-400">{rotulo}</div>
+      <div className="text-[10px] uppercase tracking-wide text-slate-500">{rotulo}</div>
       <div className="text-slate-900">{children}</div>
     </div>
   )

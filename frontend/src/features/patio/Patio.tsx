@@ -1005,11 +1005,11 @@ function CelulaVaga({
             <CarroTopo cor={futuro.cor} largura={44} titulo={`${futuro.veiculo} (chega depois)`} />
           </span>
         ) : (
-          <span className="fonte-display flex flex-col items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-stone-500">
+          <span className="fonte-display flex flex-col items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-stone-600">
             <CalendarPlus className="size-6" aria-hidden />
             vaga livre
             {podeAgendar && (
-              <span className="text-[10px] font-medium normal-case tracking-normal text-stone-400">
+              <span className="text-[10px] font-medium normal-case tracking-normal text-stone-600">
                 clique para agendar
               </span>
             )}

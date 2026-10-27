@@ -22,6 +22,7 @@ import {
 import { CHAVES, useConfig } from '../../lib/config'
 import { claro } from '../../components/oficina'
 import { GRUPOS, ROTULOS } from './rotulos'
+import { plural } from '../../lib/format'
 
 // Toda aba daqui precisa da entrada correspondente em GRUPOS (rotulos.ts):
 // o render usa GRUPOS.find(...)! e quebraria em tela branca sem ela.
@@ -107,7 +108,7 @@ export default function Configuracoes() {
           <Settings2 className="size-5 text-slate-400" aria-hidden />
           Configurações
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-600">
           Quase tudo no sistema é "vai ou não vai". O que você desligar aqui desaparece das telas —
           sem opção morta na interface.
         </p>
@@ -123,7 +124,7 @@ export default function Configuracoes() {
               'flex-none border-b-2 px-4 py-3 text-sm transition',
               aba === item.chave
                 ? 'border-marca-600 font-medium text-marca-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800',
+                : 'border-transparent text-slate-600 hover:text-slate-900',
             )}
           >
             {item.rotulo}
@@ -295,7 +296,7 @@ export default function Configuracoes() {
       {pendentes > 0 && (
         <div className="sticky bottom-0 -mx-4 flex items-center gap-3 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
           <p className="flex-1 text-xs text-slate-500">
-            {pendentes} alteração(ões) não salva(s).
+            {plural(pendentes, 'alteração', 'ões')} não {pendentes === 1 ? 'salva' : 'salvas'}.
           </p>
           <Botao variante="secundario" onClick={() => setAlterados({})}>
             Descartar
@@ -360,7 +361,7 @@ function Cadastros() {
           titulo="Marcas de veículo"
           descricao="O que aparece no combo ao cadastrar um carro. Quem cadastra ainda pode digitar uma marca fora da lista — nenhum carro fica de fora por causa disto."
           placeholder="Nova marca e Enter"
-          substantivo="marca(s) na lista."
+          substantivo="na lista."
           vazio="Nenhuma marca na lista. Enquanto estiver assim, o campo de marca volta a ser digitado à mão."
         />
       )}
@@ -370,7 +371,7 @@ function Cadastros() {
           titulo="Checklist de entrada"
           descricao="O que se confere quando o carro chega. Vale para as OS abertas daqui em diante — as que já estão na oficina mantêm a lista com que foram abertas."
           placeholder="Novo item e Enter"
-          substantivo="item(ns) conferido(s) na entrada."
+          substantivo="conferidos na entrada."
           vazio="Nenhum item na lista. Sem itens, o checklist não aparece na OS e a exigência em Fluxo não tem o que cobrar."
         />
       )}
@@ -648,7 +649,7 @@ function Boxes() {
     <Cartao>
       <CartaoTitulo
         titulo="Boxes e vagas"
-        descricao={`${ativos} vaga(s) ativa(s). É a capacidade física que o quadro usa no semáforo.`}
+        descricao={`${plural(ativos, 'vaga ativa')}. É a capacidade física que o quadro usa no semáforo.`}
         acao={
           <Botao tamanho="sm" onClick={() => setCriando(true)}>
             Nova
@@ -1052,7 +1053,7 @@ function SeletorDeDias({
                 'h-11 w-14 rounded-lg text-sm font-medium ring-1 transition',
                 aberto
                   ? 'bg-marca-600 text-white ring-marca-600'
-                  : 'bg-white text-slate-400 ring-slate-300 hover:bg-slate-50',
+                  : 'bg-white text-slate-500 ring-slate-300 hover:bg-slate-50',
               )}
             >
               {dia.curto}

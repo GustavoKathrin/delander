@@ -1,5 +1,6 @@
 package br.com.oficina.ordemservico;
 
+import br.com.oficina.common.Texto;
 import br.com.oficina.apontamento.ApontamentoRepository;
 import br.com.oficina.compartilhamento.CompartilhamentoOsRepository;
 import br.com.oficina.configuracao.Chaves;
@@ -155,18 +156,18 @@ public class ResumoOsFactory {
         }
         if (os.getStatus() == StatusOs.PRONTO_AGUARDANDO_RETIRADA && diasAguardandoRetirada >= limiteRetirada) {
             alertas.add(OsDtos.Alerta.vermelho("RETIRADA",
-                    "Pronto há %d dia(s) e ninguém buscou".formatted(diasAguardandoRetirada)));
+                    "Pronto há %s e ninguém buscou".formatted(Texto.plural(diasAguardandoRetirada, "dia"))));
         }
         if (os.getStatus().noPatio()
                 && os.getStatus() != StatusOs.PRONTO_AGUARDANDO_RETIRADA
                 && diasSemMovimentacao >= limiteSemMovimento) {
             alertas.add(OsDtos.Alerta.vermelho("SEM_MOVIMENTO",
-                    "Sem nenhum apontamento há %d dia(s)".formatted(diasSemMovimentacao)));
+                    "Sem nenhum apontamento há %s".formatted(Texto.plural(diasSemMovimentacao, "dia"))));
         }
         if (os.atrasada(hoje)) {
             long diasAtraso = Math.max(hoje.toEpochDay() - os.getPrevisaoEntrega().toEpochDay(), 0);
             alertas.add(OsDtos.Alerta.vermelho("ATRASO",
-                    "Entrega prometida há %d dia(s)".formatted(diasAtraso)));
+                    "Entrega prometida há %s".formatted(Texto.plural(diasAtraso, "dia"))));
         } else if (os.getPrevisaoEntrega() != null && os.getStatus().noPatio()
                 && !os.getPrevisaoEntrega().isBefore(hoje)
                 && os.getPrevisaoEntrega().toEpochDay() - hoje.toEpochDay() <= diasAntesPrevisao) {

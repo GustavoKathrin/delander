@@ -22,13 +22,7 @@ import {
   useAviso,
   useTique,
 } from '../../components/ui'
-import {
-  CORES_ITEM,
-  CORES_PRIORIDADE,
-  dataCompleta,
-  decorrido,
-  horas,
-} from '../../lib/format'
+import { CORES_ITEM, CORES_PRIORIDADE, dataCompleta, decorrido, horas, plural } from '../../lib/format'
 import { CHAVES, useConfig } from '../../lib/config'
 import { CarroTopo, Placa, SeloElevador } from '../../components/oficina'
 import { useAuth } from '../../lib/auth'
@@ -154,9 +148,9 @@ export default function PainelMecanico() {
         <h1 className="text-lg font-semibold text-slate-900">
           {gerencia ? 'Serviços abertos na oficina' : `Olá, ${usuario?.nome.split(' ')[0]}`}
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-600">
           {rodando.length > 0
-            ? `${rodando.length} serviço(s) com cronômetro rodando.`
+            ? `${plural(rodando.length, 'serviço')} com ${rodando.length === 1 ? 'o cronômetro rodando' : 'cronômetro rodando'}.`
             : 'Toque em Iniciar quando começar a mexer no carro.'}
         </p>
       </header>
@@ -553,7 +547,7 @@ function CartaoServico({
               </span>
             )}
             {!servico.meu && servico.mecanicoNome && (
-              <span className="text-[11px] text-slate-400">de {servico.mecanicoNome}</span>
+              <span className="text-[11px] text-slate-500">de {servico.mecanicoNome}</span>
             )}
           </div>
         </div>
@@ -634,7 +628,7 @@ function CartaoServico({
           <button
             type="button"
             onClick={onConcluir}
-            className="flex flex-1 items-center justify-center gap-2 border-l border-slate-200 bg-emerald-600 py-4 text-base font-semibold text-white transition hover:bg-emerald-700"
+            className="flex flex-1 items-center justify-center gap-2 border-l border-slate-200 bg-emerald-700 py-4 text-base font-semibold text-white transition hover:bg-emerald-800"
           >
             <Check className="size-5" aria-hidden />
             Concluir

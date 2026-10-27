@@ -1,6 +1,7 @@
 package br.com.oficina.leitura;
 
 import br.com.oficina.common.RegraNegocioException;
+import br.com.oficina.common.Texto;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -109,8 +110,9 @@ public class AnalisadorRelatorioAutel implements EstrategiaDeRelatorio {
 
         RelatorioScanner.Qualidade qualidade = QualidadeDaLeitura.medir(modulos, NOME);
         if (!qualidade.confiavel()) {
-            avisos.add("Faltaram %d linha(s) numeradas no meio da tabela (de %d). "
-                    .formatted(qualidade.faltando().size(), qualidade.esperados())
+            avisos.add("Faltaram %s numeradas no meio da tabela (de %d). "
+                    .formatted(Texto.plural(qualidade.faltando().size(), "linha"),
+                            qualidade.esperados())
                     + "O relatorio numera as proprias linhas, e esses numeros nao apareceram.");
         }
 
@@ -215,8 +217,8 @@ public class AnalisadorRelatorioAutel implements EstrategiaDeRelatorio {
                     nomeAtual != null ? nomeAtual : "Modulo", caminhoAtual, List.copyOf(itens)));
         }
         if (ignoradas > 0) {
-            avisos.add("%d linha(s) nao foram reconhecidas e ficaram de fora. Confira a lista."
-                    .formatted(ignoradas));
+            avisos.add("%s nao %s reconhecidas e ficaram de fora. Confira a lista."
+                    .formatted(Texto.plural(ignoradas, "linha"), ignoradas == 1 ? "foi" : "foram"));
         }
         return modulos;
     }

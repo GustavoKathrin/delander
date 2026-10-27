@@ -69,7 +69,7 @@ export default function Acompanhar() {
           <Car className="mx-auto size-10 text-slate-300" aria-hidden />
           <h1 className="text-base font-semibold text-slate-900">Link indisponível</h1>
           <p className="text-sm text-slate-600">{erro?.message}</p>
-          <p className="text-xs text-slate-400">Peça um link novo para a oficina.</p>
+          <p className="text-xs text-slate-500">Peça um link novo para a oficina.</p>
         </div>
       </Moldura>
     )
@@ -86,7 +86,7 @@ export default function Acompanhar() {
         <div className="text-center">
           <p className="font-mono text-2xl font-bold tracking-tight text-slate-900">{os.placa}</p>
           <p className="text-sm text-slate-600">{os.veiculo}</p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-500">
             Olá, {os.cliente} · OS #{os.numeroOs}
           </p>
         </div>
@@ -195,7 +195,7 @@ export default function Acompanhar() {
                     >
                       {item.descricao}
                     </p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500">
                       {item.status}
                       {item.mecanico && ` · ${item.mecanico}`}
                     </p>
@@ -246,7 +246,7 @@ export default function Acompanhar() {
                   </div>
                   <div className="min-w-0 flex-1 pb-3">
                     <p className="text-sm text-slate-700">{evento.descricao ?? evento.tipo}</p>
-                    <p className="text-[11px] text-slate-400">{dataHora(evento.quando)}</p>
+                    <p className="text-[11px] text-slate-500">{dataHora(evento.quando)}</p>
                   </div>
                 </li>
               ))}
@@ -273,7 +273,7 @@ function Moldura({ children, oficina }: { children: React.ReactNode; oficina?: s
           )}
           {children}
         </div>
-        <p className="mt-4 text-center text-[11px] text-slate-400">
+        <p className="mt-4 text-center text-[11px] text-slate-500">
           Página de acompanhamento somente leitura. Dúvidas sobre o serviço? Fale com a oficina.
         </p>
       </div>

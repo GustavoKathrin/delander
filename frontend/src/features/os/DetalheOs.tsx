@@ -399,7 +399,7 @@ export default function DetalheOs() {
               {r.prioridade !== 'NORMAL' && (
                 <Etiqueta className={CORES_PRIORIDADE[r.prioridade]}>{r.prioridade}</Etiqueta>
               )}
-              <span className="text-xs text-slate-400">OS #{r.numero}</span>
+              <span className="text-xs text-slate-500">OS #{r.numero}</span>
             </div>
             <p className="mt-1 text-sm text-slate-700">{r.veiculo}</p>
             <p className="text-sm text-slate-500">
@@ -669,7 +669,7 @@ export default function DetalheOs() {
                     <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
                       {l.condicao ?? l.modeloDescricao}
                     </span>
-                    <span className="flex-none text-xs text-slate-400">
+                    <span className="flex-none text-xs text-slate-500">
                       {l.modulos} mód · {l.itens} itens
                     </span>
                   </Link>
@@ -734,7 +734,7 @@ export default function DetalheOs() {
                     </div>
                     <div className="min-w-0 flex-1 pb-3">
                       <p className="text-sm text-slate-800">{evento.descricao ?? evento.tipo}</p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[11px] text-slate-500">
                         {dataHora(evento.quando)}
                         {evento.autor && ` · ${evento.autor}`}
                         {evento.visivelCliente && ' · visível ao cliente'}
@@ -855,7 +855,7 @@ export default function DetalheOs() {
           <Cartao>
             <CartaoTitulo titulo="Apontamentos" descricao="Horário registrado pelo servidor" />
             {os.apontamentos.length === 0 ? (
-              <p className="px-4 py-6 text-center text-xs text-slate-400">
+              <p className="px-4 py-6 text-center text-xs text-slate-500">
                 Nenhuma hora apontada ainda.
               </p>
             ) : (
@@ -877,7 +877,7 @@ export default function DetalheOs() {
                       </span>
                     </div>
                     <p className="truncate text-[11px] text-slate-500">{a.itemDescricao}</p>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-[11px] text-slate-500">
                       {horaMinuto(a.inicio)} → {a.fim ? horaMinuto(a.fim) : '...'}
                       {a.horasEstimadasInformadas &&
                         ` · previu ${horas(a.horasEstimadasInformadas)}`}
@@ -908,7 +908,7 @@ export default function DetalheOs() {
                       </span>
                     </div>
                     {p.descricao && <p className="text-[11px] text-slate-500">{p.descricao}</p>}
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-[11px] text-slate-500">
                       desde {dataHora(p.inicio)}
                       {p.visivelCliente ? ' · visível ao cliente' : ' · interno'}
                     </p>
@@ -1072,7 +1072,7 @@ function Indicador({
 }) {
   return (
     <div>
-      <p className="text-[11px] uppercase tracking-wide text-slate-400">{rotulo}</p>
+      <p className="text-[11px] uppercase tracking-wide text-slate-500">{rotulo}</p>
       <p className={cx('text-sm font-semibold', alerta ? 'text-red-600' : 'text-slate-800')}>
         {valor}
       </p>

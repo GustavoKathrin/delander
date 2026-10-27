@@ -83,7 +83,7 @@ export function TabelaScanner({
                         item.foraDaFaixa && 'bg-red-50',
                       )}
                     >
-                      <td className="px-2 py-1 tabular-nums text-slate-400">{item.numero ?? '—'}</td>
+                      <td className="px-2 py-1 tabular-nums text-slate-500">{item.numero ?? '—'}</td>
                       <td className="px-2 py-1">
                         {editavel && onMudarItem ? (
                           <input
@@ -121,10 +121,10 @@ export function TabelaScanner({
                           {oficial?.valor ?? '—'}
                         </td>
                       )}
-                      <td className="px-2 py-1 text-right font-mono tabular-nums text-slate-400">
+                      <td className="px-2 py-1 text-right font-mono tabular-nums text-slate-500">
                         {item.minimo ?? '—'}
                       </td>
-                      <td className="px-2 py-1 text-right font-mono tabular-nums text-slate-400">
+                      <td className="px-2 py-1 text-right font-mono tabular-nums text-slate-500">
                         {item.maximo ?? '—'}
                       </td>
                       <td className="px-2 py-1 text-[11px] text-slate-500">

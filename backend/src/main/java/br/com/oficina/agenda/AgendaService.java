@@ -1,5 +1,6 @@
 package br.com.oficina.agenda;
 
+import br.com.oficina.common.Texto;
 import br.com.oficina.cadastro.Box;
 import br.com.oficina.cadastro.BoxRepository;
 import br.com.oficina.common.Contexto;
@@ -345,7 +346,7 @@ public class AgendaService {
         if (os.status() == StatusOs.PRONTO_AGUARDANDO_RETIRADA) {
             long dias = os.diasAguardandoRetirada();
             return dias <= 0 ? "pronto, aguardando retirada"
-                    : "pronto há %d dia(s), ninguém buscou".formatted(dias);
+                    : "pronto há %s, ninguém buscou".formatted(Texto.plural(dias, "dia"));
         }
         if (os.paradaMotivo() != null) {
             return os.paradaMotivo().toLowerCase();

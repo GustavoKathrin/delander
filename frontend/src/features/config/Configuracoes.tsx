@@ -120,7 +120,7 @@ export default function Configuracoes() {
             type="button"
             onClick={() => setAba(item.chave)}
             className={cx(
-              'flex-none border-b-2 px-3 py-2 text-sm transition',
+              'flex-none border-b-2 px-4 py-3 text-sm transition',
               aba === item.chave
                 ? 'border-marca-600 font-medium text-marca-700'
                 : 'border-transparent text-slate-500 hover:text-slate-800',
@@ -1049,7 +1049,7 @@ function SeletorDeDias({
               aria-pressed={aberto}
               title={aberto ? `Abre ${dia.longo}` : `Fechado ${dia.longo}`}
               className={cx(
-                'h-10 w-14 rounded-lg text-sm font-medium ring-1 transition',
+                'h-11 w-14 rounded-lg text-sm font-medium ring-1 transition',
                 aberto
                   ? 'bg-marca-600 text-white ring-marca-600'
                   : 'bg-white text-slate-400 ring-slate-300 hover:bg-slate-50',

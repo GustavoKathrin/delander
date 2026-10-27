@@ -51,7 +51,7 @@ export default function Funcionarios() {
             <span className="font-medium text-slate-700">{horas(totalHoras)} por dia</span>.
           </p>
         </div>
-        <Botao onClick={() => setCriando(true)}>
+        <Botao tamanho="toque" onClick={() => setCriando(true)}>
           <Plus className="size-4" aria-hidden />
           Novo funcionário
         </Botao>
@@ -126,7 +126,7 @@ export default function Funcionarios() {
                   </div>
                 </div>
 
-                <Botao variante="secundario" tamanho="sm" onClick={() => setEditando(f)}>
+                <Botao variante="secundario" tamanho="toque" onClick={() => setEditando(f)}>
                   Editar
                 </Botao>
               </li>

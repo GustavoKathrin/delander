@@ -76,7 +76,7 @@ export function AjudaDaTela({
         }}
         aria-label="Entendi, não mostrar de novo"
         title="Entendi, não mostrar de novo"
-        className="absolute right-2 top-2 grid size-7 place-items-center rounded-lg text-marca-700 transition hover:bg-marca-100"
+        className="absolute right-1 top-1 grid size-11 place-items-center rounded-lg text-marca-700 transition hover:bg-marca-100"
       >
         <X className="size-4" />
       </button>

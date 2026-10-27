@@ -510,7 +510,11 @@ function CartaoServico({
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Link to={`/os/${servico.osId}`} aria-label={`Abrir OS do ${servico.placa}`}>
+              <Link
+                to={`/os/${servico.osId}`}
+                aria-label={`Abrir OS do ${servico.placa}`}
+                className="-my-1.5 inline-flex items-center py-1.5"
+              >
                 <Placa placa={servico.placa} tamanho="md" />
               </Link>
               {servico.precisaElevador && <SeloElevador estado="PRECISA" />}

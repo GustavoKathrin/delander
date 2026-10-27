@@ -79,7 +79,7 @@ export default function Clientes() {
               placeholder="Buscar cliente..."
             />
           </div>
-          <Botao tamanho="md" onClick={() => setCriando(true)} aria-label="Novo cliente">
+          <Botao tamanho="toque" onClick={() => setCriando(true)} aria-label="Novo cliente">
             <UserPlus className="size-4" aria-hidden />
           </Botao>
         </div>
@@ -145,7 +145,7 @@ export default function Clientes() {
                   .filter(Boolean)
                   .join(' · ')}
                 acao={
-                  <Botao variante="secundario" tamanho="sm" onClick={() => setEditando(cliente)}>
+                  <Botao variante="secundario" tamanho="toque" onClick={() => setEditando(cliente)}>
                     Editar
                   </Botao>
                 }
@@ -196,7 +196,7 @@ export default function Clientes() {
                   titulo="Nenhum veículo cadastrado"
                   descricao="Carro não é obrigatório: dá para ter o cliente no sistema e cadastrar o carro quando ele aparecer."
                   acao={
-                    <Botao tamanho="sm" onClick={() => setEditandoVeiculo({ veiculo: null })}>
+                    <Botao tamanho="toque" onClick={() => setEditandoVeiculo({ veiculo: null })}>
                       <Plus className="size-3.5" aria-hidden />
                       Adicionar carro
                     </Botao>

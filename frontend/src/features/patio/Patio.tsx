@@ -412,7 +412,8 @@ export default function Patio() {
                 type="button"
                 onClick={abrirCadeado}
                 title="Arrumar a planta do pátio"
-                className="rounded-md p-2 text-zinc-300 ring-1 ring-white/20 transition hover:bg-white/10 hover:text-white"
+                aria-label="Arrumar a planta do pátio"
+                className="grid size-11 place-items-center rounded-md text-zinc-300 ring-1 ring-white/20 transition hover:bg-white/10 hover:text-white"
               >
                 <Lock className="size-4" aria-hidden />
               </button>

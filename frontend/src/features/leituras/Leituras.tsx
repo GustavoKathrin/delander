@@ -108,7 +108,7 @@ export default function Leituras() {
             deixa de exigir plugar o scanner de novo.
           </p>
         </div>
-        <Botao onClick={() => setImportando(true)}>
+        <Botao tamanho="toque" onClick={() => setImportando(true)}>
           <FileUp className="size-4" aria-hidden />
           Importar PDF
         </Botao>
@@ -131,7 +131,7 @@ export default function Leituras() {
           {(['', 'OFICIAL', 'ANOMALIA'] as const).map((opcao) => (
             <Botao
               key={opcao || 'todas'}
-              tamanho="sm"
+              tamanho="toque"
               variante={tipo === opcao ? 'primario' : 'secundario'}
               onClick={() => setTipo(opcao)}
             >
@@ -148,12 +148,15 @@ export default function Leituras() {
           <Clock3 className="size-4 shrink-0 text-violet-600" aria-hidden />
           <p className="text-sm text-violet-900">
             <strong className="font-semibold">
-              {pendentes.length} leitura(s) chegaram por e-mail
+              {pendentes.length === 1
+                ? '1 leitura chegou por e-mail'
+                : `${pendentes.length} leituras chegaram por e-mail`}
             </strong>{' '}
-            e faltam completar: diga de que carro é e se o motor estava ligado.
+            e {pendentes.length === 1 ? 'falta' : 'faltam'} completar: diga de que carro é e se o
+            motor estava ligado.
           </p>
           <Botao
-            tamanho="sm"
+            tamanho="toque"
             variante="secundario"
             className="ml-auto"
             onClick={() => setCompletando(pendentes[0].id)}

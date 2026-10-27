@@ -88,22 +88,28 @@ export default function Quadro() {
           <div className="flex items-center gap-1">
             <Botao
               variante="secundario"
-              tamanho="sm"
+              tamanho="toque"
+              className="px-3"
               onClick={() => setInicio(somarDias(inicio, -7))}
               aria-label="Semana anterior"
             >
-              <ChevronLeft className="size-4" aria-hidden />
+              <ChevronLeft className="size-5" aria-hidden />
             </Botao>
-            <Botao variante="secundario" tamanho="sm" onClick={() => setInicio(segundaDaSemana())}>
+            <Botao
+              variante="secundario"
+              tamanho="toque"
+              onClick={() => setInicio(segundaDaSemana())}
+            >
               Hoje
             </Botao>
             <Botao
               variante="secundario"
-              tamanho="sm"
+              tamanho="toque"
+              className="px-3"
               onClick={() => setInicio(somarDias(inicio, 7))}
               aria-label="Próxima semana"
             >
-              <ChevronRight className="size-4" aria-hidden />
+              <ChevronRight className="size-5" aria-hidden />
             </Botao>
           </div>
 

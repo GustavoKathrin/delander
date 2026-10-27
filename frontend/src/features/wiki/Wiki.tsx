@@ -40,7 +40,7 @@ export default function Wiki() {
             o próximo Civic 2014 com o mesmo sintoma cai nele.
           </p>
         </div>
-        <Botao onClick={() => setEscrevendo({})}>
+        <Botao tamanho="toque" onClick={() => setEscrevendo({})}>
           <Plus className="size-4" aria-hidden />
           Escrever artigo
         </Botao>

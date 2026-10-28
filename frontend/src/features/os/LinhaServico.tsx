@@ -102,7 +102,11 @@ export function LinhaServico({
         {gerencia && !cancelado ? (
           <Selecao
             aria-label={`Mecânico de ${item.descricao}`}
-            className="h-8 w-40 py-1 text-xs"
+            // Sem `text-xs`: abaixo de 16px o Safari do iPhone da zoom
+            // sozinho ao focar, e a tela inteira pula quando o mecanico vai
+            // trocar de mecanico. `h-8` tambem saiu -- o `min-h-11` da base
+            // ja mandava nele, e so confundia quem lesse.
+            className="w-40"
             value={item.funcionarioId ?? ''}
             onChange={(e) => e.target.value && onAtribuir(e.target.value)}
           >

@@ -46,7 +46,7 @@ export default function Prontuario() {
       <div>
         <Link
           to="/clientes"
-          className="-my-2 inline-flex items-center gap-1 py-3 text-xs text-slate-600 hover:text-slate-900"
+          className="-my-1 inline-flex min-h-11 items-center gap-1 text-xs text-slate-600 hover:text-slate-900"
         >
           <ArrowLeft className="size-3.5" aria-hidden />
           Voltar

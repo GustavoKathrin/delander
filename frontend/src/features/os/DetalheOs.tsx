@@ -72,7 +72,7 @@ import { GaleriaFotos } from './GaleriaFotos'
 import { ModalOrcamento } from './ModalOrcamento'
 import { RequisitosDaEtapa } from './RequisitosDaEtapa'
 import { AjudaDaTela } from '../../components/AjudaDaTela'
-import { EtapasDaOs } from './EtapasDaOs'
+import { EtapasDaOs, SecaoDaEtapa, etapaDaOs } from './EtapasDaOs'
 import { LinhaServico } from './LinhaServico'
 import { ModalMotivoServico } from './ModalMotivoServico'
 import type { AcaoServico } from './ModalMotivoServico'
@@ -372,6 +372,32 @@ export default function DetalheOs() {
   const cores = CORES_STATUS[r.status]
   const mostraValores = gerencia || flag(CHAVES.mecanicoVeValores)
 
+  /**
+   * Em que etapa das SETE este carro esta.
+   *
+   * Nao e o status do servidor: tres etapas -- pecas, cotacao e mao de obra
+   * -- acontecem todas em EM_DIAGNOSTICO. `etapaDaOs` le o dado para
+   * distinguir, e e dela que sai a cor de cada secao.
+   */
+  const etapaAtual = etapaDaOs(os)
+  /**
+   * Servico e peca pertencem a DUAS etapas, e a cor diz qual vale agora.
+   *
+   * Antes de aprovar, lancar servico e dizer o que o carro precisa: etapa 2.
+   * Depois, a mesma lista vira o trabalho acontecendo: etapa 6. A peca ainda
+   * passa pela 3, que e quando ela deixa de ser "o que falta" e vira "quanto
+   * custa e quando chega".
+   */
+  const etapaDoServico = etapaAtual >= 6 ? 6 : 2
+  const etapaDaPeca = etapaAtual >= 6 ? 6 : etapaAtual === 3 ? 3 : 2
+  const descricaoDosServicos =
+    `${os.itens.length === 1 ? '1 serviço' : `${os.itens.length} serviços`}` +
+    ` · ${horas(r.horasEstimadas)} estimadas` +
+    (etapaDoServico === 6
+      ? ' · os botões valem para cada serviço, um por um'
+      : ' · isto é o que vai para o orçamento')
+
+
   const acionar = (status: StatusOs) => {
     setErroAcao(undefined)
     if (status === 'PAUSADO' || status === 'CANCELADO') {
@@ -397,7 +423,7 @@ export default function DetalheOs() {
       <div className="sem-impressao">
         <Link
           to="/quadro"
-          className="-my-2 inline-flex items-center gap-1 py-3 text-xs text-slate-500 hover:text-slate-800"
+          className="-my-1 inline-flex min-h-11 items-center gap-1 text-xs text-slate-500 hover:text-slate-800"
         >
           <ArrowLeft className="size-3.5" aria-hidden />
           Voltar para o quadro
@@ -455,7 +481,11 @@ export default function DetalheOs() {
           </div>
 
           <div className="flex flex-none flex-col gap-2 sem-impressao">
-            <div className="flex gap-2 [&>*]:flex-1 sm:[&>*]:flex-none">
+            {/* Duas colunas no celular, e nao tres.
+                Em 375px os tres botoes dividiam 343px em fatias de 112px, e
+                "O cliente vê" nao cabe em 112px: o rotulo quebrava em tres
+                linhas, uma palavra por linha, dentro do botao verde. */}
+            <div className="grid grid-cols-2 gap-2 [&_button]:whitespace-nowrap sm:flex sm:[&>*]:flex-none">
               {/* Sem `gerencia`: o mecânico decide o que vai para o link deste
                   carro. Ele é quem sabe se a foto do motor aberto ajuda ou
                   assusta. Com isso só na gerência, na prática ninguém mexia. */}
@@ -497,6 +527,7 @@ export default function DetalheOs() {
         <div className="mt-4 sem-impressao">
           <EtapasDaOs
             status={r.status}
+            etapaAtual={etapaAtual}
             proximos={os.proximosStatus.filter(
               (status) => status === 'CANCELADO' || podeAcionar(r.status, status, perfil),
             )}
@@ -511,7 +542,178 @@ export default function DetalheOs() {
                 onIrParaFotos={irParaFotos}
               />
             }
-          />
+          >
+            {/* ---------------- servicos ----------------
+
+                Era um cartao solto abaixo da regua, visualmente igual a wiki
+                e a linha do tempo -- nada dizia que aquilo era o miolo da
+                etapa. O dono: "quero que suma o card de servicos e peca,
+                isso tem que estar dentro do mesmo card ali relacionado a
+                etapa".
+
+                A etapa do rotulo muda com o carro, e e essa a razao de a cor
+                existir: antes de aprovar, lancar servico e a etapa 2 (dizer
+                o que o carro precisa); depois, e a etapa 6 (fazer). Mesma
+                lista, dois trabalhos diferentes. */}
+            <SecaoDaEtapa
+              etapa={etapaDoServico}
+              titulo="Serviços"
+              descricao={descricaoDosServicos}
+              acao={
+                // O mecanico tambem lanca servico: e o diagnostico dele que
+                // diz o que o carro precisa. Quem protege a oficina e ele
+                // nao ver nem escrever preco.
+                podeRegistrarTrabalho && (
+                  <Botao
+                    variante="secundario"
+                    tamanho="toque"
+                    onClick={() => setAdicionandoServico(true)}
+                  >
+                    <Plus className="size-4" aria-hidden />
+                    Adicionar
+                  </Botao>
+                )
+              }
+            >
+              {os.itens.length === 0 ? (
+                <Vazio
+                  icone={<Wrench className="size-8" />}
+                  titulo="Nenhum serviço na OS"
+                  descricao="Adicione o que será feito para o sistema poder estimar o tempo e a capacidade do dia."
+                />
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {os.itens.map((item) => (
+                    <LinhaServico
+                      key={item.id}
+                      item={item}
+                      osId={os.resumo.id}
+                      fotos={os.arquivos.filter((a) => a.osItemId === item.id).length}
+                      gerencia={gerencia}
+                      mostraValores={mostraValores}
+                      funcionarios={funcionarios.data ?? []}
+                      salvando={transicionarItem.isPending}
+                      onAtribuir={(funcionarioId) =>
+                        atribuir.mutate({ itemId: item.id, funcionarioId })
+                      }
+                      onAcao={(acao) => setAcaoServico({ item, acao })}
+                      onIniciar={() =>
+                        transicionarItem.mutate({
+                          itemId: item.id,
+                          corpo: { status: 'EM_EXECUCAO' },
+                        })
+                      }
+                      onRegistrarTrabalho={() => setAnotando(item)}
+                      onFotoEnviada={invalidar}
+                      onRemover={() => removerItem.mutate(item.id)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </SecaoDaEtapa>
+
+            {/* ---------------- pecas ----------------
+                Na etapa 3 ela vira ambar: e o momento em que a peca deixa de
+                ser "o que o carro precisa" e vira "quanto custa e quando
+                chega". A lista e a mesma; o trabalho em cima dela, nao. */}
+            <SecaoDaEtapa
+              etapa={etapaDaPeca}
+              titulo="Peças"
+              descricao="Falta de peça é o motivo número um de carro parado"
+              acao={
+                podeRegistrarTrabalho && (
+                  <Botao
+                    variante="secundario"
+                    tamanho="toque"
+                    onClick={() => setAdicionandoPeca(true)}
+                  >
+                    <Plus className="size-4" aria-hidden />
+                    Adicionar
+                  </Botao>
+                )
+              }
+            >
+              {os.pecas.length === 0 ? (
+                <Vazio
+                  icone={<Package className="size-8" />}
+                  titulo="Nenhuma peça registrada"
+                  descricao="Registre a peça e a previsão de chegada para o quadro mostrar por que o carro está parado."
+                />
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {os.pecas.map((peca) => (
+                    <li key={peca.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-slate-800">
+                          {peca.quantidade > 1 && `${peca.quantidade}x `}
+                          {peca.descricao}
+                        </p>
+                        {/* Origem primeiro: e ela que diz se aquilo e dinheiro
+                            no orcamento ou trabalho para alguem fazer. */}
+                        <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500">
+                          <span
+                            className={cx(
+                              'rounded px-1.5 py-0.5 font-medium',
+                              peca.origem === 'ESTOQUE'
+                                ? 'bg-slate-100 text-slate-700'
+                                : 'bg-orange-100 text-orange-800',
+                            )}
+                          >
+                            {peca.origemDescricao}
+                          </span>
+                          {peca.origem === 'COMPRAR' && (
+                            <>
+                              <span>· {peca.momentoDescricao}</span>
+                              <span>· {peca.fornecedor ?? 'sem fornecedor'}</span>
+                              {peca.previsaoChegada &&
+                                ` · chega ${dataCompleta(peca.previsaoChegada)}`}
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      <Etiqueta
+                        className={cx(
+                          peca.status === 'RECEBIDA' || peca.status === 'APLICADA'
+                            ? 'bg-emerald-100 text-emerald-800 ring-emerald-200'
+                            : 'bg-amber-100 text-amber-800 ring-amber-200',
+                        )}
+                      >
+                        {peca.statusDescricao}
+                      </Etiqueta>
+                      {mostraValores && (
+                        <span className="w-24 text-right text-xs text-slate-600">
+                          {moeda(peca.total)}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </SecaoDaEtapa>
+
+            {/* ---------------- mao de obra e total ----------------
+                Vivia na coluna da direita, longe da regua, e por isso a etapa
+                4 nao tinha onde acontecer. Quem nao pode ver dinheiro continua
+                sem ver: o servidor nem manda os valores. */}
+            {mostraValores && (
+              <SecaoDaEtapa
+                etapa={etapaAtual >= 5 ? 5 : 4}
+                titulo={etapaAtual >= 5 ? 'Orçamento do cliente' : 'Mão de obra e total'}
+                descricao={
+                  etapaAtual >= 5
+                    ? 'O que foi combinado com o cliente'
+                    : 'Quanto fica a mão de obra e o desconto que o balcão pode dar'
+                }
+              >
+                <CartaoValores
+                  os={os}
+                  osId={id}
+                  onSalvo={invalidar}
+                  onMandarOrcamento={() => setMandandoOrcamento(true)}
+                />
+              </SecaoDaEtapa>
+            )}
+          </EtapasDaOs>
         </div>
 
         <AvisoErro mensagem={erroAcao} />
@@ -575,140 +777,6 @@ export default function DetalheOs() {
       <div className="grid gap-4 lg:grid-cols-3">
         {/* ---------------- coluna principal ---------------- */}
         <div className="space-y-4 lg:col-span-2">
-          <Cartao>
-            {/* A descricao diz o ESCOPO, nao so a contagem.
-                O botao grande la em cima move a ordem inteira; os botoes
-                daqui mexem num servico so. Eram dois "Iniciar" sem nada
-                escrito explicando a diferenca -- e "1 item(ns)" ainda por
-                cima entregava que ninguem tinha olhado o texto. */}
-            <CartaoTitulo
-              titulo="Serviços"
-              descricao={`${os.itens.length === 1 ? '1 serviço' : `${os.itens.length} serviços`} · ${horas(r.horasEstimadas)} estimadas · os botões abaixo valem para cada serviço, um por um`}
-              acao={
-                // O mecanico tambem lanca servico: e o diagnostico dele que
-                // diz o que o carro precisa, e ate agora so a gerencia via
-                // este botao -- a lista dependia de alguem repassar de boca.
-                // Quem protege a oficina e ele nao ver nem escrever preco.
-                podeRegistrarTrabalho && (
-                  <Botao
-                    variante="secundario"
-                    tamanho="toque"
-                    onClick={() => setAdicionandoServico(true)}
-                  >
-                    <Plus className="size-4" aria-hidden />
-                    Adicionar
-                  </Botao>
-                )
-              }
-            />
-            {os.itens.length === 0 ? (
-              <Vazio
-                icone={<Wrench className="size-8" />}
-                titulo="Nenhum serviço na OS"
-                descricao="Adicione o que será feito para o sistema poder estimar o tempo e a capacidade do dia."
-              />
-            ) : (
-              <ul className="divide-y divide-slate-100">
-                {os.itens.map((item) => (
-                  <LinhaServico
-                    key={item.id}
-                    item={item}
-                    osId={os.resumo.id}
-                    fotos={os.arquivos.filter((a) => a.osItemId === item.id).length}
-                    gerencia={gerencia}
-                    mostraValores={mostraValores}
-                    funcionarios={funcionarios.data ?? []}
-                    salvando={transicionarItem.isPending}
-                    onAtribuir={(funcionarioId) =>
-                      atribuir.mutate({ itemId: item.id, funcionarioId })
-                    }
-                    onAcao={(acao) => setAcaoServico({ item, acao })}
-                    onIniciar={() =>
-                      transicionarItem.mutate({ itemId: item.id, corpo: { status: 'EM_EXECUCAO' } })
-                    }
-                    onRegistrarTrabalho={() => setAnotando(item)}
-                    onFotoEnviada={invalidar}
-                    onRemover={() => removerItem.mutate(item.id)}
-                  />
-                ))}
-              </ul>
-            )}
-          </Cartao>
-
-          <Cartao>
-            <CartaoTitulo
-              titulo="Peças"
-              descricao="Falta de peça é o motivo número um de carro parado"
-              acao={
-                // O mecânico também registra: é o diagnóstico dele que diz o
-                // que o carro precisa. Antes só gerência via este botão, e o
-                // fluxo dependia de alguém repassar a lista verbalmente.
-                podeRegistrarTrabalho && (
-                  <Botao variante="secundario" tamanho="toque" onClick={() => setAdicionandoPeca(true)}>
-                    <Plus className="size-4" aria-hidden />
-                    Adicionar
-                  </Botao>
-                )
-              }
-            />
-            {os.pecas.length === 0 ? (
-              <Vazio
-                icone={<Package className="size-8" />}
-                titulo="Nenhuma peça registrada"
-                descricao="Registre a peça e a previsão de chegada para o quadro mostrar por que o carro está parado."
-              />
-            ) : (
-              <ul className="divide-y divide-slate-100">
-                {os.pecas.map((peca) => (
-                  <li key={peca.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-slate-800">
-                        {peca.quantidade > 1 && `${peca.quantidade}x `}
-                        {peca.descricao}
-                      </p>
-                      {/* Origem primeiro: é ela que diz se aquilo é dinheiro
-                          no orçamento ou trabalho para alguém fazer. */}
-                      <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500">
-                        <span
-                          className={cx(
-                            'rounded px-1.5 py-0.5 font-medium',
-                            peca.origem === 'ESTOQUE'
-                              ? 'bg-slate-100 text-slate-700'
-                              : 'bg-orange-100 text-orange-800',
-                          )}
-                        >
-                          {peca.origemDescricao}
-                        </span>
-                        {peca.origem === 'COMPRAR' && (
-                          <>
-                            <span>· {peca.momentoDescricao}</span>
-                            <span>· {peca.fornecedor ?? 'sem fornecedor'}</span>
-                            {peca.previsaoChegada &&
-                              ` · chega ${dataCompleta(peca.previsaoChegada)}`}
-                          </>
-                        )}
-                      </p>
-                    </div>
-                    <Etiqueta
-                      className={cx(
-                        peca.status === 'RECEBIDA' || peca.status === 'APLICADA'
-                          ? 'bg-emerald-100 text-emerald-800 ring-emerald-200'
-                          : 'bg-amber-100 text-amber-800 ring-amber-200',
-                      )}
-                    >
-                      {peca.statusDescricao}
-                    </Etiqueta>
-                    {mostraValores && (
-                      <span className="w-24 text-right text-xs text-slate-600">
-                        {moeda(peca.total)}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Cartao>
-
           {/* Clicar no carro e ver os relatorios dele: e para isto que as
               leituras do scanner existem. */}
           <Cartao>
@@ -919,15 +987,6 @@ export default function DetalheOs() {
                 </div>
               </div>
             </Cartao>
-          )}
-
-          {mostraValores && (
-            <CartaoValores
-              os={os}
-              osId={id}
-              onSalvo={invalidar}
-              onMandarOrcamento={() => setMandandoOrcamento(true)}
-            />
           )}
 
           <Cartao>
@@ -1268,19 +1327,20 @@ function CartaoValores({
   const limite = gerencia ? null : Math.round(subtotal * tetoDesconto) / 100
 
   return (
-    <Cartao>
-      <CartaoTitulo
-        titulo="Valores"
-        descricao={automatica ? 'A mão de obra é a soma dos serviços' : undefined}
-        acao={
-          !editando && (
-            <Botao variante="secundario" tamanho="toque" onClick={abrir}>
-              <Pencil className="size-4" aria-hidden />
-              {automatica ? 'Desconto' : 'Preços'}
-            </Botao>
-          )
-        }
-      />
+    // Sem `Cartao`: a seção da etapa já é a moldura, e cartão dentro de
+    // cartão come 32px de largura útil no celular — só de margem.
+    <>
+      {!editando && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-3 py-2">
+          {automatica && (
+            <p className="text-xs text-slate-500">A mão de obra é a soma dos serviços</p>
+          )}
+          <Botao variante="secundario" tamanho="toque" className="ml-auto" onClick={abrir}>
+            <Pencil className="size-4" aria-hidden />
+            {automatica ? 'Desconto' : 'Preços'}
+          </Botao>
+        </div>
+      )}
 
       {editando ? (
         <div className="space-y-3 p-4">
@@ -1364,7 +1424,7 @@ function CartaoValores({
           </Botao>
         </div>
       )}
-    </Cartao>
+    </>
   )
 }
 

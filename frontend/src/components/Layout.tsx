@@ -95,12 +95,16 @@ export default function Layout() {
         )}
       >
         <div className="flex h-14 items-center justify-between gap-2 border-b border-white/10 px-4">
-          <Link to="/" className="flex min-w-0 items-center" onClick={() => setMenuAberto(false)}>
+          <Link
+            to="/"
+            className="flex min-h-11 min-w-0 items-center"
+            onClick={() => setMenuAberto(false)}
+          >
             <LogoDelander altura={30} variante="escuro" />
           </Link>
           <button
             type="button"
-            className="rounded p-1 text-zinc-400 hover:bg-white/10 lg:hidden"
+            className="grid size-11 place-items-center rounded text-zinc-400 hover:bg-white/10 lg:hidden"
             onClick={() => setMenuAberto(false)}
             aria-label="Fechar menu"
           >
@@ -202,7 +206,7 @@ export default function Layout() {
           <button
             type="button"
             onClick={() => setMenuAberto(true)}
-            className="rounded p-1.5 text-zinc-300 hover:bg-white/10"
+            className="grid size-11 place-items-center rounded text-zinc-300 hover:bg-white/10"
             aria-label="Abrir menu"
           >
             <Menu className="size-5" aria-hidden />
@@ -211,7 +215,7 @@ export default function Layout() {
           {podeAgendar && (
             <Link
               to="/patio"
-              className="fonte-display ml-auto inline-flex items-center gap-1 rounded bg-faixa px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider sobre-destaque"
+              className="fonte-display ml-auto inline-flex min-h-11 items-center gap-1 rounded bg-faixa px-3 text-[11px] font-extrabold uppercase tracking-wider sobre-destaque"
             >
               <Plus className="size-3.5" aria-hidden />
               Agendar

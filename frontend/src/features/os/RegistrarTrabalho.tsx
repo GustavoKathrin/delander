@@ -147,7 +147,7 @@ export function RegistrarTrabalho({ os }: { os: DetalheOs }) {
             type="button"
             onClick={() => setVisivelCliente((v) => !v)}
             className={cx(
-              'ml-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ring-1 transition',
+              'ml-auto flex min-h-11 items-center gap-1.5 rounded-full px-3 text-xs font-medium ring-1 transition',
               visivelCliente
                 ? 'bg-emerald-50 text-emerald-800 ring-emerald-300'
                 : 'bg-slate-100 text-slate-600 ring-slate-300',

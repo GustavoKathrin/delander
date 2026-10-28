@@ -1,10 +1,11 @@
-import { AlertTriangle, Camera, Check, Plus, Wrench } from 'lucide-react'
+import { AlertTriangle, Camera, Check, Plus, Tag, Wrench } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { cx } from '../../components/ui'
 import { CHAVES, useConfig } from '../../lib/config'
-import type { DetalheOs, StatusOs } from '../../types'
+import type { DetalheOs } from '../../types'
 import { plural } from '../../lib/format'
+import { etapa as etapaDe, etapaDaOs } from './EtapasDaOs'
 
 /**
  * O que falta para sair desta etapa.
@@ -54,18 +55,28 @@ interface Pendencia {
   acao?: { rotulo: string; icone: ReactNode; onClick: () => void }
 }
 
-/** A etapa de onde o carro esta tentando sair, em linguagem de oficina. */
+/**
+ * O que falta para sair DESTA etapa, nas sete etapas do dono.
+ *
+ * Antes isto era um `switch` no status do servidor, e por isso as etapas 2,
+ * 3 e 4 -- que vivem todas em EM_DIAGNOSTICO -- dividiam o mesmo texto:
+ * "Para o orçamento sair completo". Na prática a régua dizia "Etapa 3 ·
+ * Cotação" e logo abaixo o bloco pedia para lançar serviço, que é trabalho
+ * da etapa 2 e já estava feito.
+ */
 function pendenciasDaEtapa(
   os: DetalheOs,
   acoes: { onAdicionarServico: () => void; onAdicionarPeca: () => void; onIrParaFotos: () => void },
   exige: { foto: boolean; checklist: boolean },
 ): { titulo: string; itens: Pendencia[] } | null {
-  const status: StatusOs = os.resumo.status
+  const etapa = etapaDaOs(os)
+  const nome = etapaDe(etapa).rotulo
   const temFotoEntrada = os.arquivos.some((a) => a.momento === 'ENTRADA')
   const checklistRespondido =
     os.checklist.length === 0 || os.checklist.every((c) => c.ok !== undefined && c.ok !== null)
   const servicos = os.itens.filter((i) => i.status !== 'CANCELADO')
   const servicosAbertos = servicos.filter((i) => i.status !== 'CONCLUIDO')
+  const aCotar = os.pecas.filter((p) => p.origem === 'COMPRAR' && p.status === 'SOLICITADA')
 
   const foto: Pendencia = {
     chave: 'foto',
@@ -78,11 +89,22 @@ function pendenciasDaEtapa(
     acao: { rotulo: 'Tirar foto', icone: <Camera className="size-4" aria-hidden />, onClick: acoes.onIrParaFotos },
   }
 
-  switch (status) {
-    case 'RECEBIDO':
-    case 'AGENDADO':
+  const lancarServico = {
+    rotulo: 'Adicionar serviço',
+    icone: <Plus className="size-4" aria-hidden />,
+    onClick: acoes.onAdicionarServico,
+  }
+  const lancarPeca = {
+    rotulo: 'Registrar peça',
+    icone: <Plus className="size-4" aria-hidden />,
+    onClick: acoes.onAdicionarPeca,
+  }
+
+  switch (etapa) {
+    // ---------------------------------------------------- 1. Recebimento
+    case 1:
       return {
-        titulo: 'Antes de começar a mexer no carro',
+        titulo: `Etapa 1 · ${nome} — antes de começar a mexer no carro`,
         itens: [
           foto,
           {
@@ -102,9 +124,10 @@ function pendenciasDaEtapa(
         ],
       }
 
-    case 'EM_DIAGNOSTICO':
+    // ------------------------------------------- 2. Peças e serviços
+    case 2:
       return {
-        titulo: 'Para o orçamento sair completo',
+        titulo: `Etapa 2 · ${nome} — diga tudo que este carro vai precisar`,
         itens: [
           foto,
           {
@@ -112,90 +135,134 @@ function pendenciasDaEtapa(
             rotulo:
               servicos.length === 0
                 ? 'Nenhum serviço lançado'
-                : `${servicos.length === 1 ? '1 serviço lançado' : `${servicos.length} serviços lançados`}`,
+                : `${plural(servicos.length, 'serviço')} ${servicos.length === 1 ? 'lançado' : 'lançados'}`,
             pronto: servicos.length > 0,
             lista: servicos.map((i) => i.descricao),
             exigida: true,
             porque: 'O orçamento é a soma dos serviços. Sem nenhum, o cliente recebe um papel vazio.',
-            acao: {
-              rotulo: 'Adicionar serviço',
-              icone: <Plus className="size-4" aria-hidden />,
-              onClick: acoes.onAdicionarServico,
-            },
+            acao: lancarServico,
           },
           {
             chave: 'pecas',
             rotulo:
               os.pecas.length === 0
                 ? 'Nenhuma peça registrada'
-                : `${os.pecas.length === 1 ? '1 peça registrada' : `${os.pecas.length} peças registradas`}`,
+                : `${plural(os.pecas.length, 'peça')} ${os.pecas.length === 1 ? 'registrada' : 'registradas'}`,
             // Peca e opcional de verdade: tem servico que e so mao de obra.
             pronto: true,
             lista: os.pecas.map((p) => p.descricao),
-            acao: {
-              rotulo: 'Registrar peça',
-              icone: <Plus className="size-4" aria-hidden />,
-              onClick: acoes.onAdicionarPeca,
-            },
+            acao: lancarPeca,
           },
         ],
       }
 
-    case 'ORCAMENTO_APROVADO':
+    // ------------------------------------------------------ 3. Cotação
+    case 3:
       return {
-        titulo: 'Para começar a execução',
+        titulo: `Etapa 3 · ${nome} — o que tem no estoque e o que precisa ser comprado`,
+        itens: [
+          {
+            chave: 'cotar',
+            rotulo: `${plural(aCotar.length, 'peça')} esperando preço`,
+            pronto: false,
+            lista: aCotar.map((p) => p.descricao),
+            porque:
+              'Enquanto a peça não tem preço, o total do orçamento está menor do que vai ser — e é esse número que o cliente aprova.',
+            acao: { rotulo: 'Cotar', icone: <Tag className="size-4" aria-hidden />, onClick: acoes.onAdicionarPeca },
+          },
+          {
+            chave: 'servicos',
+            rotulo: `${plural(servicos.length, 'serviço')} ${servicos.length === 1 ? 'lançado' : 'lançados'}`,
+            pronto: servicos.length > 0,
+            lista: servicos.map((i) => i.descricao),
+            acao: lancarServico,
+          },
+        ],
+      }
+
+    // -------------------------------------------------- 4. Mão de obra
+    case 4:
+      return {
+        titulo: `Etapa 4 · ${nome} — falta o preço do trabalho`,
+        itens: [
+          foto,
+          {
+            chave: 'maoObra',
+            rotulo:
+              (os.valorMaoObra ?? 0) > 0
+                ? 'Mão de obra definida'
+                : 'Mão de obra ainda em zero',
+            // Quem nao ve valor nao tem o que fazer aqui, e cobrar dele uma
+            // pendencia que ele nao consegue resolver e so culpa sem saida.
+            pronto: os.valorMaoObra === undefined || (os.valorMaoObra ?? 0) > 0,
+            porque:
+              'O orçamento sai com peça e sem trabalho — e trabalho é a maior parte da conta da oficina.',
+          },
+          {
+            chave: 'servicos',
+            rotulo: `${plural(servicos.length, 'serviço')} no orçamento`,
+            pronto: servicos.length > 0,
+            lista: servicos.map((i) => i.descricao),
+            acao: lancarServico,
+          },
+        ],
+      }
+
+    // -------------------------------------------------- 5. Aprovação
+    case 5:
+      // Esperando o cliente responder nao e pendencia DA OFICINA: inventar
+      // uma lista ali so faria ruido. Depois do "sim", sim -- ha o que
+      // conferir antes de por a mao no carro.
+      if (os.resumo.status !== 'ORCAMENTO_APROVADO') return null
+      return {
+        titulo: `Etapa 5 · ${nome} — o cliente disse sim; dá para começar?`,
         itens: [
           {
             chave: 'servicos',
             rotulo:
-              servicos.length === 0 ? 'Nenhum serviço para executar' : `${plural(servicos.length, 'serviço')} ${servicos.length === 1 ? 'aprovado' : 'aprovados'}`,
+              servicos.length === 0
+                ? 'Nenhum serviço para executar'
+                : `${plural(servicos.length, 'serviço')} ${servicos.length === 1 ? 'aprovado' : 'aprovados'}`,
             pronto: servicos.length > 0,
             lista: servicos.map((i) => i.descricao),
             porque: 'Não há o que executar sem serviço lançado.',
-            acao: {
-              rotulo: 'Adicionar serviço',
-              icone: <Plus className="size-4" aria-hidden />,
-              onClick: acoes.onAdicionarServico,
-            },
+            acao: lancarServico,
           },
           {
             chave: 'pecas',
-            rotulo: 'Peças que faltam já pedidas',
-            pronto: true,
-            acao: {
-              rotulo: 'Registrar peça',
-              icone: <Plus className="size-4" aria-hidden />,
-              onClick: acoes.onAdicionarPeca,
-            },
+            rotulo:
+              aCotar.length === 0
+                ? 'As peças já foram pedidas'
+                : `${plural(aCotar.length, 'peça')} ainda sem pedido`,
+            pronto: aCotar.length === 0,
+            lista: aCotar.map((p) => p.descricao),
+            porque: 'Começar sem a peça que trava deixa o carro aberto na bancada esperando.',
+            acao: lancarPeca,
           },
         ],
       }
 
-    case 'EM_EXECUCAO':
-    case 'PAUSADO':
+    // ----------------------------------------------------- 6. Serviço
+    case 6:
       return {
-        titulo: 'Para marcar o carro como pronto',
+        titulo: `Etapa 6 · ${nome} — para marcar o carro como pronto`,
         itens: [
           {
             chave: 'servicos',
             rotulo:
               servicosAbertos.length === 0
                 ? 'Todos os serviços concluídos'
-                : `${servicosAbertos.length === 1 ? '1 serviço ainda aberto' : `${servicosAbertos.length} serviços ainda abertos`}`,
+                : `${plural(servicosAbertos.length, 'serviço')} ainda ${servicosAbertos.length === 1 ? 'aberto' : 'abertos'}`,
             pronto: servicos.length > 0 && servicosAbertos.length === 0,
+            lista: servicosAbertos.map((i) => i.descricao),
             porque:
               'Serviço que fica aberto não entra na conta de horas, e o relatório do dono sai errado.',
-            acao: {
-              rotulo: 'Adicionar serviço',
-              icone: <Wrench className="size-4" aria-hidden />,
-              onClick: acoes.onAdicionarServico,
-            },
+            acao: { rotulo: 'Adicionar serviço', icone: <Wrench className="size-4" aria-hidden />, onClick: acoes.onAdicionarServico },
           },
         ],
       }
 
-    // Orcamento esperando o cliente e carro pronto/entregue nao tem pendencia
-    // DA OFICINA: inventar uma lista vazia ali so faria ruido.
+    // Carro pronto ou entregue nao tem pendencia da oficina.
     default:
       return null
   }

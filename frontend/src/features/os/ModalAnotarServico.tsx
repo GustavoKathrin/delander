@@ -98,7 +98,7 @@ export function ModalAnotarServico({
           type="button"
           onClick={() => setVisivelCliente((v) => !v)}
           className={cx(
-            'flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium ring-1 transition',
+            'flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-medium ring-1 transition',
             visivelCliente
               ? 'bg-emerald-50 text-emerald-800 ring-emerald-300'
               : 'bg-slate-100 text-slate-600 ring-slate-300',

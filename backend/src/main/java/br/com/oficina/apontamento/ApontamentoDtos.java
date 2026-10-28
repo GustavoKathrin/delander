@@ -1,5 +1,6 @@
 package br.com.oficina.apontamento;
 
+import br.com.oficina.ordemservico.OsDtos;
 import br.com.oficina.ordemservico.Prioridade;
 import br.com.oficina.ordemservico.StatusItem;
 import br.com.oficina.ordemservico.StatusOs;
@@ -10,6 +11,7 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public final class ApontamentoDtos {
@@ -61,6 +63,15 @@ public final class ApontamentoDtos {
             String mecanicoNome,
             boolean meu,
             /** O servico sobe o carro: o mecanico ve o selo na task. */
-            boolean precisaElevador) {
+            boolean precisaElevador,
+            /**
+             * As fotos deste servico.
+             *
+             * O cartao mostrava um desenho de carro visto de cima, colorido
+             * pela cor do veiculo. Serve para achar o carro no patio; nao
+             * serve para lembrar em que estado o servico ficou quando o
+             * mecanico largou na quinta-feira.
+             */
+            List<OsDtos.ArquivoResposta> fotos) {
     }
 }

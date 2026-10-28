@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { Eye, EyeOff, Send } from 'lucide-react'
 import { api } from '../../api/client'
 import { AreaTexto, AvisoErro, Botao, Campo, Modal, cx } from '../../components/ui'
-import type { DetalheOs, ItemOs } from '../../types'
+import type { DetalheOs } from '../../types'
 
 /**
  * Anotar o que foi feito **neste serviço**.
@@ -17,12 +17,20 @@ import type { DetalheOs, ItemOs } from '../../types'
  * carro é um serviço, então todo trabalho é em cima de um.
  */
 export function ModalAnotarServico({
-  item,
+  servico,
   osId,
   onFechar,
   onSalvo,
 }: {
-  item: ItemOs | null
+  /**
+   * Só o id e o nome do serviço.
+   *
+   * Era `ItemOs`, o item inteiro da tela da OS — e isso trancava a anotação
+   * dentro daquela tela. O painel do mecânico tem o mesmo serviço com outro
+   * formato (`MeuServico`), e anotar é justamente o que ele quer fazer dali,
+   * de dentro do box, sem abrir a OS.
+   */
+  servico: { id: string; descricao: string } | null
   osId: string
   onFechar: () => void
   onSalvo: (dados: DetalheOs) => void
@@ -32,30 +40,30 @@ export function ModalAnotarServico({
   const [erro, setErro] = useState<string>()
 
   useEffect(() => {
-    if (!item) return
+    if (!servico) return
     setTexto('')
     setVisivelCliente(false)
     setErro(undefined)
-  }, [item])
+  }, [servico])
 
   const salvar = useMutation({
     mutationFn: () =>
       api<DetalheOs>(`/os/${osId}/trabalho`, {
         metodo: 'POST',
-        corpo: { texto: texto.trim(), visivelCliente, osItemId: item?.id },
+        corpo: { texto: texto.trim(), visivelCliente, osItemId: servico?.id },
       }),
     onSuccess: onSalvo,
     onError: (falha: Error) => setErro(falha.message),
   })
 
-  if (!item) return null
+  if (!servico) return null
 
   return (
     <Modal
       aberto
       onFechar={onFechar}
       titulo="Anotar o trabalho"
-      descricao={item.descricao}
+      descricao={servico.descricao}
       rodape={
         <>
           <Botao variante="secundario" onClick={onFechar}>

@@ -356,7 +356,20 @@ public final class OsDtos {
             String url,
             String momento,
             boolean visivelCliente,
-            OffsetDateTime quando) {
+            OffsetDateTime quando,
+            /** De qual servico e esta foto. Nulo = foto do carro. */
+            UUID osItemId,
+            /** O nome do servico, pronto para a legenda. Nulo = foto do carro. */
+            String servico,
+            /**
+             * Da para desenhar como miniatura.
+             *
+             * O anexo tambem aceita PDF (orcamento do fornecedor, nota da
+             * peca). Uma galeria que tenta renderizar PDF em <img> mostra
+             * quadrado quebrado; o contentType sozinho obrigaria cada tela a
+             * repetir o mesmo startsWith.
+             */
+            boolean imagem) {
     }
 
     public record CompartilhamentoResposta(
@@ -398,7 +411,15 @@ public final class OsDtos {
                            List<String> pecas,
                            /** O que o mecanico escreveu, em ordem. */
                            List<String> anotacoes,
-                           List<String> mecanicos) {
+                           List<String> mecanicos,
+                           /**
+                            * As fotos daquela passagem, com o nome do servico.
+                            *
+                            * E aqui que a foto rende a longo prazo: um ano
+                            * depois, "troquei a correia" e uma frase, e a
+                            * foto do tensor gasto e a razao de ter trocado.
+                            */
+                           List<ArquivoResposta> fotos) {
     }
 
     public record Detalhe(

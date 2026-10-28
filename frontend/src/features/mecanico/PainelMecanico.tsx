@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ClipboardCheck, PauseCircle, Play, Wrench } from 'lucide-react'
+import { Check, ClipboardCheck, MessageSquarePlus, PauseCircle, Play } from 'lucide-react'
 import { api } from '../../api/client'
 import { AjudaDaTela } from '../../components/AjudaDaTela'
-import type { MeuServico, MotivoParada } from '../../types'
+import { BotoesDeFoto, GradeDeFotos, VisorDeFoto } from '../../components/fotos'
+import { ModalAnotarServico } from '../os/ModalAnotarServico'
+import type { ArquivoOs, MeuServico, MotivoParada } from '../../types'
 import {
   AreaTexto,
   AvisoErro,
@@ -43,6 +45,10 @@ export default function PainelMecanico() {
   const [observacao, setObservacao] = useState('')
   const [visivelCliente, setVisivelCliente] = useState(true)
   const [concluindo, setConcluindo] = useState<MeuServico | null>(null)
+  /** O serviço cuja nota está sendo escrita. */
+  const [anotando, setAnotando] = useState<MeuServico | null>(null)
+  /** A foto aberta em tela cheia, e de qual carro ela é. */
+  const [vendoFoto, setVendoFoto] = useState<{ foto: ArquivoOs; osId: string } | null>(null)
   const [erro, setErro] = useState<string>()
 
   const consulta = useQuery({
@@ -184,6 +190,9 @@ export default function PainelMecanico() {
               key={servico.itemId}
               servico={servico}
               agora={agora}
+              onRecarregar={recarregar}
+              onAnotar={() => setAnotando(servico)}
+              onVerFoto={(foto) => setVendoFoto({ foto, osId: servico.osId })}
               onPausar={() => {
                 setErro(undefined)
                 setObservacao('')
@@ -210,6 +219,9 @@ export default function PainelMecanico() {
               key={servico.itemId}
               servico={servico}
               agora={agora}
+              onRecarregar={recarregar}
+              onAnotar={() => setAnotando(servico)}
+              onVerFoto={(foto) => setVendoFoto({ foto, osId: servico.osId })}
               onIniciar={() => {
                 setErro(undefined)
                 setEstimativa(String(servico.horasEstimadas ?? 1))
@@ -229,6 +241,9 @@ export default function PainelMecanico() {
               key={servico.itemId}
               servico={servico}
               agora={agora}
+              onRecarregar={recarregar}
+              onAnotar={() => setAnotando(servico)}
+              onVerFoto={(foto) => setVendoFoto({ foto, osId: servico.osId })}
               onIniciar={() => {
                 setErro(undefined)
                 const previsto = servico.horasEstimadas ?? 1
@@ -467,6 +482,29 @@ export default function PainelMecanico() {
           <AvisoErro mensagem={erro} />
         </div>
       </Modal>
+
+      {/* ---------------- anotar ----------------
+          A mesma nota da linha do serviço na OS, chamada de fora dela: o
+          mecânico está no box, com o celular, e abrir a OS inteira para
+          escrever uma linha é o passo que fazia ninguém escrever. */}
+      <ModalAnotarServico
+        servico={anotando ? { id: anotando.itemId, descricao: anotando.descricao } : null}
+        osId={anotando?.osId ?? ''}
+        onFechar={() => setAnotando(null)}
+        onSalvo={() => {
+          setAnotando(null)
+          recarregar()
+          avisar('Anotado.')
+        }}
+      />
+
+      <VisorDeFoto
+        foto={vendoFoto?.foto ?? null}
+        osId={vendoFoto?.osId ?? ''}
+        podeApagar={vendoFoto?.foto.momento !== 'ENTRADA' || gerencia}
+        onFechar={() => setVendoFoto(null)}
+        onMudou={recarregar}
+      />
     </div>
   )
 }
@@ -474,12 +512,18 @@ export default function PainelMecanico() {
 function CartaoServico({
   servico,
   agora,
+  onRecarregar,
+  onAnotar,
+  onVerFoto,
   onIniciar,
   onPausar,
   onConcluir,
 }: {
   servico: MeuServico
   agora: number
+  onRecarregar: () => void
+  onAnotar: () => void
+  onVerFoto: (foto: ArquivoOs) => void
   onIniciar?: () => void
   onPausar?: () => void
   onConcluir?: () => void
@@ -600,6 +644,36 @@ function CartaoServico({
             estimadas
           </p>
         )}
+
+        {/* ---- as fotos deste serviço ----
+
+            O cartão tinha o desenho do carro visto de cima, colorido pela cor
+            do veículo. Serve para achar o carro no pátio; não serve para
+            lembrar em que estado o serviço ficou quando o mecânico largou na
+            quinta-feira — e é essa a pergunta de quem abre o painel na
+            segunda.
+
+            Fila que rola de lado, e não grade: a grade cresce para baixo e
+            empurra "Iniciar" e "Concluir" para fora da tela do celular. */}
+        <div className="mt-3 flex items-center gap-2">
+          {servico.fotos.length > 0 ? (
+            <div className="min-w-0 flex-1">
+              <GradeDeFotos tira fotos={servico.fotos} onAbrir={onVerFoto} />
+            </div>
+          ) : (
+            <span className="flex-1 text-xs text-slate-400">
+              Nenhuma foto deste serviço ainda
+            </span>
+          )}
+          <BotoesDeFoto
+            compacto
+            osId={servico.osId}
+            osItemId={servico.itemId}
+            onPronto={onRecarregar}
+            rotulo="Fotografar este serviço"
+            className="ring-1 ring-slate-300"
+          />
+        </div>
       </div>
 
       {/* botoes grandes: usados com a mao suja, no celular */}
@@ -634,6 +708,18 @@ function CartaoServico({
             Concluir
           </button>
         )}
+
+        {/* Anotar não divide a largura com os outros: ele é o registro, não a
+            ação. Quem olha este cartão de luva está indo em Iniciar ou em
+            Concluir, e esses dois não podem encolher para caber um terceiro. */}
+        <button
+          type="button"
+          onClick={onAnotar}
+          className="flex flex-none items-center justify-center gap-2 border-l border-slate-200 bg-white px-4 py-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+        >
+          <MessageSquarePlus className="size-5" aria-hidden />
+          Anotar
+        </button>
       </div>
     </Cartao>
   )

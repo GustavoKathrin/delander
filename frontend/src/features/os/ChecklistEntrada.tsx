@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Camera, Check, ClipboardCheck, Images, X } from 'lucide-react'
+import { Check, ClipboardCheck, X } from 'lucide-react'
 import { api, ErroApi } from '../../api/client'
+import { BotoesDeFoto, GradeDeFotos, VisorDeFoto } from '../../components/fotos'
 import { Botao, Cartao, CartaoTitulo, Entrada, cx, useAviso } from '../../components/ui'
-import type { DetalheOs } from '../../types'
-import { plural } from '../../lib/format'
+import type { ArquivoOs, DetalheOs } from '../../types'
 
 /**
  * O checklist de entrada: como o carro chegou.
@@ -17,38 +17,19 @@ import { plural } from '../../lib/format'
  * é preenchido de pé, com o cliente esperando, muitas vezes no celular —
  * e nessa situação um alvo grande vale mais do que uma tela bonita.
  */
-export function ChecklistEntrada({ os }: { os: DetalheOs }) {
+export function ChecklistEntrada({ os, gerencia }: { os: DetalheOs; gerencia: boolean }) {
   const avisar = useAviso()
   const queryClient = useQueryClient()
 
   type Resposta = { ok: boolean | null; observacao: string }
   const [respostas, setRespostas] = useState<Record<string, Resposta>>({})
-  const cameraRef = useRef<HTMLInputElement>(null)
-  const galeriaRef = useRef<HTMLInputElement>(null)
+  const [aberta, setAberta] = useState<ArquivoOs | null>(null)
 
   const fotosDeEntrada = os.arquivos.filter((a) => a.momento === 'ENTRADA')
-
-  const enviarFotos = useMutation({
-    mutationFn: async (arquivos: File[]) => {
-      for (const arquivo of arquivos) {
-        const dados = new FormData()
-        dados.append('arquivo', arquivo)
-        dados.append('momento', 'ENTRADA')
-        // A foto de entrada é do cliente também: é a prova dos dois lados
-        // numa discussão sobre risco que já existia.
-        dados.append('visivelCliente', 'true')
-        await api(`/os/${os.resumo.id}/arquivos`, { metodo: 'POST', formData: dados })
-      }
-    },
-    onSuccess: (_, arquivos) => {
-      if (cameraRef.current) cameraRef.current.value = ''
-      if (galeriaRef.current) galeriaRef.current.value = ''
-      void queryClient.invalidateQueries({ queryKey: ['os', os.resumo.id] })
-      avisar(`${plural(arquivos.length, 'foto')} de entrada ${arquivos.length === 1 ? 'registrada' : 'registradas'}.`)
-    },
-    onError: (erro: Error) =>
-      avisar(erro instanceof ErroApi ? erro.message : 'Não foi possível enviar.', 'erro'),
-  })
+  const fotoAberta = aberta ? (fotosDeEntrada.find((a) => a.id === aberta.id) ?? null) : null
+  const recarregar = () => {
+    void queryClient.invalidateQueries({ queryKey: ['os', os.resumo.id] })
+  }
 
   // A OS chega depois do primeiro render, e pode ser recarregada: as
   // respostas do servidor mandam, mas o que a pessoa acabou de marcar e
@@ -187,47 +168,16 @@ export function ChecklistEntrada({ os }: { os: DetalheOs }) {
               {fotosDeEntrada.length}
             </span>
           )}
-          <input
-            ref={cameraRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={(e) => {
-              const lista = e.target.files
-              if (lista?.length) enviarFotos.mutate(Array.from(lista))
-            }}
-          />
-          <input
-            ref={galeriaRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              const lista = e.target.files
-              if (lista?.length) enviarFotos.mutate(Array.from(lista))
-            }}
-          />
-          <Botao
-            variante="secundario"
-            tamanho="toque"
+          {/* A foto de entrada nasce liberada ao cliente, ao contrário da do
+              serviço: ela é a prova dos dois lados numa discussão sobre risco
+              que já existia, e prova que só um lado vê não serve. */}
+          <BotoesDeFoto
+            osId={os.resumo.id}
+            momento="ENTRADA"
+            visivelCliente
+            onPronto={recarregar}
             className="ml-auto"
-            carregando={enviarFotos.isPending}
-            onClick={() => cameraRef.current?.click()}
-          >
-            <Camera className="size-4" aria-hidden />
-            Câmera
-          </Botao>
-          <Botao
-            variante="secundario"
-            tamanho="toque"
-            carregando={enviarFotos.isPending}
-            onClick={() => galeriaRef.current?.click()}
-          >
-            <Images className="size-4" aria-hidden />
-            Escolher fotos
-          </Botao>
+          />
         </div>
 
         {fotosDeEntrada.length === 0 ? (
@@ -235,17 +185,8 @@ export function ChecklistEntrada({ os }: { os: DetalheOs }) {
             Ainda sem foto. Fotografe a lataria, as rodas e o painel antes de mexer no carro.
           </p>
         ) : (
-          <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-6">
-            {fotosDeEntrada.map((foto) => (
-              <a key={foto.id} href={foto.url} target="_blank" rel="noreferrer" title={foto.nome}>
-                <img
-                  src={foto.url}
-                  alt={foto.nome}
-                  loading="lazy"
-                  className="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200 transition hover:ring-slate-400"
-                />
-              </a>
-            ))}
+          <div className="mt-2">
+            <GradeDeFotos fotos={fotosDeEntrada} onAbrir={setAberta} />
           </div>
         )}
       </div>
@@ -255,6 +196,17 @@ export function ChecklistEntrada({ os }: { os: DetalheOs }) {
           Salvar checklist
         </Botao>
       </div>
+
+      {/* Apagar a foto de entrada é da gerência: é prova de como o carro
+          chegou, e quem apaga prova assume a escolha. O servidor recusa de
+          qualquer forma — aqui o botão nem aparece. */}
+      <VisorDeFoto
+        foto={fotoAberta}
+        osId={os.resumo.id}
+        podeApagar={gerencia}
+        onFechar={() => setAberta(null)}
+        onMudou={recarregar}
+      />
     </Cartao>
   )
 }

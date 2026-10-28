@@ -6,6 +6,8 @@ import br.com.oficina.common.RegraNegocioException;
 import br.com.oficina.ordemservico.EventoService;
 import br.com.oficina.ordemservico.OrdemServico;
 import br.com.oficina.ordemservico.OrdemServicoRepository;
+import br.com.oficina.ordemservico.OsDtos;
+import br.com.oficina.ordemservico.OsItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
@@ -48,8 +50,16 @@ public class ArquivoService {
         this.contexto = contexto;
     }
 
+    /**
+     * Anexa uma foto, opcionalmente colada em UM servico da OS.
+     *
+     * Com `osItemId`, a foto deixa de ser "do carro" e passa a ser "da troca
+     * da correia" -- que e a pergunta que o cliente faz e que quatro fotos de
+     * motor aberto nao respondem.
+     */
     @Transactional
-    public ArquivoOs salvar(UUID osId, MultipartFile arquivo, String momento, boolean visivelCliente) {
+    public OsDtos.ArquivoResposta salvar(UUID osId, MultipartFile arquivo, String momento,
+                                         boolean visivelCliente, UUID osItemId) {
         UUID oficinaId = contexto.oficinaId();
         OrdemServico os = osRepository.buscarCompleta(osId)
                 .orElseThrow(() -> RecursoNaoEncontradoException.de("Ordem de servico", osId));
@@ -60,6 +70,18 @@ public class ArquivoService {
         String momentoValidado = List.of("ENTRADA", "EXECUCAO", "SAIDA").contains(momento)
                 ? momento : "EXECUCAO";
 
+        // O servico tem que ser DESTE carro. Sem esta checagem, um id de item
+        // de outra oficina rotularia a foto com um servico que o dono nao
+        // consegue abrir -- e a galeria mostraria um nome que nao existe.
+        OsItem servico = null;
+        if (osItemId != null) {
+            servico = os.getItens().stream()
+                    .filter(i -> i.getId().equals(osItemId))
+                    .findFirst()
+                    .orElseThrow(() -> new RegraNegocioException(
+                            "Este servico nao e deste carro."));
+        }
+
         // A subpasta continua sendo o id da OS: os caminhos ja gravados no
         // banco precisam continuar resolvendo.
         ArmazenamentoArquivos.Guardado guardado = armazenamento.guardar(arquivo, osId.toString());
@@ -67,6 +89,7 @@ public class ArquivoService {
         ArquivoOs registro = new ArquivoOs();
         registro.setOficinaId(oficinaId);
         registro.setOrdemServicoId(osId);
+        registro.setOsItemId(servico == null ? null : servico.getId());
         registro.setNomeOriginal(guardado.nomeOriginal());
         registro.setCaminho(guardado.caminhoRelativo());
         registro.setContentType(guardado.contentType());
@@ -81,10 +104,15 @@ public class ArquivoService {
             apagarEntradasAntigas(os);
         }
 
+        // Com servico, o evento diz de qual: na linha do tempo de um carro com
+        // cinco servicos, "Arquivo anexado" sozinho nao localiza nada.
         eventoService.registrar(oficinaId, osId, EventoService.FOTO_ANEXADA,
-                "Arquivo anexado: " + salvo.getNomeOriginal(), visivelCliente);
+                servico == null
+                        ? "Arquivo anexado: " + salvo.getNomeOriginal()
+                        : "Foto de %s: %s".formatted(servico.getDescricao(), salvo.getNomeOriginal()),
+                visivelCliente);
 
-        return salvo;
+        return resposta(salvo, servico == null ? null : servico.getDescricao());
     }
 
     /**
@@ -141,7 +169,79 @@ public class ArquivoService {
         return arquivo;
     }
 
+    /**
+     * Libera (ou recolhe) a foto para o link do cliente.
+     *
+     * A foto nasce interna de proposito: foto de motor aberto no meio do
+     * servico ajuda um cliente e assusta outro, e quem sabe qual dos dois e
+     * este nao e quem configurou a oficina -- e quem esta com o carro na
+     * frente. Mesma regra do escopo do link: muda quem trabalha no carro.
+     */
+    @Transactional
+    public OsDtos.ArquivoResposta visibilidade(UUID osId, UUID arquivoId, boolean visivelCliente) {
+        contexto.exigirEquipe("Mudar o que o cliente vê é de quem trabalha no carro.");
+        ArquivoOs arquivo = metadados(osId, arquivoId);
+        arquivo.setVisivelCliente(visivelCliente);
+        ArquivoOs salvo = repository.save(arquivo);
+        return resposta(salvo, null);
+    }
+
+    /**
+     * Remove uma foto.
+     *
+     * Existe porque a alternativa e pior: a foto e tirada de luva, com o
+     * celular na mao, dentro do box -- e a primeira sai tremida ou do chao.
+     * Sem apagar, a galeria vira lixo e, se a foto estiver liberada, o
+     * cliente ve o chao do box.
+     *
+     * A foto de ENTRADA e a excecao: ela e prova de como o carro chegou, para
+     * os dois lados. Quem apaga prova e a gerencia, assumindo a escolha.
+     */
+    @Transactional
+    public void apagar(UUID osId, UUID arquivoId) {
+        ArquivoOs arquivo = metadados(osId, arquivoId);
+        if ("ENTRADA".equals(arquivo.getMomento())) {
+            contexto.exigirGerencia();
+        } else {
+            contexto.exigirMaoNaMassa();
+        }
+        try {
+            armazenamento.apagar(arquivo.getCaminho());
+        } catch (RuntimeException e) {
+            // O registro vai embora de qualquer jeito: um arquivo orfao no
+            // disco incomoda o servidor, uma linha orfa no banco mostra ao
+            // cliente uma imagem quebrada.
+            log.warn("Nao foi possivel apagar o arquivo {}: {}", arquivo.getCaminho(), e.getMessage());
+        }
+        repository.delete(arquivo);
+        eventoService.registrar(contexto.oficinaId(), osId, EventoService.FOTO_ANEXADA,
+                "Arquivo removido: " + arquivo.getNomeOriginal(), false);
+    }
+
     public Resource conteudo(ArquivoOs arquivo) {
         return armazenamento.conteudo(arquivo.getCaminho());
+    }
+
+    /**
+     * O anexo como a tela precisa dele.
+     *
+     * Estatico e aqui porque o formato da URL e o teste de "da para mostrar
+     * como miniatura" estavam escritos em dois lugares -- a lista do detalhe
+     * e a resposta do upload -- e so um deles mudava quando a regra mudava.
+     *
+     * `servico` vem de fora: quem chama ja carregou os itens da OS, e buscar
+     * a descricao aqui seria uma ida ao banco por foto.
+     */
+    public static OsDtos.ArquivoResposta resposta(ArquivoOs a, String servico) {
+        return new OsDtos.ArquivoResposta(
+                a.getId(),
+                a.getNomeOriginal(),
+                "/api/os/%s/arquivos/%s".formatted(a.getOrdemServicoId(), a.getId()),
+                a.getMomento(),
+                a.isVisivelCliente(),
+                a.getCriadoEm(),
+                a.getOsItemId(),
+                servico,
+                a.getContentType() != null && a.getContentType().startsWith("image/"));
     }
 }

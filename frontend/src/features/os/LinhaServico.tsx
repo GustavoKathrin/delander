@@ -1,4 +1,5 @@
 import { AlertTriangle, Check, Clock, MessageSquarePlus, PauseCircle, Play, Trash2, User } from 'lucide-react'
+import { BotoesDeFoto } from '../../components/fotos'
 import { Botao, Etiqueta, Selecao, cx } from '../../components/ui'
 import { CORES_ITEM, horaMinuto, horas, moeda } from '../../lib/format'
 import type { Funcionario, ItemOs, StatusItem } from '../../types'
@@ -18,6 +19,8 @@ import type { AcaoServico } from './ModalMotivoServico'
  */
 export function LinhaServico({
   item,
+  osId,
+  fotos,
   gerencia,
   mostraValores,
   funcionarios,
@@ -26,9 +29,13 @@ export function LinhaServico({
   onAcao,
   onIniciar,
   onRegistrarTrabalho,
+  onFotoEnviada,
   onRemover,
 }: {
   item: ItemOs
+  osId: string
+  /** Quantas fotos este serviço já tem. */
+  fotos: number
   gerencia: boolean
   mostraValores: boolean
   funcionarios: Funcionario[]
@@ -39,6 +46,7 @@ export function LinhaServico({
   /** Iniciar não passa por modal: é um toque só, com o carro na frente. */
   onIniciar: () => void
   onRegistrarTrabalho: () => void
+  onFotoEnviada: () => void
   onRemover: () => void
 }) {
   const pode = (status: StatusItem) => item.proximosStatus.includes(status)
@@ -160,6 +168,33 @@ export function LinhaServico({
               <MessageSquarePlus className="size-4" aria-hidden />
               Anotar
             </button>
+          )}
+
+          {/* A câmera fica colada em "Anotar" porque são a mesma coisa vista
+              de dois jeitos: o que a pessoa que mexeu no carro registrou.
+              Só o ícone — a palavra "Câmera" não cabe numa linha que já tem
+              cinco botões, e o ícone de câmera não precisa de legenda.
+
+              O contador existe para não ter que descer até a galeria só para
+              saber se este serviço já foi fotografado. */}
+          {!cancelado && (
+            <span className="relative flex-none">
+              <BotoesDeFoto
+                compacto
+                osId={osId}
+                osItemId={item.id}
+                onPronto={onFotoEnviada}
+                rotulo={`Fotografar ${item.descricao}`}
+              />
+              {fotos > 0 && (
+                <span
+                  className="pointer-events-none absolute right-0.5 top-0.5 grid size-4 place-items-center rounded-full bg-slate-700 text-[10px] font-semibold leading-none text-white"
+                  aria-hidden
+                >
+                  {fotos}
+                </span>
+              )}
+            </span>
           )}
 
           {/* ---- a partir daqui, desfazer ----

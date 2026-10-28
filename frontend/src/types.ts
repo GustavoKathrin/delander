@@ -203,6 +203,12 @@ export interface ArquivoOs {
   momento: string
   visivelCliente: boolean
   quando: string
+  /** De qual serviço é esta foto. Ausente = foto do carro. */
+  osItemId?: string
+  /** O nome do serviço, pronto para a legenda. */
+  servico?: string
+  /** Dá para desenhar como miniatura — o anexo também aceita PDF. */
+  imagem: boolean
 }
 
 export interface ChecklistOs {
@@ -425,6 +431,8 @@ export interface MeuServico {
   mecanicoNome?: string
   meu: boolean
   precisaElevador: boolean
+  /** As fotos deste serviço. */
+  fotos: ArquivoOs[]
 }
 
 export interface Especialidade {
@@ -658,7 +666,7 @@ export interface AcompanhamentoPublico {
   parada?: { motivo: string; desde: string; horas: number }
   timeline: { tipo: string; descricao?: string; quando: string }[]
   /** Foto no link do cliente. O momento separa o checklist de entrada do serviço. */
-  fotos: { url: string; momento: string }[]
+  fotos: { url: string; momento: string; servico?: string | null }[]
   entradaEm: string
   prontoEm?: string
 }
@@ -815,4 +823,6 @@ export interface PassagemProntuario {
   pecas: string[]
   anotacoes: string[]
   mecanicos: string[]
+  /** As fotos daquela passagem, com o nome do serviço. */
+  fotos: ArquivoOs[]
 }

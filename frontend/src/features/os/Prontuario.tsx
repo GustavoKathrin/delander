@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, ChevronDown, ChevronRight, FileText, Package, Wrench } from 'lucide-react'
+import { ArrowLeft, Camera, ChevronDown, ChevronRight, FileText, Package, Wrench } from 'lucide-react'
 
 import { api } from '../../api/client'
+import { GradeDeFotos, VisorDeFoto } from '../../components/fotos'
 import { Carregando, Cartao, Etiqueta, Vazio, cx } from '../../components/ui'
 import { Placa } from '../../components/oficina'
 import { CORES_STATUS, dataCompleta, moeda, plural } from '../../lib/format'
-import type { PassagemProntuario } from '../../types'
+import type { ArquivoOs, PassagemProntuario } from '../../types'
 
 /**
  * O prontuário do carro.
@@ -26,6 +27,8 @@ import type { PassagemProntuario } from '../../types'
 export default function Prontuario() {
   const { id = '' } = useParams()
   const [aberto, setAberto] = useState<string | null>(null)
+  /** A foto aberta em tela cheia, e de qual passagem ela é. */
+  const [vendoFoto, setVendoFoto] = useState<{ foto: ArquivoOs; osId: string } | null>(null)
 
   const consulta = useQuery({
     queryKey: ['prontuario', id],
@@ -82,7 +85,10 @@ export default function Prontuario() {
               const expandido = aberto === p.osId
               const cores = CORES_STATUS[p.status]
               const nada =
-                p.servicos.length === 0 && p.pecas.length === 0 && p.anotacoes.length === 0
+                p.servicos.length === 0 &&
+                p.pecas.length === 0 &&
+                p.anotacoes.length === 0 &&
+                p.fotos.length === 0
 
               return (
                 <Cartao key={p.osId} className="overflow-hidden">
@@ -152,6 +158,18 @@ export default function Prontuario() {
                         </Secao>
                       )}
 
+                      {/* A foto é o pedaço que o texto não alcança: um ano
+                          depois, "troquei a correia" é uma frase e a foto do
+                          tensor gasto é a razão de ter trocado. */}
+                      {p.fotos.length > 0 && (
+                        <Secao titulo="Fotos daquela passagem" Icone={Camera}>
+                          <GradeDeFotos
+                            fotos={p.fotos}
+                            onAbrir={(foto) => setVendoFoto({ foto, osId: p.osId })}
+                          />
+                        </Secao>
+                      )}
+
                       {/* O pedaco que nenhum relatorio tem: o que a pessoa
                           que mexeu no carro observou. E o que faz um
                           prontuario valer mais que uma nota fiscal. */}
@@ -194,6 +212,18 @@ export default function Prontuario() {
           </div>
         </>
       )}
+
+      {/* Aqui a foto não se apaga nem se libera: o prontuário é leitura do
+          que já aconteceu. Quem precisa mexer abre a OS, que está a um toque
+          dentro do bloco. */}
+      <VisorDeFoto
+        foto={vendoFoto?.foto ?? null}
+        osId={vendoFoto?.osId ?? ''}
+        podeApagar={false}
+        somenteLeitura
+        onFechar={() => setVendoFoto(null)}
+        onMudou={() => consulta.refetch()}
+      />
     </div>
   )
 }

@@ -27,6 +27,7 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -364,11 +365,19 @@ public class CompartilhamentoService {
 
         List<PublicoDtos.FotoPublica> fotos = List.of();
         if (Boolean.TRUE.equals(escopo.get(Chaves.COMP_MOSTRAR_FOTOS))) {
+            // A legenda e o que faz a foto valer algo para quem esta em casa:
+            // "motor aberto" sao quatro fotos iguais; "troca da correia
+            // dentada" responde a pergunta que ele ia ligar para fazer.
+            Map<UUID, String> nomeDoServico = new HashMap<>();
+            for (OsItem item : os.getItens()) {
+                nomeDoServico.put(item.getId(), item.getDescricao());
+            }
             fotos = arquivoRepository.findByOrdemServicoIdAndVisivelClienteTrueOrderByCriadoEm(os.getId())
                     .stream()
                     .map(a -> new PublicoDtos.FotoPublica(
                             "/api/publico/os/%s/fotos/%s".formatted(link.getToken(), a.getId()),
-                            a.getMomento()))
+                            a.getMomento(),
+                            nomeDoServico.get(a.getOsItemId())))
                     .toList();
         }
 

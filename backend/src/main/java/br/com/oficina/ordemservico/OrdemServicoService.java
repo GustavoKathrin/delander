@@ -4,6 +4,7 @@ import br.com.oficina.common.Texto;
 import br.com.oficina.apontamento.Apontamento;
 import br.com.oficina.apontamento.ApontamentoRepository;
 import br.com.oficina.arquivo.ArquivoOsRepository;
+import br.com.oficina.arquivo.ArquivoService;
 import br.com.oficina.cadastro.Box;
 import br.com.oficina.cadastro.BoxRepository;
 import br.com.oficina.cadastro.CatalogoServico;
@@ -1108,11 +1109,13 @@ public class OrdemServicoService {
                 .map(c -> new OsDtos.ChecklistResposta(c.getId(), c.getDescricao(), c.getOk(), c.getObservacao()))
                 .toList();
 
+        // O nome do servico vai junto com a foto: a galeria agrupa por servico
+        // e nao deveria ter que cruzar duas listas para achar a legenda.
+        Map<UUID, String> nomeDoServico = os.getItens().stream()
+                .collect(Collectors.toMap(OsItem::getId, OsItem::getDescricao, (a, b) -> a));
         List<OsDtos.ArquivoResposta> arquivos = arquivoRepository
                 .findByOrdemServicoIdOrderByCriadoEm(id).stream()
-                .map(a -> new OsDtos.ArquivoResposta(
-                        a.getId(), a.getNomeOriginal(), "/api/os/%s/arquivos/%s".formatted(id, a.getId()),
-                        a.getMomento(), a.isVisivelCliente(), a.getCriadoEm()))
+                .map(a -> ArquivoService.resposta(a, nomeDoServico.get(a.getOsItemId())))
                 .toList();
 
         return new OsDtos.Detalhe(
@@ -1229,6 +1232,16 @@ public class OrdemServicoService {
                             .filter(d -> d != null && !d.isBlank())
                             .toList();
 
+                    Map<UUID, String> nomes = vivos.stream()
+                            .collect(Collectors.toMap(OsItem::getId, OsItem::getDescricao,
+                                    (a, b) -> a));
+                    List<OsDtos.ArquivoResposta> fotos = arquivoRepository
+                            .findByOrdemServicoIdOrderByCriadoEm(os.getId()).stream()
+                            .filter(a -> a.getContentType() != null
+                                    && a.getContentType().startsWith("image/"))
+                            .map(a -> ArquivoService.resposta(a, nomes.get(a.getOsItemId())))
+                            .toList();
+
                     return new OsDtos.Passagem(
                             os.getId(),
                             os.getNumero(),
@@ -1243,7 +1256,8 @@ public class OrdemServicoService {
                             servicos,
                             pecas,
                             anotacoes,
-                            mecanicos);
+                            mecanicos,
+                            fotos);
                 })
                 .toList();
     }

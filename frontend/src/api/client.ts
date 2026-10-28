@@ -124,7 +124,14 @@ interface Opcoes {
   formData?: FormData
 }
 
-export async function api<T>(caminho: string, opcoes: Opcoes = {}): Promise<T> {
+/**
+ * A requisicao em si: token, renovacao e erro.
+ *
+ * Separada de `api` porque nem toda resposta e texto ou JSON. A foto da OS
+ * e bytes, e so da para pedi-la com o token no cabecalho -- e um `<img src>`
+ * nao manda cabecalho nenhum.
+ */
+async function requisicao(caminho: string, opcoes: Opcoes = {}): Promise<Response> {
   const { metodo = 'GET', corpo, publico = false, formData } = opcoes
 
   const montar = (token?: string | null): RequestInit => {
@@ -152,6 +159,12 @@ export async function api<T>(caminho: string, opcoes: Opcoes = {}): Promise<T> {
   if (!res.ok) {
     throw await extrairErro(res)
   }
+  return res
+}
+
+export async function api<T>(caminho: string, opcoes: Opcoes = {}): Promise<T> {
+  const res = await requisicao(caminho, opcoes)
+
   if (res.status === 204) {
     return undefined as T
   }
@@ -161,6 +174,25 @@ export async function api<T>(caminho: string, opcoes: Opcoes = {}): Promise<T> {
     return (await res.text()) as unknown as T
   }
   return (await res.json()) as T
+}
+
+/**
+ * Os bytes de um arquivo da OS.
+ *
+ * Existe por um defeito que ficou invisivel por muito tempo: o caminho da
+ * foto e `/api/os/{os}/arquivos/{id}`, protegido por token, e todas as telas
+ * punham esse caminho direto no `src` de um `<img>`. O navegador busca `src`
+ * sem cabecalho nenhum, entao o servidor devolvia **401 em toda foto** -- a
+ * do checklist de entrada inclusive, desde o primeiro dia. O que aparecia na
+ * tela era o icone de imagem quebrada, que todo mundo lia como "a foto ainda
+ * nao subiu".
+ *
+ * Quem chama transforma o blob em object URL e **libera no unmount**; sem
+ * isso o navegador segura os bytes de cada foto ate a aba fechar.
+ */
+export async function baixarArquivo(caminho: string): Promise<Blob> {
+  const res = await requisicao(caminho)
+  return res.blob()
 }
 
 /** O identificador e o apelido ("tonny") ou o e-mail. O backend aceita os dois. */

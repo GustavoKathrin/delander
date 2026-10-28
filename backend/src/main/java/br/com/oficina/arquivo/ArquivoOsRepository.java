@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,6 +15,16 @@ public interface ArquivoOsRepository extends JpaRepository<ArquivoOs, UUID> {
     List<ArquivoOs> findByOrdemServicoIdAndVisivelClienteTrueOrderByCriadoEm(UUID ordemServicoId);
 
     long countByOrdemServicoIdAndMomento(UUID ordemServicoId, String momento);
+
+    /**
+     * As fotos de um punhado de servicos, numa consulta so.
+     *
+     * O painel do mecanico monta dez, vinte cartoes de uma vez. Buscar foto
+     * por cartao sao vinte idas ao banco para mostrar uma miniatura -- e o
+     * painel recarrega sozinho a cada 30 segundos.
+     */
+    @Query("select a from ArquivoOs a where a.osItemId in :itens order by a.criadoEm")
+    List<ArquivoOs> dosServicos(@Param("itens") Collection<UUID> itens);
 
     /** Atalho com nome que se le no ponto de uso. */
     default long contarDoMomento(UUID ordemServicoId, String momento) {

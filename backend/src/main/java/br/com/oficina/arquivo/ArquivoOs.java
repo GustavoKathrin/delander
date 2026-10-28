@@ -26,6 +26,16 @@ public class ArquivoOs {
     @Column(name = "ordem_servico_id", nullable = false)
     private UUID ordemServicoId;
 
+    /**
+     * De qual servico da OS esta foto e. Nulo = foto do carro.
+     *
+     * UUID solto e nao @ManyToOne de proposito: o resto desta entidade segue
+     * a mesma escolha (oficina, ordem de servico), e quem le uma foto quer
+     * os bytes -- nunca o grafo do servico.
+     */
+    @Column(name = "os_item_id")
+    private UUID osItemId;
+
     @Column(name = "nome_original", nullable = false, length = 200)
     private String nomeOriginal;
 

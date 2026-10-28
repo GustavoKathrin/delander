@@ -318,7 +318,7 @@ function GaleriaDeFotos({
 }: {
   titulo: string
   descricao?: string
-  fotos: { url: string; momento: string }[]
+  fotos: { url: string; momento: string; servico?: string | null }[]
 }) {
   if (fotos.length === 0) return null
   return (
@@ -327,13 +327,21 @@ function GaleriaDeFotos({
       {descricao && <p className="mb-2 text-xs text-slate-500">{descricao}</p>}
       <div className={cx('grid grid-cols-3 gap-2', !descricao && 'mt-2')}>
         {fotos.map((f) => (
-          <a key={f.url} href={f.url} target="_blank" rel="noreferrer">
+          <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="block">
             <img
               src={f.url}
-              alt={titulo}
+              alt={f.servico ?? titulo}
               loading="lazy"
               className="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200"
             />
+            {/* A legenda é o que faz a foto valer algo para quem está em casa:
+                três fotos de motor aberto são três imagens iguais; "troca da
+                correia dentada" responde o que ele ia ligar para perguntar. */}
+            {f.servico && (
+              <span className="mt-1 block truncate text-[11px] leading-tight text-slate-600">
+                {f.servico}
+              </span>
+            )}
           </a>
         ))}
       </div>

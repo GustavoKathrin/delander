@@ -1,5 +1,8 @@
 package br.com.oficina.apontamento;
 
+import br.com.oficina.arquivo.ArquivoOs;
+import br.com.oficina.arquivo.ArquivoOsRepository;
+import br.com.oficina.arquivo.ArquivoService;
 import br.com.oficina.cadastro.MotivoParada;
 import br.com.oficina.cadastro.MotivoParadaRepository;
 import br.com.oficina.common.Contexto;
@@ -15,6 +18,7 @@ import br.com.oficina.ordemservico.MaquinaEstadosOs;
 import br.com.oficina.ordemservico.OrdemServico;
 import br.com.oficina.ordemservico.OrdemServicoRepository;
 import br.com.oficina.ordemservico.OsItem;
+import br.com.oficina.ordemservico.OsDtos;
 import br.com.oficina.ordemservico.OsItemRepository;
 import br.com.oficina.ordemservico.ReconciliacaoOs;
 import br.com.oficina.ordemservico.StatusItem;
@@ -60,6 +64,7 @@ public class ApontamentoService {
     private final FuncionarioRepository funcionarioRepository;
     private final ParadaRepository paradaRepository;
     private final MotivoParadaRepository motivoParadaRepository;
+    private final ArquivoOsRepository arquivoRepository;
     private final CompartilhamentoService compartilhamentoService;
     private final EventoService eventoService;
     private final ConfiguracaoService config;
@@ -73,6 +78,7 @@ public class ApontamentoService {
                               FuncionarioRepository funcionarioRepository,
                               ParadaRepository paradaRepository,
                               MotivoParadaRepository motivoParadaRepository,
+                              ArquivoOsRepository arquivoRepository,
                               CompartilhamentoService compartilhamentoService,
                               EventoService eventoService,
                               ConfiguracaoService config,
@@ -85,6 +91,7 @@ public class ApontamentoService {
         this.funcionarioRepository = funcionarioRepository;
         this.paradaRepository = paradaRepository;
         this.motivoParadaRepository = motivoParadaRepository;
+        this.arquivoRepository = arquivoRepository;
         this.compartilhamentoService = compartilhamentoService;
         this.eventoService = eventoService;
         this.config = config;
@@ -364,11 +371,35 @@ public class ApontamentoService {
         }
 
         List<ApontamentoDtos.MeuServico> cards = new ArrayList<>();
+        Map<UUID, List<OsDtos.ArquivoResposta>> fotos = fotosPorServico(itens);
         for (OsItem item : itens) {
             cards.add(montarCard(item, abertos.get(item.getId()),
-                    horas.getOrDefault(item.getId(), BigDecimal.ZERO), agora, funcionarioId));
+                    horas.getOrDefault(item.getId(), BigDecimal.ZERO), agora, funcionarioId,
+                    fotos.getOrDefault(item.getId(), List.of())));
         }
         return cards;
+    }
+
+    /**
+     * As fotos de todos os servicos da tela, numa consulta.
+     *
+     * Vinte cartoes vezes uma busca por cartao sao vinte idas ao banco para
+     * desenhar miniatura -- e o painel se recarrega sozinho a cada 30s.
+     */
+    private Map<UUID, List<OsDtos.ArquivoResposta>> fotosPorServico(List<OsItem> itens) {
+        if (itens.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, String> nome = new HashMap<>();
+        for (OsItem item : itens) {
+            nome.put(item.getId(), item.getDescricao());
+        }
+        Map<UUID, List<OsDtos.ArquivoResposta>> porItem = new HashMap<>();
+        for (ArquivoOs a : arquivoRepository.dosServicos(nome.keySet())) {
+            porItem.computeIfAbsent(a.getOsItemId(), k -> new ArrayList<>())
+                    .add(ArquivoService.resposta(a, nome.get(a.getOsItemId())));
+        }
+        return porItem;
     }
 
     private ApontamentoDtos.MeuServico montarCard(OsItem item, Apontamento aberto, OffsetDateTime agora) {
@@ -376,14 +407,16 @@ public class ApontamentoService {
                 .filter(a -> a.getOsItem().getId().equals(item.getId()))
                 .map(a -> a.horas(agora))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return montarCard(item, aberto, trabalhadas, agora, contexto.funcionarioId());
+        return montarCard(item, aberto, trabalhadas, agora, contexto.funcionarioId(),
+                fotosPorServico(List.of(item)).getOrDefault(item.getId(), List.of()));
     }
 
     private ApontamentoDtos.MeuServico montarCard(OsItem item,
                                                   Apontamento aberto,
                                                   BigDecimal trabalhadas,
                                                   OffsetDateTime agora,
-                                                  UUID funcionarioId) {
+                                                  UUID funcionarioId,
+                                                  List<OsDtos.ArquivoResposta> fotos) {
         OrdemServico os = item.getOrdemServico();
         return new ApontamentoDtos.MeuServico(
                 item.getId(),
@@ -411,7 +444,8 @@ public class ApontamentoService {
                 aberto == null ? null : aberto.getHorasEstimadasInformadas(),
                 item.getFuncionario() == null ? null : item.getFuncionario().getNome(),
                 item.getFuncionario() != null && item.getFuncionario().getId().equals(funcionarioId),
-                os.isPrecisaElevador());
+                os.isPrecisaElevador(),
+                fotos);
     }
 
     // ================================================================ apoio

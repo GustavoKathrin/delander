@@ -68,6 +68,7 @@ import { CarroTopo, Placa } from '../../components/oficina'
 import ModalCompartilhar from './ModalCompartilhar'
 import { RegistrarTrabalho } from './RegistrarTrabalho'
 import { ChecklistEntrada } from './ChecklistEntrada'
+import { GaleriaFotos } from './GaleriaFotos'
 import { ModalOrcamento } from './ModalOrcamento'
 import { RequisitosDaEtapa } from './RequisitosDaEtapa'
 import { AjudaDaTela } from '../../components/AjudaDaTela'
@@ -612,6 +613,8 @@ export default function DetalheOs() {
                   <LinhaServico
                     key={item.id}
                     item={item}
+                    osId={os.resumo.id}
+                    fotos={os.arquivos.filter((a) => a.osItemId === item.id).length}
                     gerencia={gerencia}
                     mostraValores={mostraValores}
                     funcionarios={funcionarios.data ?? []}
@@ -624,6 +627,7 @@ export default function DetalheOs() {
                       transicionarItem.mutate({ itemId: item.id, corpo: { status: 'EM_EXECUCAO' } })
                     }
                     onRegistrarTrabalho={() => setAnotando(item)}
+                    onFotoEnviada={invalidar}
                     onRemover={() => removerItem.mutate(item.id)}
                   />
                 ))}
@@ -777,8 +781,12 @@ export default function DetalheOs() {
               início do serviço, e registrar trabalho vem antes da linha do
               tempo porque é a ação, não o relato. */}
           <div ref={blocoFotos} className="scroll-mt-4">
-            <ChecklistEntrada os={os} />
+            <ChecklistEntrada os={os} gerencia={gerencia} />
           </div>
+
+          {/* A galeria vem logo depois do checklist: as duas são foto, e quem
+              está procurando uma imagem procura as duas no mesmo lugar. */}
+          <GaleriaFotos os={os} gerencia={gerencia} onMudou={invalidar} />
 
           {/* O registro solto continua, para o que é do carro e não de um
               serviço só — "cliente ligou perguntando", "levei para o teste".
@@ -1007,7 +1015,7 @@ export default function DetalheOs() {
       />
 
       <ModalAnotarServico
-        item={anotando}
+        servico={anotando}
         osId={id}
         onFechar={() => setAnotando(null)}
         onSalvo={(dados) => {

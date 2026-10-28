@@ -29,7 +29,9 @@ public final class PublicoDtos {
      * chegou — e serve de prova para os dois lados. Misturada com as fotos
      * do servico, ela vira so mais uma imagem e perde essa funcao.
      */
-    public record FotoPublica(String url, String momento) {
+    public record FotoPublica(String url, String momento,
+                              /** De qual servico e a foto. Nulo = foto do carro. */
+                              String servico) {
     }
 
     public record EventoPublico(String tipo, String descricao, OffsetDateTime quando) {

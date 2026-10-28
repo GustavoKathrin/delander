@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -172,7 +172,8 @@ export default function DetalheOs() {
   const [motivoParadaId, setMotivoParadaId] = useState('')
   const [descricaoParada, setDescricaoParada] = useState('')
   const [paradaVisivel, setParadaVisivel] = useState(true)
-  const blocoFotos = useRef<HTMLDivElement>(null)
+  /** A âncora da vistoria de entrada, para "Tirar foto" saber onde rolar. */
+  const ANCORA_RECEBIMENTO = 'bloco-recebimento'
   /**
    * Qual etapa abriu a gaveta das outras etapas — não um "está aberta".
    *
@@ -412,17 +413,25 @@ export default function DetalheOs() {
    */
   const irParaFotos = () => {
     setGavetaAberta(etapaAtual)
-    // Tenta de novo ate o React montar a secao. Um quadro so nem sempre
-    // basta, e rolar ate um elemento que ainda nao existe nao faz nada --
-    // o botao pareceria quebrado.
+    // Procura pelo id, e nao por uma ref: fora da etapa 1 a seção ainda não
+    // existe no instante do clique, e uma ref de um elemento que vai nascer
+    // chega vazia. Com o id, cada tentativa pergunta ao DOM de novo.
+    //
+    // Por timeout e não por quadro: o navegador não entrega quadro para uma
+    // aba em segundo plano, e o botão ficaria mudo ao voltar para ela.
     const rolar = (tentativas: number) => {
-      if (blocoFotos.current) {
-        blocoFotos.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      const alvo = document.getElementById(ANCORA_RECEBIMENTO)
+      if (alvo) {
+        // `auto` e nao `smooth`: a rolagem suave simplesmente nao acontece em
+        // parte dos navegadores embarcados (medido: scrollY ficava em 0), e
+        // quando acontece sao 1600px de animacao num celular -- o mecanico
+        // perde de vista onde estava. O salto diz melhor "voce esta aqui".
+        alvo.scrollIntoView({ behavior: 'auto', block: 'start' })
       } else if (tentativas > 0) {
-        requestAnimationFrame(() => rolar(tentativas - 1))
+        window.setTimeout(() => rolar(tentativas - 1), 50)
       }
     }
-    requestAnimationFrame(() => rolar(6))
+    rolar(20)
   }
   const descricaoDosServicos =
     `${os.itens.length === 1 ? '1 serviço' : `${os.itens.length} serviços`}` +
@@ -446,7 +455,7 @@ export default function DetalheOs() {
   // um toque. Conferir a vistoria de entrada com o carro já na bancada é uma
   // coisa que se faz.
   const secaoRecebimento = (
-    <div key="recebimento" ref={blocoFotos} className="scroll-mt-4">
+    <div key="recebimento" id={ANCORA_RECEBIMENTO} className="scroll-mt-4">
       <SecaoDaEtapa
         etapa={1}
         titulo="Vistoria de entrada"
@@ -631,9 +640,22 @@ export default function DetalheOs() {
     { chave: 'fotos', etapa: etapaDasFotos, no: secaoFotos },
   ].filter((s) => s.no !== null)
 
-  const daEtapa = TODAS_AS_SECOES.filter((s) => s.etapa === etapaAtual)
+  /**
+   * Numa OS cancelada nao ha etapa corrente: mostra tudo.
+   *
+   * Esconder o que "nao e da etapa" so faz sentido quando existe um proximo
+   * passo a destacar. Numa OS cancelada nao existe -- ela virou registro do
+   * que ia ser feito, e esconder dois tercos do registro atras de uma gaveta
+   * e esconder por esconder.
+   */
+  const cancelada = r.status === 'CANCELADO'
+  const daEtapa = cancelada
+    ? TODAS_AS_SECOES
+    : TODAS_AS_SECOES.filter((s) => s.etapa === etapaAtual)
   const naEtapa = daEtapa.map((s) => s.no)
-  const foraDaEtapa = TODAS_AS_SECOES.filter((s) => s.etapa !== etapaAtual).map((s) => s.no)
+  const foraDaEtapa = cancelada
+    ? null
+    : TODAS_AS_SECOES.filter((s) => s.etapa !== etapaAtual).map((s) => s.no)
   const secoesNaTela = daEtapa.map((s) => s.chave)
 
   const acionar = (status: StatusOs) => {
@@ -1038,6 +1060,7 @@ export default function DetalheOs() {
                             ))}
                           </Selecao>
                           <Botao
+                            tamanho="toque"
                             onClick={() => subirElevador.mutate(elevadorEscolhido)}
                             disabled={!elevadorEscolhido}
                           >

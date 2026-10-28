@@ -69,6 +69,13 @@ function pendenciasDaEtapa(
   acoes: { onAdicionarServico: () => void; onAdicionarPeca: () => void; onIrParaFotos: () => void },
   exige: { foto: boolean; checklist: boolean },
 ): { titulo: string; itens: Pendencia[] } | null {
+  // OS cancelada nao tem pendencia nenhuma: nada mais vai acontecer com este
+  // carro. `etapaDaOs` devolve 1 para ela (a regua inteira vira passado), e
+  // sem esta guarda a tela cobraria "tire a foto de entrada" de um carro que
+  // nao vai ser mexido. O codigo anterior acertava por acidente: ele ligava
+  // em StatusOs, e CANCELADO caia no default que devolvia null.
+  if (os.resumo.status === 'CANCELADO') return null
+
   const etapa = etapaDaOs(os)
   const temFotoEntrada = os.arquivos.some((a) => a.momento === 'ENTRADA')
   const checklistRespondido =

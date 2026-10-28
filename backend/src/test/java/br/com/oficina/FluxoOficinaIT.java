@@ -436,7 +436,18 @@ class FluxoOficinaIT {
                 .isNotEqualTo("PRONTO_AGUARDANDO_RETIRADA");
 
         // E o servico cancelado para de ser cobrado.
+        //
+        // Isto so vale no modo AUTOMATICA, em que a mao de obra E a soma dos
+        // servicos. No modo MANUAL (o padrao da oficina nova, porque a tabela
+        // de precos ainda nao existe) o valor e de quem digitou, e cancelar um
+        // servico nao pode apagar o numero que o dono fechou com o cliente.
+        // Sem ligar a chave aqui, a afirmacao passaria por acidente -- estes
+        // servicos nasceram sem preco nenhum.
+        alterarConfiguracao(auth, "fluxo.modo_mao_de_obra", "AUTOMATICA");
+        JsonNode recalculada = buscar("/api/os/" + osUnica, auth);
+        assertThat(recalculada.get("valorMaoObra").asDouble()).isZero();
         assertThat(depois.get("valorMaoObra").asDouble()).isZero();
+        alterarConfiguracao(auth, "fluxo.modo_mao_de_obra", "MANUAL");
 
         // ---------- transicao invalida ----------
         mvc.perform(MockMvcRequestBuilders

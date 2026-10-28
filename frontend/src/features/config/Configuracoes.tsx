@@ -22,7 +22,7 @@ import {
 import { CHAVES, useConfig } from '../../lib/config'
 import { claro } from '../../components/oficina'
 import { GRUPOS, ROTULOS } from './rotulos'
-import { plural } from '../../lib/format'
+import { moeda, plural } from '../../lib/format'
 
 // Toda aba daqui precisa da entrada correspondente em GRUPOS (rotulos.ts):
 // o render usa GRUPOS.find(...)! e quebraria em tela branca sem ela.
@@ -852,6 +852,7 @@ function Catalogo() {
   const [especialidadeId, setEspecialidadeId] = useState('')
   const [horasPadrao, setHorasPadrao] = useState('1')
   const [preco, setPreco] = useState('')
+  const [lucro, setLucro] = useState('')
   const [ativo, setAtivo] = useState(true)
 
   const lista = useQuery({
@@ -869,8 +870,17 @@ function Catalogo() {
     setEspecialidadeId(editando?.especialidadeId ?? '')
     setHorasPadrao(String(editando?.horasPadrao ?? 1))
     setPreco(editando?.precoSugerido ? String(editando.precoSugerido) : '')
+    setLucro(editando?.valorLucro ? String(editando.valorLucro) : '')
     setAtivo(editando?.ativo ?? true)
   }, [editando, criando])
+
+  /** Null quando falta preco ou lucro: "sem margem calculada" nao e "margem zero". */
+  const margemViva = useMemo(() => {
+    const p = Number(preco)
+    const l = Number(lucro)
+    if (!preco || !lucro || !Number.isFinite(p) || !Number.isFinite(l) || p <= 0) return null
+    return Math.round((l * 100) / p)
+  }, [preco, lucro])
 
   const salvar = useMutation({
     mutationFn: () => {
@@ -879,6 +889,7 @@ function Catalogo() {
         especialidadeId: especialidadeId || undefined,
         horasPadrao: Number(horasPadrao),
         precoSugerido: preco ? Number(preco) : undefined,
+        valorLucro: lucro ? Number(lucro) : undefined,
         ativo,
       }
       return editando
@@ -975,15 +986,51 @@ function Catalogo() {
               onChange={(e) => setHorasPadrao(e.target.value)}
             />
           </Campo>
-          <Campo rotulo="Preço sugerido (R$)">
+          <Campo rotulo="Preço sugerido (R$)" dica="O que o cliente paga por este serviço.">
             <Entrada
               type="number"
               step="0.01"
               min="0"
+              inputMode="decimal"
               value={preco}
               onChange={(e) => setPreco(e.target.value)}
             />
           </Campo>
+          <Campo rotulo="Quanto disso é lucro (R$)" dica="Opcional. Serve para a margem aparecer sozinha.">
+            <Entrada
+              type="number"
+              step="0.01"
+              min="0"
+              inputMode="decimal"
+              value={lucro}
+              onChange={(e) => setLucro(e.target.value)}
+            />
+          </Campo>
+
+          {/*
+            A margem e CALCULADA, e nao digitada.
+            Guardar preco, lucro E margem e guardar duas versoes da mesma
+            verdade: um dia alguem muda o preco, esquece a margem, e a tela
+            passa a mentir com confianca. Aqui ela aparece viva enquanto o
+            dono digita, e nao tem como discordar da conta.
+          */}
+          {margemViva !== null && (
+            <div className="sm:col-span-2 flex flex-wrap items-baseline gap-x-2 rounded-lg bg-slate-50 px-3 py-2.5 text-sm ring-1 ring-slate-200">
+              <span className="text-slate-600">Margem deste serviço:</span>
+              <strong
+                className={cx(
+                  'text-base tabular-nums',
+                  margemViva < 20 ? 'text-amber-700' : 'text-emerald-700',
+                )}
+              >
+                {margemViva}%
+              </strong>
+              <span className="text-xs text-slate-500">
+                {moeda(Number(lucro))} de lucro em {moeda(Number(preco))}
+              </span>
+            </div>
+          )}
+
           <div className="rounded-lg bg-slate-50 px-3 ring-1 ring-slate-200 sm:col-span-2">
             <Interruptor ativo={ativo} rotulo="Serviço ativo" onChange={setAtivo} />
           </div>

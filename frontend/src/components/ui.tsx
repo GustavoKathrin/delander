@@ -181,8 +181,25 @@ export function Campo({
  * min-h e nao h: a area de texto cresce com as linhas, e um select com
  * fonte grande nao pode ficar cortado.
  */
+/**
+ * 16px no celular, 14px no desktop. E 44px de altura minima.
+ *
+ * O 16px nao e gosto: o Safari do iPhone DA ZOOM na pagina sozinho quando o
+ * dedo toca um campo com fonte menor que 16px. O mecanico tocava na caixa de
+ * anotacao (14px) e a tela inteira pulava e saia do lugar -- medido na tela
+ * da OS a 390px de largura. Do `sm:` para cima volta a 14px, porque ali o
+ * problema nao existe e a tela ganha densidade.
+ *
+ * A altura minima tem a mesma origem: o campo saia com 36px (py-2 sobre
+ * texto de 14px), e isso vale para TODO formulario do sistema -- a busca de
+ * cliente, a busca da wiki, a placa no check-in. Campos que alguem acerta
+ * com a luva, no tablet, em pe ao lado do carro.
+ *
+ * min-h e nao h: a area de texto cresce com as linhas, e um select com
+ * fonte grande nao pode ficar cortado.
+ */
 const ESTILO_CAMPO =
-  'w-full min-h-11 rounded-lg border-0 bg-white px-3 py-2.5 text-sm text-slate-900 ring-1 ring-slate-300 ' +
+  'w-full min-h-11 rounded-lg border-0 bg-white px-3 py-2.5 text-base sm:text-sm text-slate-900 ring-1 ring-slate-300 ' +
   'placeholder:text-slate-400 focus:ring-2 focus:ring-marca-600 disabled:bg-slate-50 disabled:text-slate-500'
 
 export function Entrada({ className, ...resto }: InputHTMLAttributes<HTMLInputElement>) {

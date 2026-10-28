@@ -459,6 +459,9 @@ export interface ServicoCatalogo {
   especialidadeCor?: string
   horasPadrao: number
   precoSugerido?: number
+  valorLucro?: number
+  /** lucro / preço, em %. Calculada pelo servidor; nula sem preço ou sem lucro. */
+  margemPercentual?: number
   exigeElevador: boolean
   ativo: boolean
 }

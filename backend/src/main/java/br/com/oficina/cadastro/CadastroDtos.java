@@ -97,6 +97,7 @@ public final class CadastroDtos {
             UUID especialidadeId,
             @DecimalMin(value = "0.0", message = "Horas padrao nao pode ser negativa") BigDecimal horasPadrao,
             @DecimalMin(value = "0.0", message = "Preco nao pode ser negativo") BigDecimal precoSugerido,
+            @DecimalMin(value = "0.0", message = "Lucro nao pode ser negativo") BigDecimal valorLucro,
             /** O servico sobe o carro: quem marca isso alimenta a fila do elevador. */
             Boolean exigeElevador,
             Boolean ativo) {
@@ -109,6 +110,9 @@ public final class CadastroDtos {
                                   String especialidadeCor,
                                   BigDecimal horasPadrao,
                                   BigDecimal precoSugerido,
+                                  BigDecimal valorLucro,
+                                  /** lucro / preco, em %. Calculada aqui para a tela nao refazer a conta. */
+                                  Integer margemPercentual,
                                   boolean exigeElevador,
                                   boolean ativo) {
 
@@ -121,8 +125,22 @@ public final class CadastroDtos {
                     c.getEspecialidade() == null ? null : c.getEspecialidade().getCor(),
                     c.getHorasPadrao(),
                     c.getPrecoSugerido(),
+                    c.getValorLucro(),
+                    margemDe(c),
                     c.isExigeElevador(),
                     c.isAtivo());
+        }
+
+        /** Nula quando falta preco ou lucro -- "sem margem calculada" nao e "margem zero". */
+        private static Integer margemDe(CatalogoServico c) {
+            BigDecimal preco = c.getPrecoSugerido();
+            BigDecimal lucro = c.getValorLucro();
+            if (preco == null || lucro == null || preco.signum() <= 0) {
+                return null;
+            }
+            return lucro.multiply(java.math.BigDecimal.valueOf(100))
+                    .divide(preco, 0, java.math.RoundingMode.HALF_UP)
+                    .intValue();
         }
     }
 }

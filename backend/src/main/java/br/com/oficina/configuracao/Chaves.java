@@ -38,6 +38,19 @@ public final class Chaves {
     public static final String MECANICO_CRIA_OS = "fluxo.mecanico_pode_criar_os";
     public static final String MECANICO_REALOCA = "fluxo.mecanico_pode_realocar";
     public static final String MECANICO_VE_VALORES = "fluxo.mecanico_ve_valores";
+    /**
+     * MANUAL ou AUTOMATICA.
+     *
+     * MANUAL: alguem do balcao digita o valor da mao de obra da OS.
+     * AUTOMATICA: o valor e a soma dos servicos, pelo preco do catalogo, e o
+     * mecanico escolhe o servico sem ver preco nenhum.
+     *
+     * Nasce MANUAL porque a tabela de precos da oficina ainda nao existe --
+     * com catalogo vazio, AUTOMATICA soma zero e o orcamento sai de graca.
+     */
+    public static final String MODO_MAO_DE_OBRA = "fluxo.modo_mao_de_obra";
+    /** Quanto de desconto o balcao da sozinho, em %. Dono e gerente nao tem teto. */
+    public static final String DESCONTO_MAXIMO_PERCENTUAL = "fluxo.desconto_maximo_percentual";
     public static final String FECHAR_APONTAMENTO_ESQUECIDO = "fluxo.fechar_apontamento_esquecido";
     public static final String HORA_FECHAMENTO_AUTOMATICO = "fluxo.hora_fechamento_automatico";
 

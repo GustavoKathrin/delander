@@ -1,0 +1,101 @@
+# ---------------------------------------------------------------------------
+# Roda os testes a cada push.
+#
+# Ate aqui o repositorio nao tinha nenhum: o unico workflow era o "manter
+# acordado". Os 78 testes de unidade so passavam porque alguem lembrava de
+# rodar na mao, e os de integracao nao rodavam nem isso -- o Testcontainers
+# nao abre o Docker na maquina de desenvolvimento (o contexto ativo e o
+# dockerDesktopLinuxEngine e a estrategia fixada em ~/.testcontainers.properties
+# procura o pipe padrao). No runner do GitHub nao existe essa briga: Docker e
+# nativo, entao e AQUI que FluxoOficinaIT e LeituraPorEmailIT finalmente rodam.
+#
+# Por que dois jobs e nao um: backend e frontend nao dependem um do outro para
+# testar, e separados eles rodam ao mesmo tempo e dizem QUAL dos dois quebrou
+# so pelo nome do job vermelho.
+# ---------------------------------------------------------------------------
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Push em cima de push cancela o anterior: o resultado do commit velho nao
+# interessa mais, e o runner gratuito e compartilhado.
+concurrency:
+  group: testes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (unidade + integração)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # O mvnw esta no git com modo 100644 (sem bit de execucao), porque foi
+      # commitado do Windows. Sem isto o runner Linux responde "Permission
+      # denied" antes de compilar uma linha.
+      - name: Dar permissao ao wrapper do Maven
+        working-directory: backend
+        run: chmod +x ./mvnw
+
+      # verify, e nao test: `test` roda so os *Test. Os *IT, que sobem um
+      # PostgreSQL de verdade e cobrem o fluxo ponta a ponta, sao do failsafe
+      # e so entram no verify.
+      - name: Compilar e testar
+        working-directory: backend
+        run: ./mvnw -B --no-transfer-progress verify
+
+      # Sem isto, um teste vermelho vira um log de 2000 linhas para garimpar.
+      - name: Guardar os relatorios quando algo quebra
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorios-de-teste
+          path: |
+            backend/target/surefire-reports/
+            backend/target/failsafe-reports/
+          retention-days: 7
+
+  frontend:
+    name: Frontend (tipos + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Mesma versao do estagio de build do Dockerfile. Divergir aqui
+          # significa descobrir em producao um erro que o CI nao viu.
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar as dependencias travadas
+        working-directory: frontend
+        run: npm ci
+
+      # O projeto nao tem teste de frontend. O que existe de rede de seguranca
+      # e o TypeScript: `tsc --noEmit` pega assinatura trocada, campo que nao
+      # existe no DTO e import quebrado -- que e a maior parte do que quebra
+      # quando o backend muda um contrato.
+      - name: Checar tipos
+        working-directory: frontend
+        run: npm run typecheck
+
+      # O build pega o que o typecheck nao pega: import circular, asset que
+      # nao existe, plugin mal configurado. E e exatamente o comando que a
+      # Vercel vai rodar -- falhar aqui e melhor que falhar no deploy.
+      - name: Build de producao
+        working-directory: frontend
+        run: npm run build

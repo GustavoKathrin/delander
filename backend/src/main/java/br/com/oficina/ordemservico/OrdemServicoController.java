@@ -151,6 +151,14 @@ public class OrdemServicoController {
         return service.adicionarItem(id, req);
     }
 
+    @PatchMapping("/{id}/itens/{itemId}")
+    @Operation(summary = "Poe ou corrige o preco e as horas de um servico ja lancado (etapa de cotacao)")
+    public OsDtos.Detalhe atualizarItem(@PathVariable UUID id,
+                                        @PathVariable UUID itemId,
+                                        @Valid @RequestBody OsDtos.ItemValorRequisicao req) {
+        return service.atualizarItem(id, itemId, req);
+    }
+
     @DeleteMapping("/{id}/itens/{itemId}")
     @Operation(summary = "Remove o servico (se ja teve horas apontadas, apenas cancela)")
     public OsDtos.Detalhe removerItem(@PathVariable UUID id, @PathVariable UUID itemId) {

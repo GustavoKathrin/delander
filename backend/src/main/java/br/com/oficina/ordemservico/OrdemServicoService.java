@@ -471,6 +471,10 @@ public class OrdemServicoService {
                 os.setOrcamentoRespondidoEm(agora);
                 os.setOrcamentoRespondidoPor(contexto.nomeUsuario());
                 os.setOrcamentoRecusaMotivo(null);
+                // Fotografia do total neste instante. Depois daqui a OS pode
+                // ganhar peca e o total muda -- mas o que o cliente aprovou
+                // foi este numero, e e este que vale numa discussao.
+                os.setValorAprovado(os.valorTotal());
                 eventoService.registrar(oficinaId, os.getId(), EventoService.ORCAMENTO_APROVADO,
                         "Orcamento aprovado pelo cliente (registrado por %s)."
                                 .formatted(contexto.nomeUsuario()), true);
@@ -685,19 +689,76 @@ public class OrdemServicoService {
     @Transactional
     public OsDtos.Detalhe adicionarItem(UUID id, OsDtos.ItemRequisicao req) {
         UUID oficinaId = contexto.oficinaId();
-        contexto.exigirGerencia();
+        /*
+         * Lancar servico e diagnostico, e diagnostico e do mecanico.
+         *
+         * Antes isto exigia gerencia, e por isso a etapa 2 do fluxo -- "o
+         * mecanico analisa o carro e diz tudo o que vai precisar" -- nao
+         * existia: ele podia registrar a peca (PecaService.adicionar nunca
+         * cobrou papel) e nao podia registrar o servico que usa a peca.
+         *
+         * O que protege a oficina nao e impedir o mecanico de listar, e sim:
+         * ele nao ve valor (mascarado em detalhe()), nao define valor (logo
+         * abaixo), e nao aprova o proprio orcamento -- aprovar continua
+         * exigindo atendimento.
+         */
+        contexto.exigirMaoNaMassa();
         OrdemServico os = buscarComItens(id, oficinaId);
         if (os.getStatus().finalizada()) {
             throw new RegraNegocioException("OS ja finalizada nao aceita novos servicos.");
         }
 
         OsItem item = construirItem(req, oficinaId);
+        if (!contexto.gerencia()) {
+            // Quem nao ve preco tambem nao escreve preco. Sem esta linha, um
+            // POST feito na mao mandaria o valor que quisesse.
+            item.setValor(item.getCatalogoServico() == null
+                    ? null : item.getCatalogoServico().getPrecoSugerido());
+        }
         os.adicionarItem(item);
         recalcularMaoObra(os);
         repository.save(os);
 
         eventoService.registrar(oficinaId, os.getId(), EventoService.ITEM_ADICIONADO,
                 "Servico adicionado: " + item.getDescricao(), true);
+        return detalhe(id);
+    }
+
+    /**
+     * A cotacao da etapa 3: o dono poe preco no que o mecanico listou.
+     *
+     * Ate aqui OsItem.valor so podia ser escrito no nascimento do item -- o
+     * controller tinha POST, DELETE, atribuir e transicao, e nenhum caminho
+     * para corrigir um preco. Na pratica o valor so podia vir do catalogo, e
+     * a "mao de obra manual" que o dono pediu nao tinha onde acontecer.
+     */
+    @Transactional
+    public OsDtos.Detalhe atualizarItem(UUID id, UUID itemId, OsDtos.ItemValorRequisicao req) {
+        UUID oficinaId = contexto.oficinaId();
+        // Poe preco quem responde pelo preco.
+        contexto.exigirGerencia();
+        OrdemServico os = buscarComItens(id, oficinaId);
+
+        OsItem item = os.getItens().stream()
+                .filter(i -> i.getId().equals(itemId))
+                .findFirst()
+                .orElseThrow(() -> RecursoNaoEncontradoException.de("Servico da OS", itemId));
+
+        if (item.getStatus() == StatusItem.CANCELADO) {
+            throw new RegraNegocioException("Servico cancelado nao recebe preco.");
+        }
+        if (req.valor() != null) {
+            item.setValor(req.valor());
+        }
+        if (req.horasEstimadas() != null) {
+            item.setHorasEstimadas(req.horasEstimadas());
+        }
+        if (req.descricao() != null && !req.descricao().isBlank()) {
+            item.setDescricao(req.descricao().trim());
+        }
+
+        recalcularMaoObra(os);
+        repository.save(os);
         return detalhe(id);
     }
 
@@ -773,11 +834,18 @@ public class OrdemServicoService {
     }
 
     /**
-     * A mao de obra da OS e a soma dos itens nao cancelados. Sem isso o dono
-     * ve total zerado mesmo com servico no catalogo tendo preco.
-     * Nao sobrescreve um valor informado a mao quando nenhum item tem preco.
+     * A mao de obra da OS e a soma dos itens nao cancelados -- quando o dono
+     * escolheu AUTOMATICA.
+     *
+     * No modo MANUAL alguem do balcao digita o valor da OS, e somar os itens
+     * por cima apagaria o que essa pessoa acabou de digitar toda vez que um
+     * servico entrasse ou saisse. Entao no MANUAL este metodo nao faz nada: o
+     * valor e de quem digitou, ate alguem digitar outro.
      */
     private void recalcularMaoObra(OrdemServico os) {
+        if (!maoDeObraAutomatica(os.getOficinaId())) {
+            return;
+        }
         boolean algumItemComValor = os.getItens().stream()
                 .anyMatch(i -> i.getStatus() != StatusItem.CANCELADO && i.getValor() != null);
         if (!algumItemComValor) {
@@ -788,6 +856,16 @@ public class OrdemServicoService {
                 .map(i -> i.getValor() == null ? BigDecimal.ZERO : i.getValor())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         os.setValorMaoObra(total);
+    }
+
+    /**
+     * Leitura defensiva: qualquer valor que nao seja exatamente AUTOMATICA
+     * vale como MANUAL. A chave e TEXTO livre no banco, e um erro de
+     * digitacao nao pode virar "a oficina passou a cobrar zero".
+     */
+    boolean maoDeObraAutomatica(UUID oficinaId) {
+        return "AUTOMATICA".equalsIgnoreCase(
+                config.texto(oficinaId, Chaves.MODO_MAO_DE_OBRA, "MANUAL"));
     }
 
     private OsItem construirItem(OsDtos.ItemRequisicao req, UUID oficinaId) {
@@ -838,6 +916,19 @@ public class OrdemServicoService {
         OrdemServico os = buscarComItens(id, oficinaId);
         OffsetDateTime agora = OffsetDateTime.now(clock);
 
+        /*
+         * "O mecanico nao ve valor" precisa valer AQUI, e nao so na tela.
+         *
+         * A chave fluxo.mecanico_ve_valores existia desde o inicio e nunca
+         * tinha sido lida pelo servidor: o JSON ia completo com preco de
+         * servico, preco de peca e total da OS, e so o React escondia. Quem
+         * abrisse o aplicativo pelo navegador do celular e olhasse a resposta
+         * via F12 via tudo. E a etapa 2 do fluxo novo pede o contrario: o
+         * mecanico escolhe o servico SEM ver valor nenhum.
+         */
+        boolean mostraValores = contexto.gerencia()
+                || config.flag(oficinaId, Chaves.MECANICO_VE_VALORES);
+
         List<Apontamento> apontamentos = apontamentoRepository.listarPorOs(id);
         Map<UUID, BigDecimal> horasPorItem = new HashMap<>();
         Map<UUID, Apontamento> abertoPorItem = new HashMap<>();
@@ -866,7 +957,7 @@ public class OrdemServicoService {
                             i.getFuncionario() == null ? null : i.getFuncionario().getNome(),
                             i.getStatus(),
                             i.getStatus().descricao(),
-                            i.getValor(),
+                            mostraValores ? i.getValor() : null,
                             aberto != null,
                             aberto == null ? null : aberto.getInicio(),
                             i.getMotivoCancelamento(),
@@ -911,7 +1002,9 @@ public class OrdemServicoService {
                         p.getStatus(), p.getStatus().descricao(),
                         p.getOrigem(), p.getOrigem().descricao(),
                         p.getMomentoNecessario(), p.getMomentoNecessario().descricao(),
-                        p.getPrevisaoChegada(), p.getValorUnitario(), p.total()))
+                        p.getPrevisaoChegada(),
+                        mostraValores ? p.getValorUnitario() : null,
+                        mostraValores ? p.total() : null))
                 .toList();
 
         List<OsDtos.ChecklistResposta> checklist = checklistRepository
@@ -935,10 +1028,11 @@ public class OrdemServicoService {
                 os.getInicioExecucaoEm(),
                 os.getProntoEm(),
                 os.getEntregueEm(),
-                os.getValorPecas(),
-                os.getValorMaoObra(),
-                os.getDesconto(),
-                os.valorTotal(),
+                mostraValores ? os.getValorPecas() : null,
+                mostraValores ? os.getValorMaoObra() : null,
+                mostraValores ? os.getDesconto() : null,
+                mostraValores ? os.valorTotal() : null,
+                os.getValorAprovado(),
                 List.copyOf(MaquinaEstadosOs.proximos(os.getStatus())),
                 itens,
                 apontamentosDto,

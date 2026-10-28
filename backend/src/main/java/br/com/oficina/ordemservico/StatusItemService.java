@@ -284,7 +284,17 @@ public class StatusItemService {
         }
     }
 
+    /**
+     * Mesma regra da outra copia em OrdemServicoService: no modo MANUAL o
+     * valor e de quem digitou. Esta copia nao tinha guarda nenhuma -- cancelar
+     * um servico reescrevia o valor da mao de obra mesmo com o dono tendo
+     * digitado um numero fechado.
+     */
     private void recalcularMaoObra(OrdemServico os) {
+        if (!"AUTOMATICA".equalsIgnoreCase(
+                config.texto(os.getOficinaId(), Chaves.MODO_MAO_DE_OBRA, "MANUAL"))) {
+            return;
+        }
         BigDecimal total = os.getItens().stream()
                 .filter(i -> i.getStatus() != StatusItem.CANCELADO)
                 .map(i -> i.getValor() == null ? BigDecimal.ZERO : i.getValor())

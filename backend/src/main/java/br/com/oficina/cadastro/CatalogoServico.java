@@ -35,6 +35,18 @@ public class CatalogoServico extends BaseEntity {
     @Column(name = "preco_sugerido", precision = 12, scale = 2)
     private BigDecimal precoSugerido;
 
+    /**
+     * Quanto deste preco e lucro. Opcional -- o dono disse "nada obrigatorio,
+     * so o valor".
+     *
+     * A MARGEM nao mora aqui de proposito: margem e lucro dividido por preco.
+     * Guardar as duas e guardar duas versoes da mesma verdade, e um dia elas
+     * discordam -- alguem muda o preco e esquece a margem. Quem calcula e
+     * mostra e a tela.
+     */
+    @Column(name = "valor_lucro", precision = 12, scale = 2)
+    private BigDecimal valorLucro;
+
     /** Servico que sobe o carro: quem marca isso alimenta a fila do elevador. */
     @Column(name = "exige_elevador", nullable = false)
     private boolean exigeElevador = false;

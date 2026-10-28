@@ -21,6 +21,8 @@ export const CHAVES = {
   mecanicoCriaOs: 'fluxo.mecanico_pode_criar_os',
   mecanicoRealoca: 'fluxo.mecanico_pode_realocar',
   mecanicoVeValores: 'fluxo.mecanico_ve_valores',
+  modoMaoDeObra: 'fluxo.modo_mao_de_obra',
+  descontoMaximo: 'fluxo.desconto_maximo_percentual',
   compAtivo: 'compartilhamento.ativo_global',
   compAutomatico: 'compartilhamento.gerar_automatico_ao_iniciar',
   compExigirPin: 'compartilhamento.exigir_pin',

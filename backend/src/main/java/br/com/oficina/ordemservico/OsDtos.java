@@ -53,6 +53,19 @@ public final class OsDtos {
     }
 
     /**
+     * Precificar depois: a etapa 3 poe valor no que a etapa 2 listou.
+     *
+     * Separado de ItemRequisicao de proposito -- aquele cria um servico e
+     * exige saber de onde ele vem; este so corrige numeros de um servico que
+     * ja existe, e todo campo e opcional (mandar so o valor e o caso comum).
+     */
+    public record ItemValorRequisicao(
+            @DecimalMin(value = "0.0", message = "Valor nao pode ser negativo") BigDecimal valor,
+            @DecimalMin(value = "0.0", message = "Horas estimadas nao pode ser negativa") BigDecimal horasEstimadas,
+            @Size(max = 240) String descricao) {
+    }
+
+    /**
      * Check-in rapido: cria cliente + veiculo + OS + itens + alocacao
      * em uma unica transacao. E a tela de "poucos cliques" da recepcao.
      */
@@ -363,6 +376,8 @@ public final class OsDtos {
             BigDecimal valorMaoObra,
             BigDecimal desconto,
             BigDecimal valorTotal,
+            /** O total congelado no "sim" do cliente. Null enquanto nao houve aprovacao. */
+            BigDecimal valorAprovado,
             List<StatusOs> proximosStatus,
             List<ItemResposta> itens,
             List<ApontamentoResposta> apontamentos,

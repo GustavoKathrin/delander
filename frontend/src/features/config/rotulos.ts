@@ -91,6 +91,32 @@ export const ROTULOS: Record<string, RotuloConfig> = {
     rotulo: 'Exigir fotos na entrada',
     descricao: 'Protege a oficina de reclamação de avaria pré-existente.',
   },
+  'fluxo.modo_mao_de_obra': {
+    rotulo: 'Como o valor da mão de obra é definido',
+    descricao:
+      'Esta é a escolha que muda quem faz o preço. Em "Digitado", alguém do balcão fecha o valor do serviço inteiro. Em "Pela tabela", o preço sai do que já está cadastrado em Serviços, e o mecânico escolhe o serviço sem ver preço nenhum.',
+    ordem: 1,
+    opcoes: [
+      {
+        valor: 'MANUAL',
+        rotulo: 'Digitado',
+        descricao:
+          'O atendente digita o valor da mão de obra na OS, e pode dar desconto. Use enquanto a tabela de preços da oficina não estiver pronta.',
+      },
+      {
+        valor: 'AUTOMATICA',
+        rotulo: 'Pela tabela',
+        descricao:
+          'O valor é a soma dos serviços, pelo preço cadastrado em Serviços. O mecânico seleciona o serviço na avaliação sem ver quanto custa.',
+      },
+    ],
+  },
+  'fluxo.desconto_maximo_percentual': {
+    rotulo: 'Desconto que o balcão pode dar sozinho',
+    descricao:
+      'Em porcentagem do total. Zero significa que só você e o gerente dão desconto — a recepção vê o pedido do cliente e chama você. Acima de zero, a recepção resolve na hora até esse limite.',
+    unidade: '%',
+  },
   'fluxo.permitir_multiplos_mecanicos_por_os': {
     rotulo: 'Vários mecânicos na mesma OS',
     descricao: 'Permite que dois mecânicos trabalhem no mesmo carro ao mesmo tempo.',

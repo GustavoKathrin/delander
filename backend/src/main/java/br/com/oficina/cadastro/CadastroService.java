@@ -277,6 +277,7 @@ public class CadastroService {
             c.setHorasPadrao(BigDecimal.ONE);
         }
         c.setPrecoSugerido(req.precoSugerido());
+        c.setValorLucro(req.valorLucro());
         if (req.exigeElevador() != null) {
             c.setExigeElevador(req.exigeElevador());
         }

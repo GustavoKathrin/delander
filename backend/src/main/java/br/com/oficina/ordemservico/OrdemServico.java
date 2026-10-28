@@ -120,6 +120,16 @@ public class OrdemServico extends BaseEntity {
     @Column(name = "desconto", nullable = false, precision = 12, scale = 2)
     private BigDecimal desconto = BigDecimal.ZERO;
 
+    /**
+     * O total no instante em que o cliente aprovou. Congelado.
+     *
+     * valorTotal() e derivado e muda a cada peca que entra. Sem esta coluna,
+     * o "voce autorizou R$ 1.180" de seis meses depois nao tem prova: basta
+     * alguem acrescentar uma peca para o passado mudar de ideia.
+     */
+    @Column(name = "valor_aprovado", precision = 12, scale = 2)
+    private BigDecimal valorAprovado;
+
     @OneToMany(mappedBy = "ordemServico", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("ordem asc")
     private List<OsItem> itens = new ArrayList<>();

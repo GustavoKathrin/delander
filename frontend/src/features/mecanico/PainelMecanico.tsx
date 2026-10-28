@@ -47,8 +47,15 @@ export default function PainelMecanico() {
   const [concluindo, setConcluindo] = useState<MeuServico | null>(null)
   /** O serviço cuja nota está sendo escrita. */
   const [anotando, setAnotando] = useState<MeuServico | null>(null)
-  /** A foto aberta em tela cheia, e de qual carro ela é. */
-  const [vendoFoto, setVendoFoto] = useState<{ foto: ArquivoOs; osId: string } | null>(null)
+  /**
+   * A foto aberta em tela cheia — guardada por ID, não o objeto.
+   *
+   * Guardando o objeto, "o cliente vê" nunca mudava de estado: o PATCH ia,
+   * o servidor gravava, a lista recarregava, e o visor seguia mostrando a
+   * cópia capturada no toque. Quem tocasse de novo achando que falhou
+   * mandava o MESMO valor outra vez, sem volta possível.
+   */
+  const [vendoFoto, setVendoFoto] = useState<{ fotoId: string; osId: string } | null>(null)
   const [erro, setErro] = useState<string>()
 
   const consulta = useQuery({
@@ -125,6 +132,16 @@ export default function PainelMecanico() {
   })
 
   const lista = consulta.data ?? []
+  /**
+   * A foto aberta, sempre a versao de agora.
+   *
+   * Re-derivada da lista a cada render: guardar o objeto fazia o visor
+   * mostrar a copia capturada no toque, e "o cliente ve" nunca mudava de
+   * estado depois do PATCH.
+   */
+  const fotoAberta = vendoFoto
+    ? (lista.flatMap((s) => s.fotos).find((f) => f.id === vendoFoto.fotoId) ?? null)
+    : null
   const rodando = useMemo(() => lista.filter((s) => s.apontamentoAbertoId), [lista])
   /**
    * Servico parado no meio nao e servico na fila.
@@ -192,7 +209,7 @@ export default function PainelMecanico() {
               agora={agora}
               onRecarregar={recarregar}
               onAnotar={() => setAnotando(servico)}
-              onVerFoto={(foto) => setVendoFoto({ foto, osId: servico.osId })}
+              onVerFoto={(foto) => setVendoFoto({ fotoId: foto.id, osId: servico.osId })}
               onPausar={() => {
                 setErro(undefined)
                 setObservacao('')
@@ -221,7 +238,7 @@ export default function PainelMecanico() {
               agora={agora}
               onRecarregar={recarregar}
               onAnotar={() => setAnotando(servico)}
-              onVerFoto={(foto) => setVendoFoto({ foto, osId: servico.osId })}
+              onVerFoto={(foto) => setVendoFoto({ fotoId: foto.id, osId: servico.osId })}
               onIniciar={() => {
                 setErro(undefined)
                 setEstimativa(String(servico.horasEstimadas ?? 1))
@@ -243,7 +260,7 @@ export default function PainelMecanico() {
               agora={agora}
               onRecarregar={recarregar}
               onAnotar={() => setAnotando(servico)}
-              onVerFoto={(foto) => setVendoFoto({ foto, osId: servico.osId })}
+              onVerFoto={(foto) => setVendoFoto({ fotoId: foto.id, osId: servico.osId })}
               onIniciar={() => {
                 setErro(undefined)
                 const previsto = servico.horasEstimadas ?? 1
@@ -499,9 +516,8 @@ export default function PainelMecanico() {
       />
 
       <VisorDeFoto
-        foto={vendoFoto?.foto ?? null}
+        foto={fotoAberta}
         osId={vendoFoto?.osId ?? ''}
-        podeApagar={vendoFoto?.foto.momento !== 'ENTRADA' || gerencia}
         onFechar={() => setVendoFoto(null)}
         onMudou={recarregar}
       />

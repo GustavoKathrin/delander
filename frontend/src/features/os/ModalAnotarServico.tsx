@@ -39,12 +39,18 @@ export function ModalAnotarServico({
   const [visivelCliente, setVisivelCliente] = useState(false)
   const [erro, setErro] = useState<string>()
 
+  // Depende do ID, nao do objeto.
+  //
+  // `servico` e um objeto literal montado por quem chama, novo a cada render.
+  // No Painel do Mecanico a tela re-renderiza a cada segundo (o cronometro),
+  // entao com `[servico]` este efeito rodava a cada segundo e limpava o campo
+  // embaixo do dedo: era impossivel escrever a nota de dentro do painel.
   useEffect(() => {
     if (!servico) return
     setTexto('')
     setVisivelCliente(false)
     setErro(undefined)
-  }, [servico])
+  }, [servico?.id])
 
   const salvar = useMutation({
     mutationFn: () =>

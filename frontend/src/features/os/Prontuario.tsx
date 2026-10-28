@@ -219,7 +219,6 @@ export default function Prontuario() {
       <VisorDeFoto
         foto={vendoFoto?.foto ?? null}
         osId={vendoFoto?.osId ?? ''}
-        podeApagar={false}
         somenteLeitura
         onFechar={() => setVendoFoto(null)}
         onMudou={() => consulta.refetch()}

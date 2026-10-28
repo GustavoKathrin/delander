@@ -1131,7 +1131,11 @@ public class OrdemServicoService {
                 mostraValores ? os.getValorMaoObra() : null,
                 mostraValores ? os.getDesconto() : null,
                 mostraValores ? os.valorTotal() : null,
-                os.getValorAprovado(),
+                // Mascarado como os outros. Ele escapou da regra quando foi
+                // criado: e o unico campo de dinheiro do detalhe que ia
+                // inteiro para o mecanico, e justamente o mais sensivel --
+                // e quanto o cliente aceitou pagar.
+                mostraValores ? os.getValorAprovado() : null,
                 os.isAvisoInicioPendente(),
                 List.copyOf(MaquinaEstadosOs.proximos(os.getStatus())),
                 itens,
@@ -1232,7 +1236,11 @@ public class OrdemServicoService {
                             .filter(d -> d != null && !d.isBlank())
                             .toList();
 
-                    Map<UUID, String> nomes = vivos.stream()
+                    // TODOS os itens, nao so os vivos: a foto de um servico
+                    // cancelado continua existindo, e sem o nome dele no mapa
+                    // ela abria rotulada "Foto do carro" -- a mesma foto que
+                    // na tela da OS aparece com a legenda certa.
+                    Map<UUID, String> nomes = completa.getItens().stream()
                             .collect(Collectors.toMap(OsItem::getId, OsItem::getDescricao,
                                     (a, b) -> a));
                     List<OsDtos.ArquivoResposta> fotos = arquivoRepository

@@ -196,12 +196,11 @@ export function ChecklistEntrada({ os, gerencia }: { os: DetalheOs; gerencia: bo
       </div>
 
       {/* Apagar a foto de entrada é da gerência: é prova de como o carro
-          chegou, e quem apaga prova assume a escolha. O servidor recusa de
-          qualquer forma — aqui o botão nem aparece. */}
+          chegou, e quem apaga prova assume a escolha. Quem decide isso é o
+          próprio visor, com a mesma regra do servidor. */}
       <VisorDeFoto
         foto={fotoAberta}
         osId={os.resumo.id}
-        podeApagar={gerencia}
         onFechar={() => setAberta(null)}
         onMudou={recarregar}
       />

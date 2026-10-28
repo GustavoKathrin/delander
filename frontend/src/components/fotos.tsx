@@ -4,6 +4,7 @@ import { Camera, FileText, ImageOff, Images, Loader2, Trash2, X } from 'lucide-r
 
 import { api, baixarArquivo, ErroApi } from '../api/client'
 import { Botao, cx, useAviso } from './ui'
+import { useAuth } from '../lib/auth'
 import { dataHora, plural } from '../lib/format'
 import type { ArquivoOs } from '../types'
 
@@ -28,11 +29,55 @@ const caminho = (url: string) => url.replace(/^\/api/, '')
  * pela tela ficam na memória do navegador até a aba fechar — e são fotos de
  * celular, de megabytes, numa tela que o mecânico deixa aberta o dia todo.
  */
-function FotoProtegida({ url, alt, className }: { url: string; alt: string; className?: string }) {
+export function FotoProtegida({
+  url,
+  alt,
+  className,
+}: {
+  url: string
+  alt: string
+  className?: string
+}) {
   const [src, setSrc] = useState<string>()
   const [falhou, setFalhou] = useState(false)
+  /**
+   * Só baixa o que chegou perto da tela.
+   *
+   * Não existe endpoint de miniatura: toda foto vem inteira, até 8 MB. Uma
+   * galeria de dez fotos eram 80 MB de uma vez, e o painel do mecânico
+   * carrega as fotos de todos os cartões — no 4G do box isso trava o
+   * celular antes de mostrar a primeira. `loading="lazy"` não serve aqui,
+   * porque quem busca os bytes somos nós e não o `<img>`.
+   */
+  const [visivel, setVisivel] = useState(false)
+  const caixa = useRef<HTMLElement>(null)
 
   useEffect(() => {
+    if (visivel) return
+    const alvo = caixa.current
+    // Sem IntersectionObserver (navegador velho), baixa logo: melhor gastar
+    // banda do que mostrar quadrado cinza para sempre.
+    if (!alvo || typeof IntersectionObserver === 'undefined') {
+      setVisivel(true)
+      return
+    }
+    const observador = new IntersectionObserver(
+      (entradas) => {
+        if (entradas.some((e) => e.isIntersecting)) {
+          setVisivel(true)
+          observador.disconnect()
+        }
+      },
+      // 400px de folga: começa a baixar antes de aparecer, para a foto
+      // chegar pronta quando o dedo terminar a rolagem.
+      { rootMargin: '400px' },
+    )
+    observador.observe(alvo)
+    return () => observador.disconnect()
+  }, [visivel])
+
+  useEffect(() => {
+    if (!visivel) return
     let vivo = true
     let criado: string | undefined
     setSrc(undefined)
@@ -52,11 +97,12 @@ function FotoProtegida({ url, alt, className }: { url: string; alt: string; clas
       vivo = false
       if (criado) URL.revokeObjectURL(criado)
     }
-  }, [url])
+  }, [url, visivel])
 
   if (falhou) {
     return (
       <span
+        ref={caixa}
         title="Não foi possível carregar esta foto"
         className={cx('grid place-items-center bg-slate-100 text-slate-400', className)}
       >
@@ -67,8 +113,11 @@ function FotoProtegida({ url, alt, className }: { url: string; alt: string; clas
 
   if (!src) {
     return (
-      <span className={cx('grid animate-pulse place-items-center bg-slate-100', className)}>
-        <Loader2 className="size-4 animate-spin text-slate-400" aria-hidden />
+      <span
+        ref={caixa}
+        className={cx('grid animate-pulse place-items-center bg-slate-100', className)}
+      >
+        {visivel && <Loader2 className="size-4 animate-spin text-slate-400" aria-hidden />}
       </span>
     )
   }
@@ -159,14 +208,23 @@ export function BotoesDeFoto({
 }) {
   const cameraRef = useRef<HTMLInputElement>(null)
   const galeriaRef = useRef<HTMLInputElement>(null)
-  const { enviar, enviando } = useEnviarFotos(osId, () => {
+  const limpar = () => {
     if (cameraRef.current) cameraRef.current.value = ''
     if (galeriaRef.current) galeriaRef.current.value = ''
+  }
+  const { enviar, enviando } = useEnviarFotos(osId, () => {
+    limpar()
     onPronto?.()
   })
 
   const escolheu = (lista: FileList | null) => {
-    if (lista?.length) enviar({ arquivos: Array.from(lista), momento, visivelCliente, osItemId })
+    if (!lista?.length) return
+    const arquivos = Array.from(lista)
+    // Limpa ANTES de enviar, e nao so no sucesso: o `onChange` nao dispara
+    // quando a pessoa escolhe o MESMO arquivo de novo, entao depois de um
+    // envio que falhou o segundo toque na mesma foto nao fazia nada.
+    limpar()
+    enviar({ arquivos, momento, visivelCliente, osItemId })
   }
 
   return (
@@ -304,14 +362,31 @@ function AbrirArquivo({ foto }: { foto: ArquivoOs }) {
 
   const abrir = async () => {
     setAbrindo(true)
+    // A aba nasce AQUI, dentro do toque.
+    //
+    // Abrindo depois do download o navegador trata como popup: o iPhone
+    // bloqueia sempre, e o Chrome bloqueia assim que a "ativação pelo
+    // gesto" expira — uns 5s, que um PDF de alguns MB no 4G do box
+    // estoura. `window.open` devolvia null, ninguém olhava, e o botão
+    // voltava ao normal sem nada ter acontecido.
+    const aba = window.open('', '_blank')
     try {
       const blob = await baixarArquivo(caminho(foto.url))
       const url = URL.createObjectURL(blob)
-      window.open(url, '_blank', 'noopener')
+      if (aba && !aba.closed) {
+        aba.location.href = url
+      } else {
+        // Bloqueado mesmo assim: baixa, que sempre funciona.
+        const link = document.createElement('a')
+        link.href = url
+        link.download = foto.nome
+        link.click()
+      }
       // O blob precisa sobreviver ao open; um minuto cobre o carregamento e
       // evita segurar os bytes pelo resto da sessão.
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
     } catch (erro) {
+      aba?.close()
       avisar(erro instanceof ErroApi ? erro.message : 'Não foi possível abrir.', 'erro')
     } finally {
       setAbrindo(false)
@@ -341,15 +416,12 @@ function AbrirArquivo({ foto }: { foto: ArquivoOs }) {
 export function VisorDeFoto({
   foto,
   osId,
-  podeApagar,
   somenteLeitura = false,
   onFechar,
   onMudou,
 }: {
   foto: ArquivoOs | null
   osId: string
-  /** Foto de entrada é prova: só a gerência tira. */
-  podeApagar: boolean
   /**
    * Sem nenhum botão de ação, só a imagem.
    *
@@ -362,6 +434,43 @@ export function VisorDeFoto({
   onMudou: () => void
 }) {
   const avisar = useAviso()
+  const { gerencia, ehMecanico } = useAuth()
+
+  /**
+   * Quem apaga, exatamente como o servidor decide.
+   *
+   * Calculado aqui e não recebido de fora porque cada tela chutava a sua
+   * versão: duas delas usavam «não é ENTRADA», que dá verdadeiro para
+   * qualquer papel — a recepção via "Apagar" em toda foto de serviço e
+   * levava 403 com uma mensagem que nem fala de foto.
+   *
+   * Servidor (ArquivoService.apagar): ENTRADA exige gerência, porque é
+   * prova de como o carro chegou; o resto exige quem põe a mão no carro.
+   */
+  const podeApagar =
+    foto?.momento === 'ENTRADA' ? gerencia : gerencia || ehMecanico
+
+  /**
+   * Esc fecha, e a pagina atras para de rolar.
+   *
+   * O visor se anuncia como `aria-modal`, e um modal que nao fecha no Esc
+   * nem trava a rolagem de tras e so um div por cima: quem usa teclado
+   * ficava preso, e o dedo que tentava arrastar a foto rolava a OS inteira
+   * embaixo dela.
+   */
+  useEffect(() => {
+    if (!foto) return
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onFechar()
+    }
+    const antes = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', aoTeclar)
+    return () => {
+      document.body.style.overflow = antes
+      window.removeEventListener('keydown', aoTeclar)
+    }
+  }, [foto, onFechar])
 
   const visibilidade = useMutation({
     mutationFn: (visivelCliente: boolean) =>
@@ -395,6 +504,9 @@ export function VisorDeFoto({
       role="dialog"
       aria-modal="true"
       aria-label={foto.nome}
+      // Toque no fundo fecha. O `stopPropagation` nos filhos esta no
+      // container do meio: sem ele, tocar na propria foto fecharia tambem.
+      onClick={onFechar}
       className="fixed inset-0 z-50 flex flex-col bg-slate-950/95 p-3"
     >
       <div className="flex items-start gap-2">
@@ -414,7 +526,10 @@ export function VisorDeFoto({
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 items-center justify-center py-3">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="flex min-h-0 flex-1 items-center justify-center py-3"
+      >
         {foto.imagem ? (
           <FotoProtegida
             url={foto.url}
@@ -426,7 +541,10 @@ export function VisorDeFoto({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-2">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="flex flex-wrap items-center justify-center gap-2"
+      >
         {/* "O cliente vê" é um botão de estado e não um interruptor: aqui o
             fundo é escuro e o interruptor cinza desaparece nele. */}
         {!somenteLeitura && (

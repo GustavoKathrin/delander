@@ -53,10 +53,13 @@ export function GaleriaFotos({
     // já está numa ordem que quem trabalha reconhece.
     const blocos = os.itens
       .filter((item) => porServico.has(item.id))
-      .map((item) => ({ titulo: item.descricao, fotos: porServico.get(item.id)! }))
+      // `chave` e o id e nao a descricao: dois servicos com o mesmo nome no
+      // mesmo carro ("Troca de oleo" dianteiro e traseiro) dariam a mesma
+      // key de React, e um dos blocos sumiria.
+      .map((item) => ({ chave: item.id, titulo: item.descricao, fotos: porServico.get(item.id)! }))
 
     if (doCarro.length > 0) {
-      blocos.push({ titulo: 'Do carro', fotos: doCarro })
+      blocos.push({ chave: 'do-carro', titulo: 'Do carro', fotos: doCarro })
     }
     return { blocos, total: doTrabalho.length }
   }, [os.arquivos, os.itens])
@@ -82,7 +85,7 @@ export function GaleriaFotos({
           />
         ) : (
           grupos.blocos.map((bloco) => (
-            <div key={bloco.titulo}>
+            <div key={bloco.chave}>
               <p className="mb-1.5 text-xs font-semibold text-slate-600">{bloco.titulo}</p>
               <GradeDeFotos fotos={bloco.fotos} onAbrir={setAberta} />
             </div>
@@ -94,7 +97,6 @@ export function GaleriaFotos({
       <VisorDeFoto
         foto={fotoAberta}
         osId={osId}
-        podeApagar={fotoAberta?.momento !== 'ENTRADA' || gerencia}
         onFechar={() => setAberta(null)}
         onMudou={onMudou}
       />

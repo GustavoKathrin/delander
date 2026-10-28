@@ -42,6 +42,15 @@ interface Pendencia {
    */
   exigida?: boolean
   /**
+   * O item nao bloqueia nada, e estar vazio e um estado legitimo.
+   *
+   * Separa "nao ha peca registrada" (opcional, vazio, traco cinza) de "nao
+   * ha peca esperando preco" (sucesso, vazio, check verde). Antes os dois
+   * eram `lista` vazia com `pronto` verdadeiro, e o sucesso era desenhado
+   * igual ao pendente -- em cima de uma frase que dizia o contrario.
+   */
+  opcional?: boolean
+  /**
    * O que ja foi lancado, por nome.
    *
    * Contagem nao e lista: "3 servicos lancados" obriga o mecanico a rolar a
@@ -158,6 +167,7 @@ function pendenciasDaEtapa(
                 : `${plural(os.pecas.length, 'peça')} ${os.pecas.length === 1 ? 'registrada' : 'registradas'}`,
             // Peca e opcional de verdade: tem servico que e so mao de obra.
             pronto: true,
+            opcional: true,
             lista: os.pecas.map((p) => p.descricao),
             acao: lancarPeca,
           },
@@ -193,18 +203,25 @@ function pendenciasDaEtapa(
       return {
         titulo: 'Falta o preço do trabalho',
         itens: [
-          {
-            chave: 'maoObra',
-            rotulo:
-              (os.valorMaoObra ?? 0) > 0
-                ? 'Mão de obra definida'
-                : 'Mão de obra ainda em zero',
-            // Quem nao ve valor nao tem o que fazer aqui, e cobrar dele uma
-            // pendencia que ele nao consegue resolver e so culpa sem saida.
-            pronto: os.valorMaoObra === undefined || (os.valorMaoObra ?? 0) > 0,
-            porque:
-              'O orçamento sai com peça e sem trabalho — e trabalho é a maior parte da conta da oficina.',
-          },
+          // Quem nao ve dinheiro nao ve esta linha. Antes ela aparecia para
+          // o mecanico com check verde em cima de "Mao de obra ainda em
+          // zero" -- o `pronto` tentava nao cobrar dele uma pendencia que
+          // ele nao resolve, e o rotulo nao sabia disso. Some inteira: o
+          // trabalho desta etapa nao e dele.
+          ...(os.valorMaoObra === undefined
+            ? []
+            : [
+                {
+                  chave: 'maoObra',
+                  rotulo:
+                    (os.valorMaoObra ?? 0) > 0
+                      ? 'Mão de obra definida'
+                      : 'Mão de obra ainda em zero',
+                  pronto: (os.valorMaoObra ?? 0) > 0,
+                  porque:
+                    'O orçamento sai com peça e sem trabalho — e trabalho é a maior parte da conta da oficina.',
+                },
+              ]),
           {
             chave: 'servicos',
             rotulo: `${plural(servicos.length, 'serviço')} no orçamento`,
@@ -362,7 +379,11 @@ export function RequisitosDaEtapa({
 
       <ul className="mt-2 space-y-1.5">
         {bloco.itens.map((item) => {
-          const vazio = item.lista !== undefined && item.lista.length === 0
+          // So o item OPCIONAL vazio ganha o traco cinza. Para os outros,
+          // lista vazia e justamente o sucesso -- "todos os servicos
+          // concluidos", "as pecas ja foram pedidas" -- e pintar isso de
+          // cinza dizia o contrario da frase ao lado.
+          const vazio = item.opcional === true && (item.lista?.length ?? 0) === 0
           return (
           <li key={item.chave} className="flex flex-wrap items-center gap-2 text-sm">
             <span

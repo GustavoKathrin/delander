@@ -368,9 +368,16 @@ public class CompartilhamentoService {
             // A legenda e o que faz a foto valer algo para quem esta em casa:
             // "motor aberto" sao quatro fotos iguais; "troca da correia
             // dentada" responde a pergunta que ele ia ligar para fazer.
+            //
+            // So que ela E a lista de servicos, escrita embaixo de uma foto.
+            // Com "mostrar a lista de servicos" desligada e fotos ligada, as
+            // legendas entregavam exatamente o que aquele interruptor existe
+            // para esconder. Agora as duas chaves andam juntas.
             Map<UUID, String> nomeDoServico = new HashMap<>();
-            for (OsItem item : os.getItens()) {
-                nomeDoServico.put(item.getId(), item.getDescricao());
+            if (Boolean.TRUE.equals(escopo.get(Chaves.COMP_MOSTRAR_ITENS))) {
+                for (OsItem item : os.getItens()) {
+                    nomeDoServico.put(item.getId(), item.getDescricao());
+                }
             }
             fotos = arquivoRepository.findByOrdemServicoIdAndVisivelClienteTrueOrderByCriadoEm(os.getId())
                     .stream()

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Pencil, ScanLine, Trash2 } from 'lucide-react'
 import { api } from '../../api/client'
+import { FotoProtegida } from '../../components/fotos'
 import type { DetalheArtigo, ResumoLeitura } from '../../types'
 import {
   Botao,
@@ -125,7 +126,14 @@ export default function ArtigoWiki() {
         <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
           {artigo.fotos.map((f) => (
             <figure key={f.id} className="overflow-hidden rounded-lg bg-white ring-1 ring-slate-200">
-              <img src={f.url} alt={f.legenda ?? a.titulo} className="w-full object-cover" />
+              {/* A foto da wiki tomava 401 pelo mesmo motivo que a da OS:
+                  `/api/wiki/fotos/{id}` e protegido por token e um `<img
+                  src>` nao manda cabecalho. A correcao tinha parado na OS. */}
+              <FotoProtegida
+                url={f.url}
+                alt={f.legenda ?? a.titulo}
+                className="aspect-[4/3] w-full object-cover"
+              />
               {f.legenda && (
                 <figcaption className="px-2 py-1 text-xs text-slate-500">{f.legenda}</figcaption>
               )}

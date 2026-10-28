@@ -344,6 +344,7 @@ export default function Checkin() {
 
               <Botao
                 variante="secundario"
+                tamanho="toque"
                 onClick={() => {
                   setCriandoCliente(true)
                   setNovoCliente({ ...novoCliente, nome: '' })

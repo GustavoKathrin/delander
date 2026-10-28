@@ -237,6 +237,15 @@ export function Interruptor({
         <p className="text-sm font-medium text-slate-800">{rotulo}</p>
         {descricao && <p className="mt-0.5 text-xs text-slate-500">{descricao}</p>}
       </div>
+      {/*
+        O BOTAO tem 44px de altura; o trilho de 24px mora dentro dele.
+        Antes o botao era o proprio trilho (24px) e a area de toque vinha de
+        um ::before esticado. Media bem por cima e errado por baixo: o
+        pseudo-elemento fica abaixo do conteudo da linha seguinte na pilha,
+        e o toque caia no vizinho. Alvo de verdade nao depende de ordem de
+        pintura -- e continua parecendo uma chave, porque o que cresceu foi
+        a area, nao o desenho.
+      */}
       <button
         type="button"
         role="switch"
@@ -245,23 +254,23 @@ export function Interruptor({
         disabled={desabilitado}
         onClick={() => onChange(!ativo)}
         className={cx(
-          'relative mt-0.5 h-6 w-11 flex-none rounded-full transition disabled:opacity-50',
-          // A chave continua com 24px de altura, porque e assim que uma chave
-          // se parece -- mas o alvo tem 44px. O ::before invisivel estica a
-          // area clicavel 10px para cima e 10px para baixo sem mexer no
-          // desenho; engordar o trilho ate 44 deixaria a chave com cara de
-          // barra de rolagem.
-          "before:absolute before:inset-x-0 before:-inset-y-[10px] before:content-['']",
+          'flex h-11 w-11 flex-none items-center justify-center rounded-lg transition disabled:opacity-50',
           'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-600',
-          ativo ? 'bg-marca-600' : 'bg-slate-300',
         )}
       >
         <span
           className={cx(
-            'absolute top-0.5 size-5 rounded-full bg-white shadow transition-all',
-            ativo ? 'left-[22px]' : 'left-0.5',
+            'relative block h-6 w-11 rounded-full transition',
+            ativo ? 'bg-marca-600' : 'bg-slate-300',
           )}
-        />
+        >
+          <span
+            className={cx(
+              'absolute top-0.5 size-5 rounded-full bg-white shadow transition-all',
+              ativo ? 'left-[22px]' : 'left-0.5',
+            )}
+          />
+        </span>
       </button>
     </div>
   )

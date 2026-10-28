@@ -50,6 +50,13 @@ public class PecaController {
         return catalogo.listar(apenasAtivas);
     }
 
+    @PostMapping("/pecas/catalogo/rapido")
+    @Operation(summary = "Cadastro rapido de peca pelo mecanico: so nome e marca, sem preco nem estoque")
+    public PecaCatalogoDtos.Resposta cadastroRapido(
+            @Valid @RequestBody PecaCatalogoDtos.CadastroRapido req) {
+        return catalogo.cadastroRapido(req);
+    }
+
     @GetMapping("/pecas/catalogo/autocompletar")
     @Operation(summary = "Busca peca do catalogo enquanto o mecanico digita")
     public List<PecaCatalogoDtos.Resposta> autocompletar(@RequestParam String termo) {

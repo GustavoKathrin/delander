@@ -23,6 +23,20 @@ public final class PecaCatalogoDtos {
     }
 
     /**
+     * Cadastro rapido, feito pelo mecanico no meio da avaliacao.
+     *
+     * So nome e marca -- e so o nome e obrigatorio. Preco e estoque ficam de
+     * fora de proposito: quem avalia o carro nao cota nem conta prateleira, e
+     * um campo de preco aqui seria preco chutado por quem nao compra. A peca
+     * nasce sem valor e com saldo zero, e a cotacao acontece na etapa do
+     * balcao.
+     */
+    public record CadastroRapido(
+            @NotBlank(message = "Informe o nome da peca") @Size(max = 200) String descricao,
+            @Size(max = 120) String fabricante) {
+    }
+
+    /**
      * @param temEstoque tem na prateleira agora
      * @param acabando   ainda tem, mas chegou no minimo
      */

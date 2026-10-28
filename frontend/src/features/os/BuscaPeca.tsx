@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Check, PackageSearch, ShoppingCart } from 'lucide-react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { Check, PackagePlus, PackageSearch, ShoppingCart } from 'lucide-react'
 import { api } from '../../api/client'
 import { Entrada, cx } from '../../components/ui'
 import { moeda } from '../../lib/format'
@@ -24,14 +24,18 @@ export function BuscaPeca({
   onDescricao,
   onEscolher,
   escolhida,
+  mostraValores = true,
 }: {
   descricao: string
   onDescricao: (texto: string) => void
   /** Peça do catálogo, ou null quando é avulsa/pedido novo. */
   onEscolher: (peca: PecaCatalogo | null) => void
   escolhida: PecaCatalogo | null
+  /** Esconde preço de quem não cota. */
+  mostraValores?: boolean
 }) {
   const [termo, setTermo] = useState('')
+  const [marca, setMarca] = useState('')
 
   // Espera a digitação parar: sem isto, "amortecedor" dispara onze consultas.
   useEffect(() => {
@@ -48,6 +52,28 @@ export function BuscaPeca({
 
   const achadas = busca.data ?? []
 
+  /**
+   * "Não achei, cadastra agora".
+   *
+   * Sem isto, o que o mecânico digita vira peça avulsa: resolve este carro e
+   * some. Da próxima vez que o mesmo kit aparecer, alguém digita de novo,
+   * com outra grafia, e o catálogo nunca aprende. Dois campos — nome e marca,
+   * só o nome obrigatório — e a peça passa a existir para sempre, sem preço
+   * (quem cota é o balcão) e sem saldo.
+   */
+  const cadastrar = useMutation({
+    mutationFn: () =>
+      api<PecaCatalogo>('/pecas/catalogo/rapido', {
+        metodo: 'POST',
+        corpo: { descricao: descricao.trim(), fabricante: marca.trim() || undefined },
+      }),
+    onSuccess: (peca) => {
+      onEscolher(peca)
+      onDescricao(peca.descricao)
+      setMarca('')
+    },
+  })
+
   if (escolhida) {
     return (
       <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-2.5 ring-1 ring-emerald-200">
@@ -59,7 +85,8 @@ export function BuscaPeca({
             {escolhida.temEstoque
               ? `${escolhida.quantidadeEstoque} na prateleira`
               : 'sem estoque — vira pedido de compra'}
-            {escolhida.valorSugerido != null && ` · ${moeda(escolhida.valorSugerido)}`}
+            {mostraValores && escolhida.valorSugerido != null &&
+              ` · ${moeda(escolhida.valorSugerido)}`}
           </p>
         </div>
         <button
@@ -127,10 +154,37 @@ export function BuscaPeca({
               ))}
             </ul>
           ) : (
-            <p className="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-500">
-              <ShoppingCart className="size-3.5 flex-none" aria-hidden />
-              Não está no catálogo — vai entrar como pedido de compra.
-            </p>
+            <div className="space-y-2 px-3 py-2.5">
+              <p className="flex items-start gap-1.5 text-xs text-slate-600">
+                <ShoppingCart className="mt-0.5 size-3.5 flex-none" aria-hidden />
+                Não está no catálogo. Do jeito que está, entra só como pedido de compra deste
+                carro.
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Entrada
+                  value={marca}
+                  onChange={(e) => setMarca(e.target.value)}
+                  placeholder="Marca (opcional)"
+                  className="sm:flex-1"
+                />
+                <button
+                  type="button"
+                  disabled={cadastrar.isPending || descricao.trim().length < 2}
+                  onClick={() => cadastrar.mutate()}
+                  className="flex h-11 flex-none items-center justify-center gap-2 rounded-lg bg-marca-50 px-4 text-sm font-medium text-marca-700 ring-1 ring-marca-200 transition hover:bg-marca-100 disabled:opacity-50"
+                >
+                  <PackagePlus className="size-4" aria-hidden />
+                  Cadastrar no catálogo
+                </button>
+              </div>
+              <p className="text-[11px] leading-snug text-slate-500">
+                Cadastrando, a peça passa a aparecer na busca da próxima vez — e deixa de ser
+                digitada de novo com outra grafia.
+              </p>
+              {cadastrar.isError && (
+                <p className="text-xs text-red-700">{(cadastrar.error as Error).message}</p>
+              )}
+            </div>
           )}
         </div>
       )}

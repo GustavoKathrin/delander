@@ -168,10 +168,20 @@ export function EtapasDaOs({
                   )}
                 />
               </div>
+              {/*
+                No celular os seis rotulos nao cabem: "Diagnostico" e
+                "Orcamento" com 11px ocupam quase os 65px da coluna e se
+                encostam, virando "DiagnosticoOrcamento". Abaixo de sm so a
+                etapa atual mostra o nome -- que e a unica que importa para
+                quem esta com o carro na mao. A linha abaixo da regua diz o
+                resto ("Etapa 2 de 6").
+              */}
               <span
                 className={cx(
                   'truncate text-center text-[11px] leading-tight',
-                  aqui ? 'font-semibold text-slate-900' : feita ? 'text-slate-600' : 'text-slate-400',
+                  aqui
+                    ? 'font-semibold text-slate-900'
+                    : cx('hidden sm:inline', feita ? 'text-slate-600' : 'text-slate-400'),
                 )}
               >
                 {etapa.rotulo}
@@ -180,6 +190,13 @@ export function EtapasDaOs({
           )
         })}
       </ol>
+
+      {!cancelada && (
+        <p className="mt-1 text-center text-[11px] text-slate-500 sm:hidden">
+          Etapa {indiceAtual + 1} de {ETAPAS.length}
+          {indiceAtual + 1 < ETAPAS.length && ` · depois vem ${ETAPAS[indiceAtual + 1].rotulo}`}
+        </p>
+      )}
 
       {/* ---------------- o que está acontecendo ---------------- */}
       {cancelada ? (

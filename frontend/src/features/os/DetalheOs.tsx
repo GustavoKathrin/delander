@@ -371,7 +371,7 @@ export default function DetalheOs() {
       <div className="sem-impressao">
         <Link
           to="/quadro"
-          className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800"
+          className="-my-2 inline-flex items-center gap-1 py-3 text-xs text-slate-500 hover:text-slate-800"
         >
           <ArrowLeft className="size-3.5" aria-hidden />
           Voltar para o quadro
@@ -389,7 +389,16 @@ export default function DetalheOs() {
       </div>
 
       <Cartao className="p-4">
-        <div className="flex flex-wrap items-start gap-4">
+        {/*
+          No celular isto virava uma coluna de uma palavra por linha.
+          O carro (46px) + os dois botoes (~250px) comiam a largura e
+          sobravam ~40px para placa, modelo e cliente: "Teste Etapa Um"
+          descia em tres linhas e a placa saia cortada. Agora o bloco de
+          identificacao ocupa a largura inteira do telefone e os botoes
+          descem para baixo; do sm: para cima volta a ser lado a lado.
+        */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:gap-4">
+          <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
           <CarroTopo cor={r.cor} largura={46} titulo={r.veiculo} className="flex-none" />
 
           <div className="min-w-0 flex-1">
@@ -401,7 +410,11 @@ export default function DetalheOs() {
               )}
               <span className="text-xs text-slate-500">OS #{r.numero}</span>
             </div>
-            <p className="mt-1 text-sm text-slate-700">{r.veiculo}</p>
+            {/* Sem modelo cadastrado o servidor devolve a propria placa, e o
+                cabecalho mostrava "ETA1P01" logo abaixo da placa ETA1P01. */}
+            {r.veiculo !== r.placa && (
+              <p className="mt-1 text-sm text-slate-700">{r.veiculo}</p>
+            )}
             <p className="text-sm text-slate-500">
               {r.clienteNome}
               {r.clienteTelefone && ` · ${r.clienteTelefone}`}
@@ -413,27 +426,29 @@ export default function DetalheOs() {
               </p>
             )}
           </div>
+          </div>
 
           <div className="flex flex-none flex-col gap-2 sem-impressao">
-            <div className="flex gap-2">
+            <div className="flex gap-2 [&>*]:flex-1 sm:[&>*]:flex-none">
               {/* Sem `gerencia`: o mecânico decide o que vai para o link deste
                   carro. Ele é quem sabe se a foto do motor aberto ajuda ou
                   assusta. Com isso só na gerência, na prática ninguém mexia. */}
               {flag(CHAVES.compAtivo) && (
                 <Botao
                   variante={r.compartilhado ? 'sucesso' : 'secundario'}
-                  tamanho="sm"
+                  tamanho="toque"
+                  bloco
                   onClick={() => setCompartilhando(true)}
                 >
-                  <Share2 className="size-3.5" aria-hidden />
+                  <Share2 className="size-4" aria-hidden />
                   {r.compartilhado ? 'O cliente vê' : 'Compartilhar'}
                 </Botao>
               )}
               {/* Link e nao botao: a ficha e uma pagina, e quem quer conferir
                   antes de imprimir costuma abrir numa aba separada. */}
-              <Link to={`/os/${r.id}/ficha`}>
-                <Botao variante="secundario" tamanho="sm">
-                  <Printer className="size-3.5" aria-hidden />
+              <Link to={`/os/${r.id}/ficha`} className="flex-1 sm:flex-none">
+                <Botao variante="secundario" tamanho="toque" bloco>
+                  <Printer className="size-4" aria-hidden />
                   Ficha
                 </Botao>
               </Link>
@@ -515,13 +530,17 @@ export default function DetalheOs() {
               titulo="Serviços"
               descricao={`${os.itens.length === 1 ? '1 serviço' : `${os.itens.length} serviços`} · ${horas(r.horasEstimadas)} estimadas · os botões abaixo valem para cada serviço, um por um`}
               acao={
-                gerencia && (
+                // O mecanico tambem lanca servico: e o diagnostico dele que
+                // diz o que o carro precisa, e ate agora so a gerencia via
+                // este botao -- a lista dependia de alguem repassar de boca.
+                // Quem protege a oficina e ele nao ver nem escrever preco.
+                podeRegistrarTrabalho && (
                   <Botao
                     variante="secundario"
-                    tamanho="sm"
+                    tamanho="toque"
                     onClick={() => setAdicionandoServico(true)}
                   >
-                    <Plus className="size-3.5" aria-hidden />
+                    <Plus className="size-4" aria-hidden />
                     Adicionar
                   </Botao>
                 )
@@ -567,8 +586,8 @@ export default function DetalheOs() {
                 // que o carro precisa. Antes só gerência via este botão, e o
                 // fluxo dependia de alguém repassar a lista verbalmente.
                 podeRegistrarTrabalho && (
-                  <Botao variante="secundario" tamanho="sm" onClick={() => setAdicionandoPeca(true)}>
-                    <Plus className="size-3.5" aria-hidden />
+                  <Botao variante="secundario" tamanho="toque" onClick={() => setAdicionandoPeca(true)}>
+                    <Plus className="size-4" aria-hidden />
                     Adicionar
                   </Botao>
                 )
@@ -1049,6 +1068,7 @@ export default function DetalheOs() {
         aberto={adicionandoPeca}
         onFechar={() => setAdicionandoPeca(false)}
         osId={id}
+        mostraValores={mostraValores}
         onSalvo={() => {
           invalidar()
           setAdicionandoPeca(false)
@@ -1208,11 +1228,21 @@ function ModalNovaPeca({
   onFechar,
   osId,
   onSalvo,
+  mostraValores,
 }: {
   aberto: boolean
   onFechar: () => void
   osId: string
   onSalvo: () => void
+  /**
+   * Quem nao ve preco na tela tambem nao digita preco aqui.
+   *
+   * Este e o MESMO formulario em que o mecanico registra a peca, e ele
+   * pedia "Valor unitario (R$)" e "Fornecedor" para todo mundo -- ou seja,
+   * o sistema dizia "o mecanico nao ve valores" e logo em seguida mandava
+   * ele chutar um. Cotar e ligar para fornecedor e trabalho do balcao.
+   */
+  mostraValores: boolean
 }) {
   const [descricao, setDescricao] = useState('')
   const [doCatalogo, setDoCatalogo] = useState<PecaCatalogo | null>(null)
@@ -1315,6 +1345,7 @@ function ModalNovaPeca({
               onDescricao={setDescricao}
               onEscolher={escolherDoCatalogo}
               escolhida={doCatalogo}
+              mostraValores={mostraValores}
             />
           </Campo>
         </div>
@@ -1368,19 +1399,22 @@ function ModalNovaPeca({
             onChange={(e) => setQuantidade(e.target.value)}
           />
         </Campo>
-        <Campo rotulo="Valor unitário (R$)" dica="Entra no orçamento do cliente.">
-          <Entrada
-            type="number"
-            step="0.01"
-            min="0"
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
-          />
-        </Campo>
+        {mostraValores && (
+          <Campo rotulo="Valor unitário (R$)" dica="Entra no orçamento do cliente.">
+            <Entrada
+              type="number"
+              step="0.01"
+              min="0"
+              inputMode="decimal"
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+            />
+          </Campo>
+        )}
 
         {/* Fornecedor e previsão só existem para peça que alguém vai comprar.
             Peça que já está na prateleira não tem fornecedor a cobrar. */}
-        {origem === 'COMPRAR' && (
+        {origem === 'COMPRAR' && mostraValores && (
           <>
             <Campo rotulo="Fornecedor">
               <Entrada value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} />
@@ -1389,6 +1423,13 @@ function ModalNovaPeca({
               <Entrada type="date" value={previsao} onChange={(e) => setPrevisao(e.target.value)} />
             </Campo>
           </>
+        )}
+
+        {origem === 'COMPRAR' && !mostraValores && (
+          <p className="sm:col-span-2 rounded-lg bg-slate-50 px-3 py-2.5 text-xs text-slate-600 ring-1 ring-slate-200">
+            Preço, fornecedor e prazo quem resolve é o balcão. Você só diz o que o carro precisa —
+            a peça entra na lista de compras assim que você salvar.
+          </p>
         )}
 
         <div className="sm:col-span-2">

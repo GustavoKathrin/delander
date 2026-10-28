@@ -77,6 +77,39 @@ public class PecaCatalogoService {
         return PecaCatalogoDtos.Resposta.de(repository.save(peca));
     }
 
+    /**
+     * A peca que o mecanico descobriu que o carro precisa.
+     *
+     * Exige mao na massa e nao atendimento: quem esta debaixo do carro e quem
+     * sabe que falta a bucha, e obriga-lo a pedir para a recepcao cadastrar
+     * era o que fazia a peca virar texto solto -- sem catalogo, sem historico,
+     * sem aparecer na lista de compras da proxima vez.
+     *
+     * Nasce sem preco e com saldo zero. Nao da para um cadastro rapido virar
+     * porta dos fundos para mexer em estoque.
+     */
+    @Transactional
+    public PecaCatalogoDtos.Resposta cadastroRapido(PecaCatalogoDtos.CadastroRapido req) {
+        contexto.exigirMaoNaMassa();
+        String descricao = req.descricao().trim();
+
+        // Ja existe com esse nome? Devolve a que existe em vez de criar uma
+        // segunda "Pastilha de freio dianteira" no catalogo.
+        return repository.autocompletar(contexto.oficinaId(), descricao,
+                        org.springframework.data.domain.PageRequest.of(0, 5)).stream()
+                .filter(p -> p.getDescricao().equalsIgnoreCase(descricao))
+                .findFirst()
+                .map(PecaCatalogoDtos.Resposta::de)
+                .orElseGet(() -> {
+                    PecaCatalogo peca = new PecaCatalogo();
+                    peca.setOficinaId(contexto.oficinaId());
+                    peca.setDescricao(descricao);
+                    peca.setFabricante(req.fabricante() == null || req.fabricante().isBlank()
+                            ? null : req.fabricante().trim());
+                    return PecaCatalogoDtos.Resposta.de(repository.save(peca));
+                });
+    }
+
     @Transactional
     public PecaCatalogoDtos.Resposta atualizar(UUID id, PecaCatalogoDtos.Requisicao req) {
         contexto.exigirAtendimento("Editar peca e do atendente, do gerente ou do dono.");

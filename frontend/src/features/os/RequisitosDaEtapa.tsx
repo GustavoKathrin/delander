@@ -40,6 +40,15 @@ interface Pendencia {
    * so descobre no erro vermelho depois de apertar o botao.
    */
   exigida?: boolean
+  /**
+   * O que ja foi lancado, por nome.
+   *
+   * Contagem nao e lista: "3 servicos lancados" obriga o mecanico a rolar a
+   * tela ate o cartao de baixo so para lembrar se ja pos a correia. Com os
+   * nomes aqui dentro, a etapa responde sozinha "o que eu ja disse que este
+   * carro precisa?" -- que e a pergunta da etapa 2.
+   */
+  lista?: string[]
   /** Por que isso importa. So aparece quando esta pendente. */
   porque?: string
   acao?: { rotulo: string; icone: ReactNode; onClick: () => void }
@@ -105,6 +114,8 @@ function pendenciasDaEtapa(
                 ? 'Nenhum serviço lançado'
                 : `${servicos.length === 1 ? '1 serviço lançado' : `${servicos.length} serviços lançados`}`,
             pronto: servicos.length > 0,
+            lista: servicos.map((i) => i.descricao),
+            exigida: true,
             porque: 'O orçamento é a soma dos serviços. Sem nenhum, o cliente recebe um papel vazio.',
             acao: {
               rotulo: 'Adicionar serviço',
@@ -120,6 +131,7 @@ function pendenciasDaEtapa(
                 : `${os.pecas.length === 1 ? '1 peça registrada' : `${os.pecas.length} peças registradas`}`,
             // Peca e opcional de verdade: tem servico que e so mao de obra.
             pronto: true,
+            lista: os.pecas.map((p) => p.descricao),
             acao: {
               rotulo: 'Registrar peça',
               icone: <Plus className="size-4" aria-hidden />,
@@ -138,6 +150,7 @@ function pendenciasDaEtapa(
             rotulo:
               servicos.length === 0 ? 'Nenhum serviço para executar' : `${plural(servicos.length, 'serviço')} ${servicos.length === 1 ? 'aprovado' : 'aprovados'}`,
             pronto: servicos.length > 0,
+            lista: servicos.map((i) => i.descricao),
             porque: 'Não há o que executar sem serviço lançado.',
             acao: {
               rotulo: 'Adicionar serviço',
@@ -241,20 +254,27 @@ export function RequisitosDaEtapa({
       </p>
 
       <ul className="mt-2 space-y-1.5">
-        {bloco.itens.map((item) => (
+        {bloco.itens.map((item) => {
+          const vazio = item.lista !== undefined && item.lista.length === 0
+          return (
           <li key={item.chave} className="flex flex-wrap items-center gap-2 text-sm">
             <span
               className={cx(
                 'grid size-5 flex-none place-items-center rounded-full text-[11px] font-bold',
-                item.pronto
-                  ? 'bg-emerald-600 text-white'
-                  : item.exigida
+                !item.pronto
+                  ? item.exigida
                     ? 'bg-white text-amber-700 ring-1 ring-amber-300'
-                    : 'bg-white text-slate-400 ring-1 ring-slate-300',
+                    : 'bg-white text-slate-400 ring-1 ring-slate-300'
+                  : vazio
+                    ? 'bg-white text-slate-400 ring-1 ring-slate-300'
+                    : 'bg-emerald-600 text-white',
               )}
               aria-hidden
             >
-              {item.pronto ? <Check className="size-3" /> : item.exigida ? '!' : '–'}
+              {/* Check verde e "feito". Item opcional sem nada dentro --
+                  "Nenhuma peca registrada" -- nao e conquista nenhuma, e
+                  pintar de verde ensina a ignorar o verde. */}
+              {!item.pronto ? (item.exigida ? '!' : '–') : vazio ? '–' : <Check className="size-3" />}
             </span>
 
             <span className={cx('min-w-0', item.pronto ? 'text-slate-600' : 'font-medium text-slate-900')}>
@@ -280,6 +300,19 @@ export function RequisitosDaEtapa({
               </button>
             )}
 
+            {item.lista && item.lista.length > 0 && (
+              <ul className="w-full pl-7 flex flex-wrap gap-1">
+                {item.lista.map((nome, i) => (
+                  <li
+                    key={`${item.chave}-${i}`}
+                    className="rounded-md bg-white px-2 py-1 text-xs text-slate-700 ring-1 ring-slate-200"
+                  >
+                    {nome}
+                  </li>
+                ))}
+              </ul>
+            )}
+
             {!item.pronto && item.porque && (
               <p
                 className={cx(
@@ -291,7 +324,8 @@ export function RequisitosDaEtapa({
               </p>
             )}
           </li>
-        ))}
+          )
+        })}
       </ul>
     </div>
   )

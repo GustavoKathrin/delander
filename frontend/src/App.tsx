@@ -8,6 +8,7 @@ import Radar from './features/quadro/Radar'
 import FilaEspera from './features/quadro/FilaEspera'
 import Checkin from './features/checkin/Checkin'
 import DetalheOs from './features/os/DetalheOs'
+import Prontuario from './features/os/Prontuario'
 import FichaOs from './features/os/FichaOs'
 import PainelMecanico from './features/mecanico/PainelMecanico'
 import Dashboard from './features/dashboard/Dashboard'
@@ -71,6 +72,7 @@ export default function App() {
         <Route path="/fila" element={<FilaEspera />} />
         <Route path="/novo" element={<Checkin />} />
         <Route path="/os/:id" element={<DetalheOs />} />
+        <Route path="/veiculo/:id/prontuario" element={<Prontuario />} />
         <Route path="/meus-servicos" element={<PainelMecanico />} />
         <Route path="/painel" element={<Dashboard />} />
         <Route path="/leituras" element={<Leituras />} />

@@ -27,6 +27,7 @@ import br.com.oficina.parada.Parada;
 import br.com.oficina.parada.ParadaRepository;
 import br.com.oficina.peca.PecaOs;
 import br.com.oficina.peca.PecaOsRepository;
+import br.com.oficina.peca.StatusPeca;
 import br.com.oficina.veiculo.Veiculo;
 import br.com.oficina.veiculo.VeiculoProprietarioHist;
 import br.com.oficina.veiculo.VeiculoProprietarioHistRepository;
@@ -1174,6 +1175,77 @@ public class OrdemServicoService {
     public List<OsDtos.Resumo> historicoDoVeiculo(UUID veiculoId) {
         UUID oficinaId = contexto.oficinaId();
         return resumoFactory.montar(oficinaId, repository.historicoDoVeiculo(veiculoId));
+    }
+
+    /**
+     * O prontuario do carro: o que ja foi feito nele, em blocos.
+     *
+     * Uma consulta por OS para peca e evento -- o historico de um carro tem
+     * meia duzia de passagens, nao milhares, e a alternativa seria tres
+     * consultas agregadas para economizar o que nao custa. Se um dia um
+     * veiculo tiver cem passagens, isto vira paginacao antes de virar join.
+     */
+    @Transactional(readOnly = true)
+    public List<OsDtos.Passagem> prontuarioDoVeiculo(UUID veiculoId) {
+        UUID oficinaId = contexto.oficinaId();
+        boolean mostraValores = contexto.atende()
+                || config.flag(oficinaId, Chaves.MECANICO_VE_VALORES);
+
+        return repository.historicoDoVeiculo(veiculoId).stream()
+                .filter(os -> os.getOficinaId().equals(oficinaId))
+                .map(os -> {
+                    OrdemServico completa = repository.buscarComItens(os.getId()).orElse(os);
+
+                    List<OsItem> vivos = completa.getItens().stream()
+                            .filter(i -> i.getStatus() != StatusItem.CANCELADO)
+                            .toList();
+
+                    List<String> servicos = vivos.stream()
+                            .map(OsItem::getDescricao)
+                            .toList();
+
+                    List<String> mecanicos = vivos.stream()
+                            .filter(i -> i.getFuncionario() != null)
+                            .map(i -> i.getFuncionario().getNome())
+                            .distinct()
+                            .toList();
+
+                    List<String> pecas = pecaRepository
+                            .findByOrdemServicoIdOrderByCriadoEm(os.getId()).stream()
+                            .filter(pc -> pc.getStatus() != StatusPeca.CANCELADA)
+                            .map(pc -> pc.getQuantidade() != null
+                                    && pc.getQuantidade().compareTo(BigDecimal.ONE) > 0
+                                    ? "%sx %s".formatted(pc.getQuantidade().stripTrailingZeros()
+                                            .toPlainString(), pc.getDescricao())
+                                    : pc.getDescricao())
+                            .toList();
+
+                    // So o que o mecanico ESCREVEU. Mudanca de status e
+                    // ruido de sistema; num prontuario conta o que uma
+                    // pessoa observou e resolveu.
+                    List<String> anotacoes = eventoService.listar(os.getId()).stream()
+                            .filter(e -> EventoService.TRABALHO_REGISTRADO.equals(e.tipo()))
+                            .map(OsDtos.EventoResposta::descricao)
+                            .filter(d -> d != null && !d.isBlank())
+                            .toList();
+
+                    return new OsDtos.Passagem(
+                            os.getId(),
+                            os.getNumero(),
+                            os.getVeiculo().getPlaca(),
+                            os.getEntradaEm(),
+                            os.getEntregueEm(),
+                            os.getStatus(),
+                            os.getStatus().descricao(),
+                            os.getKmEntrada(),
+                            os.getQueixa(),
+                            mostraValores ? completa.valorTotal() : null,
+                            servicos,
+                            pecas,
+                            anotacoes,
+                            mecanicos);
+                })
+                .toList();
     }
 
     // ================================================================ apoio

@@ -371,6 +371,36 @@ public final class OsDtos {
     }
 
     /** Tela de detalhe da OS. */
+    /**
+     * O prontuario do veiculo: uma passagem pela oficina, fechada.
+     *
+     * Nao e o cartao do patio. O historico devolvia OsDtos.Resumo -- horas,
+     * dias sem movimentacao, alertas, selo de peca -- que e o que serve para
+     * decidir o que fazer HOJE com um carro que esta aqui. Para "o que ja
+     * fizemos neste carro" isso e ruido: ninguem quer saber que, em marco, a
+     * OS estava 3 dias sem apontamento.
+     *
+     * O que importa num prontuario e o que ficou: que servico foi feito, que
+     * peca entrou, e o que o mecanico escreveu.
+     */
+    public record Passagem(UUID osId,
+                           long numero,
+                           String placa,
+                           OffsetDateTime entradaEm,
+                           OffsetDateTime entregueEm,
+                           StatusOs status,
+                           String statusDescricao,
+                           Integer kmEntrada,
+                           String queixa,
+                           /** Null para quem nao pode ver valor. */
+                           BigDecimal valorTotal,
+                           List<String> servicos,
+                           List<String> pecas,
+                           /** O que o mecanico escreveu, em ordem. */
+                           List<String> anotacoes,
+                           List<String> mecanicos) {
+    }
+
     public record Detalhe(
             Resumo resumo,
             String diagnostico,

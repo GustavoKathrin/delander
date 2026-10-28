@@ -14,6 +14,7 @@ import {
   User,
   Wrench,
   BellRing,
+  FileText,
   Pencil,
   Send,
 } from 'lucide-react'
@@ -474,6 +475,14 @@ export default function DetalheOs() {
                 <Botao variante="secundario" tamanho="toque" bloco>
                   <Printer className="size-4" aria-hidden />
                   Ficha
+                </Botao>
+              </Link>
+              {/* O que ja foi feito NESTE carro, nas outras vezes. E a
+                  pergunta que o mecanico faz antes de abrir o capo. */}
+              <Link to={`/veiculo/${r.veiculoId}/prontuario`} className="flex-1 sm:flex-none">
+                <Botao variante="secundario" tamanho="toque" bloco>
+                  <FileText className="size-4" aria-hidden />
+                  Histórico
                 </Botao>
               </Link>
             </div>

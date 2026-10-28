@@ -792,3 +792,27 @@ export interface DetalheArtigo {
   leituraId?: string
   fotos: FotoWiki[]
 }
+
+/**
+ * Uma passagem do carro pela oficina, no prontuário.
+ *
+ * Não é o cartão do pátio: aqui importa o que ficou (serviço feito, peça
+ * que entrou, o que o mecânico escreveu), e não o que decidir hoje.
+ */
+export interface PassagemProntuario {
+  osId: string
+  numero: number
+  placa: string
+  entradaEm?: string
+  entregueEm?: string
+  status: StatusOs
+  statusDescricao: string
+  kmEntrada?: number
+  queixa?: string
+  /** Ausente para quem não pode ver valor. */
+  valorTotal?: number
+  servicos: string[]
+  pecas: string[]
+  anotacoes: string[]
+  mecanicos: string[]
+}

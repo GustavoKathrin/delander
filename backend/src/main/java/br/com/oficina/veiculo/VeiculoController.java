@@ -60,6 +60,12 @@ public class VeiculoController {
         return osService.historicoDoVeiculo(id);
     }
 
+    @GetMapping("/{id}/prontuario")
+    @Operation(summary = "O prontuario do carro: o que ja foi feito nele, em blocos")
+    public List<OsDtos.Passagem> prontuario(@PathVariable UUID id) {
+        return osService.prontuarioDoVeiculo(id);
+    }
+
     @GetMapping("/{id}/proprietarios")
     @Operation(summary = "Historico de donos do veiculo")
     public List<VeiculoDtos.ProprietarioHistorico> proprietarios(@PathVariable UUID id) {

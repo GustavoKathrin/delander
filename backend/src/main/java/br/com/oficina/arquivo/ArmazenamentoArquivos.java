@@ -2,6 +2,7 @@ package br.com.oficina.arquivo;
 
 import br.com.oficina.common.RegraNegocioException;
 import br.com.oficina.config.AppProperties;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Component;
@@ -23,6 +24,7 @@ import java.util.UUID;
  * gerado pelo servidor, e a leitura confere que o caminho nao escapou da raiz
  * de uploads. A API publica do ArquivoService nao mudou.
  */
+@Slf4j
 @Component
 public class ArmazenamentoArquivos {
 
@@ -72,7 +74,7 @@ public class ArmazenamentoArquivos {
         }
 
         try {
-            Path diretorio = Paths.get(props.uploadsDir(), subpasta);
+            Path diretorio = raizAbsoluta().resolve(subpasta);
             Files.createDirectories(diretorio);
 
             String nomeGerado = UUID.randomUUID() + ".pdf";
@@ -81,8 +83,23 @@ public class ArmazenamentoArquivos {
             return new Guardado(subpasta + "/" + nomeGerado,
                     sanitizar(nomeOriginal), "application/pdf", conteudo.length);
         } catch (IOException e) {
+            log.error("Falha ao gravar PDF em {}", raizAbsoluta().resolve(subpasta), e);
             throw new RegraNegocioException("Nao foi possivel salvar o arquivo. Tente novamente.");
         }
+    }
+
+    /**
+     * A pasta de uploads, sempre absoluta.
+     *
+     * O valor configurado e relativo por padrao (./dados/uploads), e caminho
+     * relativo aqui e armadilha: MultipartFile.transferTo(File) delega para
+     * Part.write(), que no Tomcat resolve nome relativo contra o diretorio
+     * TEMPORARIO do container -- nao contra a pasta da aplicacao. O arquivo
+     * ia parar em lugar nenhum e o upload falhava com "nao foi possivel
+     * salvar", sem rastro, porque o catch nao registrava a causa.
+     */
+    private Path raizAbsoluta() {
+        return Paths.get(props.uploadsDir()).toAbsolutePath().normalize();
     }
 
     private Guardado guardar(MultipartFile arquivo, String subpasta, boolean somentePdf) {
@@ -106,22 +123,27 @@ public class ArmazenamentoArquivos {
         };
 
         try {
-            Path diretorio = Paths.get(props.uploadsDir(), subpasta);
+            Path diretorio = raizAbsoluta().resolve(subpasta);
             Files.createDirectories(diretorio);
 
             String nomeGerado = UUID.randomUUID() + extensao;
-            arquivo.transferTo(diretorio.resolve(nomeGerado).toFile());
+            // Files.copy e nao transferTo: copia bytes para um caminho
+            // absoluto que eu escolhi, sem passar pela resolucao do container.
+            try (var entrada = arquivo.getInputStream()) {
+                Files.copy(entrada, diretorio.resolve(nomeGerado));
+            }
 
             return new Guardado(subpasta + "/" + nomeGerado,
                     sanitizar(arquivo.getOriginalFilename()), tipo, arquivo.getSize());
         } catch (IOException e) {
+            log.error("Falha ao gravar upload em {}", raizAbsoluta().resolve(subpasta), e);
             throw new RegraNegocioException("Nao foi possivel salvar o arquivo. Tente novamente.");
         }
     }
 
     public Resource conteudo(String caminhoRelativo) {
         try {
-            Path raiz = Paths.get(props.uploadsDir()).normalize().toAbsolutePath();
+            Path raiz = raizAbsoluta();
             Path caminho = raiz.resolve(caminhoRelativo).normalize();
             if (!caminho.startsWith(raiz)) {
                 throw new RegraNegocioException("Caminho de arquivo invalido.");
@@ -138,7 +160,7 @@ public class ArmazenamentoArquivos {
 
     public void apagar(String caminhoRelativo) {
         try {
-            Path raiz = Paths.get(props.uploadsDir()).normalize().toAbsolutePath();
+            Path raiz = raizAbsoluta();
             Path caminho = raiz.resolve(caminhoRelativo).normalize();
             if (caminho.startsWith(raiz)) {
                 Files.deleteIfExists(caminho);

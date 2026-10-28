@@ -2,6 +2,7 @@ import { AlertTriangle, Camera, Check, Plus, Wrench } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { cx } from '../../components/ui'
+import { CHAVES, useConfig } from '../../lib/config'
 import type { DetalheOs, StatusOs } from '../../types'
 import { plural } from '../../lib/format'
 
@@ -31,6 +32,14 @@ interface Pendencia {
   /** Frase curta, do jeito que a oficina fala. */
   rotulo: string
   pronto: boolean
+  /**
+   * O servidor recusa a transicao sem isto.
+   *
+   * Importa a distincao: o que e so bom habito aparece como sugestao e nao
+   * assusta; o que trava de verdade precisa dizer que trava, senao a pessoa
+   * so descobre no erro vermelho depois de apertar o botao.
+   */
+  exigida?: boolean
   /** Por que isso importa. So aparece quando esta pendente. */
   porque?: string
   acao?: { rotulo: string; icone: ReactNode; onClick: () => void }
@@ -40,6 +49,7 @@ interface Pendencia {
 function pendenciasDaEtapa(
   os: DetalheOs,
   acoes: { onAdicionarServico: () => void; onAdicionarPeca: () => void; onIrParaFotos: () => void },
+  exige: { foto: boolean; checklist: boolean },
 ): { titulo: string; itens: Pendencia[] } | null {
   const status: StatusOs = os.resumo.status
   const temFotoEntrada = os.arquivos.some((a) => a.momento === 'ENTRADA')
@@ -52,7 +62,10 @@ function pendenciasDaEtapa(
     chave: 'foto',
     rotulo: 'Foto do carro na entrada',
     pronto: temFotoEntrada,
-    porque: 'É a prova de como o carro chegou. Sem ela, risco e amassado viram palavra contra palavra.',
+    exigida: exige.foto,
+    porque: exige.foto
+      ? 'É a prova de como o carro chegou, e o sistema não deixa avançar sem ela. Sem foto, risco e amassado viram palavra contra palavra.'
+      : 'É a prova de como o carro chegou. Sem ela, risco e amassado viram palavra contra palavra.',
     acao: { rotulo: 'Tirar foto', icone: <Camera className="size-4" aria-hidden />, onClick: acoes.onIrParaFotos },
   }
 
@@ -67,7 +80,10 @@ function pendenciasDaEtapa(
             chave: 'checklist',
             rotulo: 'Vistoria de entrada respondida',
             pronto: checklistRespondido,
-            porque: 'O que já estava quebrado antes de entrar precisa estar registrado.',
+            exigida: exige.checklist,
+            porque: exige.checklist
+              ? 'O que já estava quebrado antes de entrar precisa estar registrado, e o sistema não deixa avançar sem isso.'
+              : 'O que já estava quebrado antes de entrar precisa estar registrado.',
             acao: {
               rotulo: 'Responder',
               icone: <Check className="size-4" aria-hidden />,
@@ -183,27 +199,44 @@ export function RequisitosDaEtapa({
   onAdicionarPeca: () => void
   onIrParaFotos: () => void
 }) {
-  const bloco = pendenciasDaEtapa(os, { onAdicionarServico, onAdicionarPeca, onIrParaFotos })
+  const { flag } = useConfig()
+  const bloco = pendenciasDaEtapa(
+    os,
+    { onAdicionarServico, onAdicionarPeca, onIrParaFotos },
+    { foto: flag(CHAVES.exigirFotos), checklist: flag(CHAVES.exigirChecklist) },
+  )
   if (!bloco) return null
 
   const faltando = bloco.itens.filter((i) => !i.pronto)
+  // O que TRAVA e o que decide a cor do bloco e o tom da frase. Pendencia que
+  // e so recomendacao nao pode pintar a tela de ambar como se barrasse.
+  const trava = faltando.filter((i) => i.exigida)
 
   return (
     <div
       className={cx(
         'mt-4 rounded-xl p-3 ring-1',
-        faltando.length > 0 ? 'bg-amber-50/70 ring-amber-200' : 'bg-slate-50 ring-slate-200',
+        trava.length > 0
+          ? 'bg-amber-50/70 ring-amber-200'
+          : 'bg-slate-50 ring-slate-200',
       )}
     >
-      <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-        {faltando.length > 0 && (
+      <p className="flex flex-wrap items-center gap-x-1.5 text-xs font-semibold text-slate-700">
+        {trava.length > 0 && (
           <AlertTriangle className="size-3.5 flex-none text-amber-600" aria-hidden />
         )}
         {bloco.titulo}
-        {faltando.length > 0 && (
-          <span className="font-normal text-amber-800">
-            — falta {faltando.length === 1 ? '1 coisa' : `${faltando.length} coisas`}
+        {trava.length > 0 ? (
+          <span className="font-normal text-amber-900">
+            — o sistema não deixa avançar sem {trava.length === 1 ? 'isto' : 'estes itens'}
           </span>
+        ) : (
+          faltando.length > 0 && (
+            <span className="font-normal text-slate-500">
+              — falta {faltando.length === 1 ? '1 coisa' : `${faltando.length} coisas`}, mas dá para
+              seguir
+            </span>
+          )
         )}
       </p>
 
@@ -215,11 +248,13 @@ export function RequisitosDaEtapa({
                 'grid size-5 flex-none place-items-center rounded-full text-[11px] font-bold',
                 item.pronto
                   ? 'bg-emerald-600 text-white'
-                  : 'bg-white text-amber-700 ring-1 ring-amber-300',
+                  : item.exigida
+                    ? 'bg-white text-amber-700 ring-1 ring-amber-300'
+                    : 'bg-white text-slate-400 ring-1 ring-slate-300',
               )}
               aria-hidden
             >
-              {item.pronto ? <Check className="size-3" /> : '!'}
+              {item.pronto ? <Check className="size-3" /> : item.exigida ? '!' : '–'}
             </span>
 
             <span className={cx('min-w-0', item.pronto ? 'text-slate-600' : 'font-medium text-slate-900')}>
@@ -246,7 +281,14 @@ export function RequisitosDaEtapa({
             )}
 
             {!item.pronto && item.porque && (
-              <p className="w-full pl-7 text-xs leading-snug text-amber-900">{item.porque}</p>
+              <p
+                className={cx(
+                  'w-full pl-7 text-xs leading-snug',
+                  item.exigida ? 'text-amber-900' : 'text-slate-500',
+                )}
+              >
+                {item.porque}
+              </p>
             )}
           </li>
         ))}

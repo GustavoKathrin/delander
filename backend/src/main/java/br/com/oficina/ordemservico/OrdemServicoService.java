@@ -446,6 +446,22 @@ public class OrdemServicoService {
                 || (para == StatusOs.EM_DIAGNOSTICO && de == StatusOs.AGUARDANDO_APROVACAO)) {
             contexto.exigirAtendimento();
         }
+        /*
+         * A etapa 1 fecha aqui, e nao la na execucao.
+         *
+         * A trava de foto e checklist so disparava ao iniciar a EXECUCAO. Na
+         * pratica dava para ir de RECEBIDO direto para EM_DIAGNOSTICO -- isto
+         * e, abrir o capo e comecar a mexer -- sem uma unica foto do carro
+         * como ele chegou. A foto que protege a oficina de "esse risco ja
+         * estava aqui?" precisa existir ANTES de alguem encostar no carro,
+         * que e exatamente o que o dono descreveu na etapa 1.
+         *
+         * Continua valendo na execucao tambem, para o caminho em que a OS
+         * pula o diagnostico.
+         */
+        if (para == StatusOs.EM_DIAGNOSTICO && de != StatusOs.AGUARDANDO_APROVACAO) {
+            exigirChecklistDeEntrada(os, oficinaId, de);
+        }
         if (para == StatusOs.EM_EXECUCAO) {
             contexto.exigirMaoNaMassa();
             exigirChecklistDeEntrada(os, oficinaId, de);

@@ -13,6 +13,7 @@ import {
   Trash2,
   User,
   Wrench,
+  Pencil,
 } from 'lucide-react'
 import { api } from '../../api/client'
 import type {
@@ -859,17 +860,7 @@ export default function DetalheOs() {
             </Cartao>
           )}
 
-          {mostraValores && (
-            <Cartao>
-              <CartaoTitulo titulo="Valores" />
-              <dl className="divide-y divide-slate-100 px-4 py-2 text-sm">
-                <Linha rotulo="Peças" valor={moeda(os.valorPecas)} />
-                <Linha rotulo="Mão de obra" valor={moeda(os.valorMaoObra)} />
-                {os.desconto > 0 && <Linha rotulo="Desconto" valor={`- ${moeda(os.desconto)}`} />}
-                <Linha rotulo="Total" valor={moeda(os.valorTotal)} destaque />
-              </dl>
-            </Cartao>
-          )}
+          {mostraValores && <CartaoValores os={os} osId={id} onSalvo={invalidar} />}
 
           <Cartao>
             <CartaoTitulo titulo="Apontamentos" descricao="Horário registrado pelo servidor" />
@@ -1097,6 +1088,156 @@ function Indicador({
         {valor}
       </p>
     </div>
+  )
+}
+
+/**
+ * A etapa de precificar: mao de obra e desconto.
+ *
+ * Ate aqui este cartao era so leitura, e NENHUMA tela do sistema escrevia
+ * valorMaoObra ou desconto -- o endpoint existia e nada o chamava. Na
+ * pratica o valor so podia vir do catalogo, e a "mao de obra manual" que o
+ * dono pediu nao tinha onde acontecer.
+ *
+ * O cartao muda de forma conforme a configuracao:
+ * - MANUAL: campo para digitar o valor fechado do servico.
+ * - AUTOMATICA: o valor e a soma dos servicos e aparece so para leitura,
+ *   com o caminho para mexer onde ele e de verdade -- na linha do servico.
+ */
+function CartaoValores({
+  os,
+  osId,
+  onSalvo,
+}: {
+  os: DetalheTipo
+  osId: string
+  onSalvo: () => void
+}) {
+  const { gerencia } = useAuth()
+  const { texto, numero } = useConfig()
+  const avisar = useAviso()
+  const automatica = texto(CHAVES.modoMaoDeObra, 'MANUAL') === 'AUTOMATICA'
+  const tetoDesconto = numero(CHAVES.descontoMaximo, 0)
+
+  const [editando, setEditando] = useState(false)
+  const [maoObra, setMaoObra] = useState('')
+  const [desconto, setDesconto] = useState('')
+  const [erro, setErro] = useState<string>()
+
+  const abrir = () => {
+    setMaoObra(os.valorMaoObra ? String(os.valorMaoObra) : '')
+    setDesconto(os.desconto ? String(os.desconto) : '')
+    setErro(undefined)
+    setEditando(true)
+  }
+
+  const salvar = useMutation({
+    mutationFn: () =>
+      api(`/os/${osId}`, {
+        metodo: 'PATCH',
+        corpo: {
+          valorMaoObra: automatica ? undefined : maoObra === '' ? 0 : Number(maoObra),
+          desconto: desconto === '' ? 0 : Number(desconto),
+        },
+      }),
+    onSuccess: () => {
+      setEditando(false)
+      onSalvo()
+      avisar('Valores salvos.')
+    },
+    onError: (falha: Error) => setErro(falha.message),
+  })
+
+  // O desconto que ESTA pessoa pode dar, para o limite aparecer antes do
+  // erro em vez de depois. Dono e gerente nao tem teto.
+  const subtotal = (os.valorPecas ?? 0) + (os.valorMaoObra ?? 0)
+  const limite = gerencia ? null : Math.round(subtotal * tetoDesconto) / 100
+
+  return (
+    <Cartao>
+      <CartaoTitulo
+        titulo="Valores"
+        descricao={automatica ? 'A mão de obra é a soma dos serviços' : undefined}
+        acao={
+          !editando && (
+            <Botao variante="secundario" tamanho="toque" onClick={abrir}>
+              <Pencil className="size-4" aria-hidden />
+              {automatica ? 'Desconto' : 'Preços'}
+            </Botao>
+          )
+        }
+      />
+
+      {editando ? (
+        <div className="space-y-3 p-4">
+          {automatica ? (
+            <p className="rounded-lg bg-slate-50 px-3 py-2.5 text-xs text-slate-600 ring-1 ring-slate-200">
+              A mão de obra sai da tabela de serviços ({moeda(os.valorMaoObra)}). Para mudar, ajuste
+              o preço na linha do serviço — ou troque para “Digitado” em Configurações &gt; Fluxo.
+            </p>
+          ) : (
+            <Campo rotulo="Mão de obra (R$)" dica="O valor fechado do serviço, sem as peças.">
+              <Entrada
+                autoFocus
+                type="number"
+                step="0.01"
+                min="0"
+                inputMode="decimal"
+                value={maoObra}
+                onChange={(e) => setMaoObra(e.target.value)}
+              />
+            </Campo>
+          )}
+
+          <Campo
+            rotulo="Desconto (R$)"
+            dica={
+              limite === null
+                ? 'Sem limite para o seu perfil.'
+                : limite > 0
+                  ? `Você pode dar até ${moeda(limite)} nesta OS (${tetoDesconto}%). Acima disso, chame o dono.`
+                  : 'Desconto neste sistema é com o dono.'
+            }
+          >
+            <Entrada
+              type="number"
+              step="0.01"
+              min="0"
+              inputMode="decimal"
+              disabled={limite !== null && limite <= 0}
+              value={desconto}
+              onChange={(e) => setDesconto(e.target.value)}
+            />
+          </Campo>
+
+          <AvisoErro mensagem={erro} />
+
+          <div className="flex gap-2">
+            <Botao variante="secundario" tamanho="toque" bloco onClick={() => setEditando(false)}>
+              Cancelar
+            </Botao>
+            <Botao tamanho="toque" bloco carregando={salvar.isPending} onClick={() => salvar.mutate()}>
+              Salvar
+            </Botao>
+          </div>
+        </div>
+      ) : (
+        <dl className="divide-y divide-slate-100 px-4 py-2 text-sm">
+          <Linha rotulo="Peças" valor={moeda(os.valorPecas)} />
+          <Linha rotulo="Mão de obra" valor={moeda(os.valorMaoObra)} />
+          {(os.desconto ?? 0) > 0 && (
+            <Linha rotulo="Desconto" valor={`- ${moeda(os.desconto)}`} />
+          )}
+          <Linha rotulo="Total" valor={moeda(os.valorTotal)} destaque />
+          {/* O que o cliente aprovou, congelado. Se o total mudou depois, os
+              dois numeros aparecem e a diferenca fica visivel -- que e
+              exatamente a conversa dificil de seis meses depois. */}
+          {os.valorAprovado != null && os.valorAprovado !== os.valorTotal && (
+            <Linha rotulo="Cliente aprovou" valor={moeda(os.valorAprovado)} />
+          )}
+        </dl>
+      )}
+    </Cartao>
   )
 }
 

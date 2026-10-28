@@ -237,6 +237,8 @@ export interface DetalheOs {
   valorMaoObra: number
   desconto: number
   valorTotal: number
+  /** O total congelado no "sim" do cliente. Ausente enquanto não houve aprovação. */
+  valorAprovado?: number
   proximosStatus: StatusOs[]
   itens: ItemOs[]
   apontamentos: ApontamentoOs[]

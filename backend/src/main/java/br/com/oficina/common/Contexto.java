@@ -89,10 +89,15 @@ public class Contexto {
     }
 
     public void exigirAtendimento(String porque) {
-        if (gerencia() || papel() == Papel.RECEPCAO) {
+        if (atende()) {
             return;
         }
         throw new PermissaoException(porque);
+    }
+
+    /** Dono, gerente ou recepcao: quem fala de dinheiro com o cliente. */
+    public boolean atende() {
+        return gerencia() || papel() == Papel.RECEPCAO;
     }
 
     /**

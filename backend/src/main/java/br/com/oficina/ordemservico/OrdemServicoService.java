@@ -641,7 +641,9 @@ public class OrdemServicoService {
     @Transactional
     public OsDtos.Detalhe atualizar(UUID id, OsDtos.AtualizacaoRequisicao req) {
         UUID oficinaId = contexto.oficinaId();
-        contexto.exigirGerencia();
+        // Mexer em valor e do balcao: dono, gerente e recepcao. O teto de
+        // desconto, logo abaixo, e que separa o que cada um pode.
+        contexto.exigirAtendimento();
         OrdemServico os = buscarComItens(id, oficinaId);
 
         if (req.queixa() != null) {
@@ -666,10 +668,43 @@ public class OrdemServicoService {
             os.setValorMaoObra(req.valorMaoObra());
         }
         if (req.desconto() != null) {
+            exigirDescontoPermitido(os, req.desconto(), oficinaId);
             os.setDesconto(req.desconto());
         }
         repository.save(os);
         return detalhe(id);
+    }
+
+    /**
+     * Quanto de desconto o balcao da sozinho.
+     *
+     * O dono pediu que a recepcao resolvesse na hora ate um limite, em vez de
+     * ter de chama-lo por causa de dez reais -- e que acima disso fosse ele.
+     * Dono e gerente nao tem teto: quem responde pelo caixa nao pede licenca
+     * para si mesmo.
+     *
+     * Em percentual do subtotal, e nao em reais: desconto se negocia em
+     * percentual, e R$ 50 e esmola num motor e absurdo numa troca de oleo.
+     */
+    private void exigirDescontoPermitido(OrdemServico os, BigDecimal desconto, UUID oficinaId) {
+        if (contexto.gerencia() || desconto.signum() <= 0) {
+            return;
+        }
+        int tetoPercentual = config.inteiro(oficinaId, Chaves.DESCONTO_MAXIMO_PERCENTUAL, 0);
+        BigDecimal subtotal = os.getValorPecas().add(os.getValorMaoObra());
+        if (tetoPercentual <= 0 || subtotal.signum() <= 0) {
+            throw new PermissaoException(
+                    "Desconto neste sistema e com o dono. Se quiser que o balcao resolva sozinho "
+                            + "ate um limite, ligue isso em Configuracoes > Fluxo.");
+        }
+        BigDecimal teto = subtotal
+                .multiply(BigDecimal.valueOf(tetoPercentual))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        if (desconto.compareTo(teto) > 0) {
+            throw new PermissaoException(
+                    "Seu limite de desconto e %d%%, que nesta OS da %s. Para passar disso, chame o dono."
+                            .formatted(tetoPercentual, teto.setScale(2, RoundingMode.HALF_UP)));
+        }
     }
 
     @Transactional
@@ -942,7 +977,14 @@ public class OrdemServicoService {
          * via F12 via tudo. E a etapa 2 do fluxo novo pede o contrario: o
          * mecanico escolhe o servico SEM ver valor nenhum.
          */
-        boolean mostraValores = contexto.gerencia()
+        /*
+         * atende() e nao gerencia(): a recepcao PRECISA ver valor -- e ela
+         * quem cota, fecha o orcamento e da desconto. gerencia() e so dono e
+         * gerente, e usa-lo aqui cegava o balcao junto com o mecanico. A
+         * regra que o dono pediu e "o mecanico nao ve valor", nao "so o dono
+         * ve valor".
+         */
+        boolean mostraValores = contexto.atende()
                 || config.flag(oficinaId, Chaves.MECANICO_VE_VALORES);
 
         List<Apontamento> apontamentos = apontamentoRepository.listarPorOs(id);

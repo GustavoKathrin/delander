@@ -582,6 +582,15 @@ export interface PecaPendente {
   diasDeFolga?: number
   /** A OS não tem dia agendado: o carro está parado esperando esta peça. */
   carroParado: boolean
+  /**
+   * O cliente já disse sim.
+   *
+   * Separa COTAR de COMPRAR: peça de OS não aprovada precisa de preço — é
+   * dele que o orçamento é feito — mas não pode ser comprada.
+   */
+  aprovada: boolean
+  /** Sem preço ainda: o orçamento não fecha assim. */
+  semCotacao: boolean
 }
 
 export interface Painel {

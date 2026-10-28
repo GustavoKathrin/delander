@@ -136,6 +136,10 @@ class FilaDeComprasTest {
                 StatusPeca.SOLICITADA, StatusPeca.SOLICITADA.descricao(),
                 momento, momento.descricao(),
                 new BigDecimal("100.00"), null,
-                comprarAte, comprarAte == null, null, comprarAte == null);
+                comprarAte, comprarAte == null, null, comprarAte == null,
+                // aprovada / semCotacao: a ordem da fila nao olha nenhum dos
+                // dois, mas o record exige -- e deixar explicito aqui e o que
+                // faz o proximo campo novo quebrar este teste de proposito.
+                true, false);
     }
 }

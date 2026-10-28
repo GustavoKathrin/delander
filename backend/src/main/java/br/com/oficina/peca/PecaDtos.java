@@ -56,7 +56,20 @@ public final class PecaDtos {
                            LocalDate comprarAte,
                            boolean emRisco,
                            Integer diasDeFolga,
-                           boolean carroParado) {
+                           boolean carroParado,
+                           /**
+                            * O cliente ja disse sim.
+                            *
+                            * Separa COTAR de COMPRAR. A peca de OS nao
+                            * aprovada precisa de preco -- e dele que o
+                            * orcamento e feito -- mas nao pode ser comprada:
+                            * se o cliente recusar, a oficina fica com a peca
+                            * na mao. A tela usa isto para liberar o preco e
+                            * travar o "Comprei".
+                            */
+                           boolean aprovada,
+                           /** Sem preco ainda: o orcamento nao fecha assim. */
+                           boolean semCotacao) {
     }
 
     /**

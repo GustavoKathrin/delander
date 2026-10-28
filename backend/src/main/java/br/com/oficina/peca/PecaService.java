@@ -207,7 +207,7 @@ public class PecaService {
         List<PecaDtos.Pendente> fila = new ArrayList<>();
         for (PecaOs p : pecas) {
             OrdemServico os = ordens.get(p.getOrdemServicoId());
-            if (os == null || os.getAprovadoEm() == null || os.getStatus().finalizada()) {
+            if (os == null || os.getStatus().finalizada()) {
                 continue;
             }
             fila.add(montarPendente(p, os, hoje));
@@ -245,7 +245,9 @@ public class PecaService {
                 comprarAte,
                 emRisco,
                 folga,
-                os.getDataAgendada() == null);
+                os.getDataAgendada() == null,
+                os.getAprovadoEm() != null,
+                p.getValorUnitario() == null);
     }
 
     /**

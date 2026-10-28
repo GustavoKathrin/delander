@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, ClipboardCheck, X } from 'lucide-react'
 import { api, ErroApi } from '../../api/client'
 import { BotoesDeFoto, GradeDeFotos, VisorDeFoto } from '../../components/fotos'
-import { Botao, Cartao, CartaoTitulo, Entrada, cx, useAviso } from '../../components/ui'
+import { Botao, Entrada, cx, useAviso } from '../../components/ui'
 import type { ArquivoOs, DetalheOs } from '../../types'
 
 /**
@@ -78,23 +78,21 @@ export function ChecklistEntrada({ os, gerencia }: { os: DetalheOs; gerencia: bo
     setRespostas((r) => ({ ...r, [id]: { ...(r[id] ?? { observacao: '' }), ok } }))
 
   return (
-    <Cartao>
-      <CartaoTitulo
-        titulo="Checklist de entrada"
-        descricao="Como o carro chegou. Precisa estar respondido antes de iniciar o serviço."
-        acao={
-          faltam > 0 ? (
+    <>
+      {os.checklist.length > 0 && (
+        <div className="px-4 pt-3">
+          {faltam > 0 ? (
             <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
               faltam {faltam}
             </span>
           ) : (
-            <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200">
               <ClipboardCheck className="size-3.5" aria-hidden />
               completo
             </span>
-          )
-        }
-      />
+          )}
+        </div>
+      )}
 
       <ul className="divide-y divide-slate-100 px-4">
         {os.checklist.map((item) => {
@@ -207,6 +205,6 @@ export function ChecklistEntrada({ os, gerencia }: { os: DetalheOs; gerencia: bo
         onFechar={() => setAberta(null)}
         onMudou={recarregar}
       />
-    </Cartao>
+    </>
   )
 }

@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, ChevronDown, PauseCircle, Wrench } from 'lucide-react'
+import { AlertTriangle, Check, ChevronDown, ChevronUp, PauseCircle, Wrench } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Botao, cx } from '../../components/ui'
 import type { DetalheOs, StatusOs } from '../../types'
@@ -189,6 +189,9 @@ export function EtapasDaOs({
   onAcionar,
   requisitos,
   children,
+  outrasEtapas,
+  outrasAbertas = false,
+  onVerOutras,
 }: {
   status: StatusOs
   /** 1 a 7. Vem de `etapaDaOs`, que lê o dado além do status. */
@@ -206,13 +209,30 @@ export function EtapasDaOs({
    */
   requisitos?: ReactNode
   /**
-   * O conteúdo desta etapa: serviços, peças, valores, fotos.
+   * O conteúdo DESTA etapa, e só dele: serviços, peças, valores, fotos.
    *
    * Eram cartões soltos abaixo da régua, visualmente iguais à linha do
    * tempo e à wiki. O dono: "quero que suma o card de serviços e peça,
    * isso tem que estar dentro do mesmo card ali relacionado à etapa".
    */
   children?: ReactNode
+  /**
+   * O que é das outras etapas, atrás de um toque.
+   *
+   * Mostrar tudo de uma vez foi a primeira tentativa, e o dono recusou:
+   * "em cada etapa só quero os campos necessários para concluir cada
+   * etapa". Mas esconder de vez também não serve — conferir a vistoria de
+   * entrada com o carro já na bancada é uma coisa que se faz. Fechado por
+   * padrão, e fecha de novo sozinho quando o carro anda de etapa.
+   */
+  outrasEtapas?: ReactNode
+  /**
+   * A gaveta esta aberta? Controlada de fora porque quem precisa abri-la
+   * nem sempre e o toque do usuario: "Tirar foto", na etapa 5, rola a tela
+   * ate a vistoria de entrada, que naquela etapa mora aqui dentro.
+   */
+  outrasAbertas?: boolean
+  onVerOutras?: (aberta: boolean) => void
 }) {
   const [abertas, setAbertas] = useState(false)
   // Fecha de novo quando o carro anda: as opcoes de outra etapa nao sao as
@@ -284,17 +304,20 @@ export function EtapasDaOs({
                   />
                 </div>
                 {/*
-                  No celular os sete rótulos não cabem: "Peças e serviços" com
-                  11px ocupa o triplo da coluna. Abaixo de sm só a etapa atual
-                  mostra o nome — a única que importa para quem está com o
-                  carro na mão. A linha de baixo diz o resto.
+                  Os sete rótulos só cabem a partir de 768px.
+                  Mostrar só o da etapa atual no celular parecia a saída, mas
+                  "Peças e serviços" tem 100px em 11px e a coluna tem 50: o
+                  nome vazava por cima dos números vizinhos. Quem resolve isso
+                  é a linha inteira logo abaixo, que tem a largura do cartão.
                 */}
                 <span
                   className={cx(
-                    'truncate text-center text-[11px] leading-tight',
+                    'hidden w-full truncate text-center text-[11px] leading-tight md:inline',
                     aqui
                       ? 'font-semibold text-slate-900'
-                      : cx('hidden sm:inline', feita ? 'text-slate-600' : 'text-slate-400'),
+                      : feita
+                        ? 'text-slate-600'
+                        : 'text-slate-400',
                   )}
                 >
                   {e.rotulo}
@@ -304,10 +327,18 @@ export function EtapasDaOs({
           })}
         </ol>
 
+        {/* O nome da etapa atual mora aqui, e não sob o ponto: aqui ele tem a
+            largura do cartão inteiro para caber. */}
         {!cancelada && (
-          <p className="mt-1 text-center text-[11px] text-slate-500">
-            Etapa {atual.n} de {ETAPAS.length}
-            {atual.n < ETAPAS.length && ` · depois vem ${ETAPAS[indiceAtual + 1].rotulo}`}
+          <p className="mt-1.5 text-center">
+            <span className="text-sm font-semibold text-slate-900">
+              Etapa {atual.n} de {ETAPAS.length} · {atual.rotulo}
+            </span>
+            {atual.n < ETAPAS.length && (
+              <span className="mt-0.5 block text-[11px] text-slate-500">
+                depois vem {ETAPAS[indiceAtual + 1].rotulo}
+              </span>
+            )}
           </p>
         )}
 
@@ -380,6 +411,36 @@ export function EtapasDaOs({
                   </button>
                 )}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ---------------- o que é das outras etapas ----------------
+            Depois do botão do próximo passo, porque isto é consulta e não
+            ação: não pode competir com o passo da etapa pelo polegar. */}
+        {outrasEtapas && (
+          <div className="mt-3 border-t border-slate-200 pt-3">
+            {outrasAbertas ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onVerOutras?.(false)}
+                  className="mx-auto flex min-h-11 items-center gap-1 rounded-lg px-3 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+                >
+                  <ChevronUp className="size-3.5" aria-hidden />
+                  Esconder as outras etapas
+                </button>
+                <div className="mt-2 space-y-4">{outrasEtapas}</div>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onVerOutras?.(true)}
+                className="mx-auto flex min-h-11 items-center gap-1 rounded-lg px-3 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+              >
+                <ChevronDown className="size-3.5" aria-hidden />
+                Ver o que é das outras etapas
+              </button>
             )}
           </div>
         )}

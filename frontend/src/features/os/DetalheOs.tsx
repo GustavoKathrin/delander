@@ -173,8 +173,15 @@ export default function DetalheOs() {
   const [descricaoParada, setDescricaoParada] = useState('')
   const [paradaVisivel, setParadaVisivel] = useState(true)
   const blocoFotos = useRef<HTMLDivElement>(null)
-  const irParaFotos = () =>
-    blocoFotos.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  /**
+   * Qual etapa abriu a gaveta das outras etapas — não um "está aberta".
+   *
+   * Guardando a etapa, "está aberta?" vira uma comparação e ela se fecha
+   * sozinha quando o carro anda. Com um booleano, fechar exigiria um
+   * `useEffect` depois de `etapaAtual` — que vem depois do return do
+   * carregamento, e hook condicional o React recusa.
+   */
+  const [gavetaAberta, setGavetaAberta] = useState<number | null>(null)
 
   const [adicionandoServico, setAdicionandoServico] = useState(false)
   const [adicionandoPeca, setAdicionandoPeca] = useState(false)
@@ -381,22 +388,253 @@ export default function DetalheOs() {
    */
   const etapaAtual = etapaDaOs(os)
   /**
-   * Servico e peca pertencem a DUAS etapas, e a cor diz qual vale agora.
+   * De que etapa e cada seção.
    *
-   * Antes de aprovar, lancar servico e dizer o que o carro precisa: etapa 2.
-   * Depois, a mesma lista vira o trabalho acontecendo: etapa 6. A peca ainda
-   * passa pela 3, que e quando ela deixa de ser "o que falta" e vira "quanto
-   * custa e quando chega".
+   * A mesma lista de serviços é trabalho diferente conforme o carro: antes
+   * de aprovar, lançar serviço é dizer o que o carro precisa (etapa 2);
+   * depois, é fazer (etapa 6); na entrega, é o registro do que foi feito
+   * (etapa 7). A peça ainda passa pela 3, que é quando ela deixa de ser "o
+   * que falta" e vira "quanto custa e quando chega".
    */
-  const etapaDoServico = etapaAtual >= 6 ? 6 : 2
-  const etapaDaPeca = etapaAtual >= 6 ? 6 : etapaAtual === 3 ? 3 : 2
+  const etapaDoServico = etapaAtual >= 6 ? etapaAtual : 2
+  const etapaDaPeca =
+    etapaAtual >= 6 ? etapaAtual : etapaAtual === 3 ? 3 : 2
+  const etapaDosValores = etapaAtual >= 7 ? 7 : etapaAtual >= 5 ? 5 : 4
+  const etapaDasFotos = etapaAtual >= 7 ? 7 : 6
+  /** A gaveta so conta como aberta para a etapa que a abriu. */
+  const verOutrasEtapas = gavetaAberta === etapaAtual
+  /**
+   * Leva a pessoa até a vistoria de entrada, onde mora a foto.
+   *
+   * Fora da etapa 1 essa seção vive na gaveta, fechada: rolar até um
+   * elemento que não está montado não faz nada, e o botão pareceria
+   * quebrado. Abre primeiro, rola depois que o React montou.
+   */
+  const irParaFotos = () => {
+    setGavetaAberta(etapaAtual)
+    // Tenta de novo ate o React montar a secao. Um quadro so nem sempre
+    // basta, e rolar ate um elemento que ainda nao existe nao faz nada --
+    // o botao pareceria quebrado.
+    const rolar = (tentativas: number) => {
+      if (blocoFotos.current) {
+        blocoFotos.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } else if (tentativas > 0) {
+        requestAnimationFrame(() => rolar(tentativas - 1))
+      }
+    }
+    requestAnimationFrame(() => rolar(6))
+  }
   const descricaoDosServicos =
     `${os.itens.length === 1 ? '1 serviço' : `${os.itens.length} serviços`}` +
     ` · ${horas(r.horasEstimadas)} estimadas` +
-    (etapaDoServico === 6
+    (etapaDoServico >= 6
       ? ' · os botões valem para cada serviço, um por um'
       : ' · isto é o que vai para o orçamento')
 
+
+  // ---------------------------------------------------------------- seções
+  //
+  // Cada seção pertence a UMA etapa, e só aparece quando o carro está nela.
+  //
+  // Antes elas ficavam todas na tela ao mesmo tempo, só pintadas com a cor da
+  // etapa a que pertencem. O dono, olhando: "em cada etapa só quero os campos
+  // necessários para concluir cada etapa, ficou confuso do jeito que vc fez"
+  // — e tinha razão: a cor dizia "isto é de outra etapa" e a presença dizia
+  // "preencha agora". Duas mensagens opostas na mesma caixa.
+  //
+  // O que não é da etapa corrente não some: vai para `foraDaEtapa`, atrás de
+  // um toque. Conferir a vistoria de entrada com o carro já na bancada é uma
+  // coisa que se faz.
+  const secaoRecebimento = (
+    <div key="recebimento" ref={blocoFotos} className="scroll-mt-4">
+      <SecaoDaEtapa
+        etapa={1}
+        titulo="Vistoria de entrada"
+        descricao="Como o carro chegou. É a prova dos dois lados se aparecer avaria depois."
+      >
+        <ChecklistEntrada os={os} gerencia={gerencia} />
+      </SecaoDaEtapa>
+    </div>
+  )
+
+  const secaoServicos = (
+    <SecaoDaEtapa
+      key="servicos"
+      etapa={etapaDoServico}
+      titulo="Serviços"
+      descricao={descricaoDosServicos}
+      acao={
+        // O mecânico também lança serviço: é o diagnóstico dele que diz o
+        // que o carro precisa. Quem protege a oficina é ele não ver nem
+        // escrever preço.
+        podeRegistrarTrabalho && (
+          <Botao variante="secundario" tamanho="toque" onClick={() => setAdicionandoServico(true)}>
+            <Plus className="size-4" aria-hidden />
+            Adicionar
+          </Botao>
+        )
+      }
+    >
+      {os.itens.length === 0 ? (
+        <Vazio
+          icone={<Wrench className="size-8" />}
+          titulo="Nenhum serviço na OS"
+          descricao="Adicione o que será feito para o sistema poder estimar o tempo e a capacidade do dia."
+        />
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {os.itens.map((item) => (
+            <LinhaServico
+              key={item.id}
+              item={item}
+              osId={os.resumo.id}
+              fotos={os.arquivos.filter((a) => a.osItemId === item.id).length}
+              gerencia={gerencia}
+              mostraValores={mostraValores}
+              funcionarios={funcionarios.data ?? []}
+              salvando={transicionarItem.isPending}
+              onAtribuir={(funcionarioId) => atribuir.mutate({ itemId: item.id, funcionarioId })}
+              onAcao={(acao) => setAcaoServico({ item, acao })}
+              onIniciar={() =>
+                transicionarItem.mutate({ itemId: item.id, corpo: { status: 'EM_EXECUCAO' } })
+              }
+              onRegistrarTrabalho={() => setAnotando(item)}
+              onFotoEnviada={invalidar}
+              onRemover={() => removerItem.mutate(item.id)}
+            />
+          ))}
+        </ul>
+      )}
+    </SecaoDaEtapa>
+  )
+
+  // Na etapa 3 a peça fica âmbar: é quando ela deixa de ser "o que o carro
+  // precisa" e vira "quanto custa e quando chega". A lista é a mesma; o
+  // trabalho em cima dela, não.
+  const secaoPecas = (
+    <SecaoDaEtapa
+      key="pecas"
+      etapa={etapaDaPeca}
+      titulo="Peças"
+      descricao={
+        etapaAtual === 3
+          ? 'Marque o que tem no estoque e ponha o preço do que precisa comprar'
+          : 'Falta de peça é o motivo número um de carro parado'
+      }
+      acao={
+        podeRegistrarTrabalho && (
+          <Botao variante="secundario" tamanho="toque" onClick={() => setAdicionandoPeca(true)}>
+            <Plus className="size-4" aria-hidden />
+            Adicionar
+          </Botao>
+        )
+      }
+    >
+      {os.pecas.length === 0 ? (
+        <Vazio
+          icone={<Package className="size-8" />}
+          titulo="Nenhuma peça registrada"
+          descricao="Registre a peça e a previsão de chegada para o quadro mostrar por que o carro está parado."
+        />
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {os.pecas.map((peca) => (
+            <li key={peca.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-slate-800">
+                  {peca.quantidade > 1 && `${peca.quantidade}x `}
+                  {peca.descricao}
+                </p>
+                {/* Origem primeiro: é ela que diz se aquilo é dinheiro no
+                    orçamento ou trabalho para alguém fazer. */}
+                <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500">
+                  <span
+                    className={cx(
+                      'rounded px-1.5 py-0.5 font-medium',
+                      peca.origem === 'ESTOQUE'
+                        ? 'bg-slate-100 text-slate-700'
+                        : 'bg-orange-100 text-orange-800',
+                    )}
+                  >
+                    {peca.origemDescricao}
+                  </span>
+                  {peca.origem === 'COMPRAR' && (
+                    <>
+                      <span>· {peca.momentoDescricao}</span>
+                      <span>· {peca.fornecedor ?? 'sem fornecedor'}</span>
+                      {peca.previsaoChegada && ` · chega ${dataCompleta(peca.previsaoChegada)}`}
+                    </>
+                  )}
+                </p>
+              </div>
+              <Etiqueta
+                className={cx(
+                  peca.status === 'RECEBIDA' || peca.status === 'APLICADA'
+                    ? 'bg-emerald-100 text-emerald-800 ring-emerald-200'
+                    : 'bg-amber-100 text-amber-800 ring-amber-200',
+                )}
+              >
+                {peca.statusDescricao}
+              </Etiqueta>
+              {mostraValores && (
+                <span className="w-24 text-right text-xs text-slate-600">{moeda(peca.total)}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </SecaoDaEtapa>
+  )
+
+  // Quem não pode ver dinheiro não vê: o servidor nem manda os valores.
+  const secaoValores = mostraValores ? (
+    <SecaoDaEtapa
+      key="valores"
+      etapa={etapaDosValores}
+      titulo={etapaAtual >= 5 ? 'Orçamento do cliente' : 'Mão de obra e total'}
+      descricao={
+        etapaAtual >= 5
+          ? 'O que foi combinado com o cliente'
+          : 'Quanto fica a mão de obra e o desconto que o balcão pode dar'
+      }
+    >
+      <CartaoValores
+        os={os}
+        osId={id}
+        onSalvo={invalidar}
+        onMandarOrcamento={() => setMandandoOrcamento(true)}
+      />
+    </SecaoDaEtapa>
+  ) : null
+
+  // Seção de foto vazia numa OS já encerrada é só caixa vazia: ninguém vai
+  // fotografar um carro que saiu, e o lugar de olhar foto antiga é o
+  // prontuário.
+  const semFotoDeServico = os.arquivos.every((a) => a.momento === 'ENTRADA')
+  const osEncerrada = r.status === 'ENTREGUE' || r.status === 'CANCELADO'
+  const secaoFotos = semFotoDeServico && osEncerrada ? null : (
+    <SecaoDaEtapa
+      key="fotos"
+      etapa={etapaDasFotos}
+      titulo="Fotos do serviço"
+      descricao="Cada foto fica colada no serviço dela. Toque para abrir, liberar ao cliente ou apagar."
+    >
+      <GaleriaFotos os={os} gerencia={gerencia} onMudou={invalidar} />
+    </SecaoDaEtapa>
+  )
+
+  const TODAS_AS_SECOES = [
+    { chave: 'recebimento', etapa: 1, no: secaoRecebimento },
+    { chave: 'servicos', etapa: etapaDoServico, no: secaoServicos },
+    { chave: 'pecas', etapa: etapaDaPeca, no: secaoPecas },
+    { chave: 'valores', etapa: etapaDosValores, no: secaoValores },
+    { chave: 'fotos', etapa: etapaDasFotos, no: secaoFotos },
+  ].filter((s) => s.no !== null)
+
+  const daEtapa = TODAS_AS_SECOES.filter((s) => s.etapa === etapaAtual)
+  const naEtapa = daEtapa.map((s) => s.no)
+  const foraDaEtapa = TODAS_AS_SECOES.filter((s) => s.etapa !== etapaAtual).map((s) => s.no)
+  const secoesNaTela = daEtapa.map((s) => s.chave)
 
   const acionar = (status: StatusOs) => {
     setErroAcao(undefined)
@@ -534,185 +772,20 @@ export default function DetalheOs() {
             rotulo={rotuloDaAcao}
             salvando={transicionar.isPending}
             onAcionar={acionar}
+            outrasEtapas={foraDaEtapa}
+            outrasAbertas={verOutrasEtapas}
+            onVerOutras={(aberta) => setGavetaAberta(aberta ? etapaAtual : null)}
             requisitos={
               <RequisitosDaEtapa
                 os={os}
+                secoesNaTela={secoesNaTela}
                 onAdicionarServico={() => setAdicionandoServico(true)}
                 onAdicionarPeca={() => setAdicionandoPeca(true)}
                 onIrParaFotos={irParaFotos}
               />
             }
           >
-            {/* ---------------- servicos ----------------
-
-                Era um cartao solto abaixo da regua, visualmente igual a wiki
-                e a linha do tempo -- nada dizia que aquilo era o miolo da
-                etapa. O dono: "quero que suma o card de servicos e peca,
-                isso tem que estar dentro do mesmo card ali relacionado a
-                etapa".
-
-                A etapa do rotulo muda com o carro, e e essa a razao de a cor
-                existir: antes de aprovar, lancar servico e a etapa 2 (dizer
-                o que o carro precisa); depois, e a etapa 6 (fazer). Mesma
-                lista, dois trabalhos diferentes. */}
-            <SecaoDaEtapa
-              etapa={etapaDoServico}
-              titulo="Serviços"
-              descricao={descricaoDosServicos}
-              acao={
-                // O mecanico tambem lanca servico: e o diagnostico dele que
-                // diz o que o carro precisa. Quem protege a oficina e ele
-                // nao ver nem escrever preco.
-                podeRegistrarTrabalho && (
-                  <Botao
-                    variante="secundario"
-                    tamanho="toque"
-                    onClick={() => setAdicionandoServico(true)}
-                  >
-                    <Plus className="size-4" aria-hidden />
-                    Adicionar
-                  </Botao>
-                )
-              }
-            >
-              {os.itens.length === 0 ? (
-                <Vazio
-                  icone={<Wrench className="size-8" />}
-                  titulo="Nenhum serviço na OS"
-                  descricao="Adicione o que será feito para o sistema poder estimar o tempo e a capacidade do dia."
-                />
-              ) : (
-                <ul className="divide-y divide-slate-100">
-                  {os.itens.map((item) => (
-                    <LinhaServico
-                      key={item.id}
-                      item={item}
-                      osId={os.resumo.id}
-                      fotos={os.arquivos.filter((a) => a.osItemId === item.id).length}
-                      gerencia={gerencia}
-                      mostraValores={mostraValores}
-                      funcionarios={funcionarios.data ?? []}
-                      salvando={transicionarItem.isPending}
-                      onAtribuir={(funcionarioId) =>
-                        atribuir.mutate({ itemId: item.id, funcionarioId })
-                      }
-                      onAcao={(acao) => setAcaoServico({ item, acao })}
-                      onIniciar={() =>
-                        transicionarItem.mutate({
-                          itemId: item.id,
-                          corpo: { status: 'EM_EXECUCAO' },
-                        })
-                      }
-                      onRegistrarTrabalho={() => setAnotando(item)}
-                      onFotoEnviada={invalidar}
-                      onRemover={() => removerItem.mutate(item.id)}
-                    />
-                  ))}
-                </ul>
-              )}
-            </SecaoDaEtapa>
-
-            {/* ---------------- pecas ----------------
-                Na etapa 3 ela vira ambar: e o momento em que a peca deixa de
-                ser "o que o carro precisa" e vira "quanto custa e quando
-                chega". A lista e a mesma; o trabalho em cima dela, nao. */}
-            <SecaoDaEtapa
-              etapa={etapaDaPeca}
-              titulo="Peças"
-              descricao="Falta de peça é o motivo número um de carro parado"
-              acao={
-                podeRegistrarTrabalho && (
-                  <Botao
-                    variante="secundario"
-                    tamanho="toque"
-                    onClick={() => setAdicionandoPeca(true)}
-                  >
-                    <Plus className="size-4" aria-hidden />
-                    Adicionar
-                  </Botao>
-                )
-              }
-            >
-              {os.pecas.length === 0 ? (
-                <Vazio
-                  icone={<Package className="size-8" />}
-                  titulo="Nenhuma peça registrada"
-                  descricao="Registre a peça e a previsão de chegada para o quadro mostrar por que o carro está parado."
-                />
-              ) : (
-                <ul className="divide-y divide-slate-100">
-                  {os.pecas.map((peca) => (
-                    <li key={peca.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-slate-800">
-                          {peca.quantidade > 1 && `${peca.quantidade}x `}
-                          {peca.descricao}
-                        </p>
-                        {/* Origem primeiro: e ela que diz se aquilo e dinheiro
-                            no orcamento ou trabalho para alguem fazer. */}
-                        <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500">
-                          <span
-                            className={cx(
-                              'rounded px-1.5 py-0.5 font-medium',
-                              peca.origem === 'ESTOQUE'
-                                ? 'bg-slate-100 text-slate-700'
-                                : 'bg-orange-100 text-orange-800',
-                            )}
-                          >
-                            {peca.origemDescricao}
-                          </span>
-                          {peca.origem === 'COMPRAR' && (
-                            <>
-                              <span>· {peca.momentoDescricao}</span>
-                              <span>· {peca.fornecedor ?? 'sem fornecedor'}</span>
-                              {peca.previsaoChegada &&
-                                ` · chega ${dataCompleta(peca.previsaoChegada)}`}
-                            </>
-                          )}
-                        </p>
-                      </div>
-                      <Etiqueta
-                        className={cx(
-                          peca.status === 'RECEBIDA' || peca.status === 'APLICADA'
-                            ? 'bg-emerald-100 text-emerald-800 ring-emerald-200'
-                            : 'bg-amber-100 text-amber-800 ring-amber-200',
-                        )}
-                      >
-                        {peca.statusDescricao}
-                      </Etiqueta>
-                      {mostraValores && (
-                        <span className="w-24 text-right text-xs text-slate-600">
-                          {moeda(peca.total)}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </SecaoDaEtapa>
-
-            {/* ---------------- mao de obra e total ----------------
-                Vivia na coluna da direita, longe da regua, e por isso a etapa
-                4 nao tinha onde acontecer. Quem nao pode ver dinheiro continua
-                sem ver: o servidor nem manda os valores. */}
-            {mostraValores && (
-              <SecaoDaEtapa
-                etapa={etapaAtual >= 5 ? 5 : 4}
-                titulo={etapaAtual >= 5 ? 'Orçamento do cliente' : 'Mão de obra e total'}
-                descricao={
-                  etapaAtual >= 5
-                    ? 'O que foi combinado com o cliente'
-                    : 'Quanto fica a mão de obra e o desconto que o balcão pode dar'
-                }
-              >
-                <CartaoValores
-                  os={os}
-                  osId={id}
-                  onSalvo={invalidar}
-                  onMandarOrcamento={() => setMandandoOrcamento(true)}
-                />
-              </SecaoDaEtapa>
-            )}
+            {naEtapa}
           </EtapasDaOs>
         </div>
 
@@ -845,20 +918,10 @@ export default function DetalheOs() {
             </Cartao>
           )}
 
-          {/* Ordem de propósito: o checklist vem antes porque ele trava o
-              início do serviço, e registrar trabalho vem antes da linha do
-              tempo porque é a ação, não o relato. */}
-          <div ref={blocoFotos} className="scroll-mt-4">
-            <ChecklistEntrada os={os} gerencia={gerencia} />
-          </div>
-
-          {/* A galeria vem logo depois do checklist: as duas são foto, e quem
-              está procurando uma imagem procura as duas no mesmo lugar. */}
-          <GaleriaFotos os={os} gerencia={gerencia} onMudou={invalidar} />
-
-          {/* O registro solto continua, para o que é do carro e não de um
-              serviço só — "cliente ligou perguntando", "levei para o teste".
-              O que é de um serviço agora sai pelo botão Anotar da linha dele. */}
+          {/* O registro solto fica aqui embaixo, e não dentro de uma etapa:
+              ele é do carro e não de nenhuma delas — "cliente ligou
+              perguntando", "levei para o teste". O que é de um serviço sai
+              pelo botão Anotar da linha dele. */}
           {podeRegistrarTrabalho && <RegistrarTrabalho os={os} />}
 
           <Cartao>

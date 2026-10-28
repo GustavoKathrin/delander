@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react'
 import { Camera } from 'lucide-react'
 
 import { GradeDeFotos, VisorDeFoto } from '../../components/fotos'
-import { Cartao, CartaoTitulo, Vazio } from '../../components/ui'
-import { plural } from '../../lib/format'
+import { Vazio } from '../../components/ui'
 import type { ArquivoOs, DetalheOs } from '../../types'
 
 /**
@@ -73,20 +72,8 @@ export function GaleriaFotos({
   if (grupos.total === 0 && encerrada) return null
 
   return (
-    <Cartao>
-      <CartaoTitulo
-        titulo="Fotos do serviço"
-        descricao="Cada foto fica colada no serviço dela. Toque para abrir, liberar ao cliente ou apagar."
-        acao={
-          grupos.total > 0 ? (
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-              {plural(grupos.total, 'foto')}
-            </span>
-          ) : undefined
-        }
-      />
-
-      <div className="space-y-4 px-4 pb-4">
+    <>
+      <div className="space-y-4 px-4 py-3">
         {grupos.total === 0 ? (
           <Vazio
             icone={<Camera className="size-8" />}
@@ -111,6 +98,6 @@ export function GaleriaFotos({
         onFechar={() => setAberta(null)}
         onMudou={onMudou}
       />
-    </Cartao>
+    </>
   )
 }

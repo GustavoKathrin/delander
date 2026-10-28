@@ -5,7 +5,7 @@ import { cx } from '../../components/ui'
 import { CHAVES, useConfig } from '../../lib/config'
 import type { DetalheOs } from '../../types'
 import { plural } from '../../lib/format'
-import { etapa as etapaDe, etapaDaOs } from './EtapasDaOs'
+import { etapaDaOs } from './EtapasDaOs'
 
 /**
  * O que falta para sair desta etapa.
@@ -70,7 +70,6 @@ function pendenciasDaEtapa(
   exige: { foto: boolean; checklist: boolean },
 ): { titulo: string; itens: Pendencia[] } | null {
   const etapa = etapaDaOs(os)
-  const nome = etapaDe(etapa).rotulo
   const temFotoEntrada = os.arquivos.some((a) => a.momento === 'ENTRADA')
   const checklistRespondido =
     os.checklist.length === 0 || os.checklist.every((c) => c.ok !== undefined && c.ok !== null)
@@ -104,7 +103,7 @@ function pendenciasDaEtapa(
     // ---------------------------------------------------- 1. Recebimento
     case 1:
       return {
-        titulo: `Etapa 1 · ${nome} — antes de começar a mexer no carro`,
+        titulo: 'Antes de começar a mexer no carro',
         itens: [
           foto,
           {
@@ -127,9 +126,11 @@ function pendenciasDaEtapa(
     // ------------------------------------------- 2. Peças e serviços
     case 2:
       return {
-        titulo: `Etapa 2 · ${nome} — diga tudo que este carro vai precisar`,
+        titulo: 'Diga tudo que este carro vai precisar',
         itens: [
-          foto,
+          // Sem a foto de entrada: ela e da etapa 1, e a OS so chega aqui
+          // DEPOIS de o servidor ter cobrado. Repetir aqui punha o trabalho
+          // da etapa 1 no lugar onde o trabalho e lancar servico e peca.
           {
             chave: 'servicos',
             rotulo:
@@ -159,7 +160,7 @@ function pendenciasDaEtapa(
     // ------------------------------------------------------ 3. Cotação
     case 3:
       return {
-        titulo: `Etapa 3 · ${nome} — o que tem no estoque e o que precisa ser comprado`,
+        titulo: 'O que tem no estoque, e o preço do que precisa ser comprado',
         itens: [
           {
             chave: 'cotar',
@@ -183,9 +184,8 @@ function pendenciasDaEtapa(
     // -------------------------------------------------- 4. Mão de obra
     case 4:
       return {
-        titulo: `Etapa 4 · ${nome} — falta o preço do trabalho`,
+        titulo: 'Falta o preço do trabalho',
         itens: [
-          foto,
           {
             chave: 'maoObra',
             rotulo:
@@ -215,8 +215,12 @@ function pendenciasDaEtapa(
       // conferir antes de por a mao no carro.
       if (os.resumo.status !== 'ORCAMENTO_APROVADO') return null
       return {
-        titulo: `Etapa 5 · ${nome} — o cliente disse sim; dá para começar?`,
+        titulo: 'O cliente disse sim — dá para começar?',
         itens: [
+          // Aqui a foto volta, porque e aqui que ela trava de verdade: o
+          // servidor recusa EM_EXECUCAO sem ela. E o caso do carro que pulou
+          // o diagnostico, ou de quem adiou a foto na entrada.
+          foto,
           {
             chave: 'servicos',
             rotulo:
@@ -245,7 +249,7 @@ function pendenciasDaEtapa(
     // ----------------------------------------------------- 6. Serviço
     case 6:
       return {
-        titulo: `Etapa 6 · ${nome} — para marcar o carro como pronto`,
+        titulo: 'Para marcar o carro como pronto',
         itens: [
           {
             chave: 'servicos',
@@ -270,22 +274,51 @@ function pendenciasDaEtapa(
 
 export function RequisitosDaEtapa({
   os,
+  secoesNaTela,
   onAdicionarServico,
   onAdicionarPeca,
   onIrParaFotos,
 }: {
   os: DetalheOs
+  /**
+   * Quais seções a etapa já mostra logo abaixo deste bloco.
+   *
+   * A pendência não repete um botão que está a 100px dela: na etapa 2
+   * havia quatro botões para duas ações. O atalho nasceu quando serviço e
+   * peça viviam em cartões soltos lá embaixo; com a seção na mesma caixa,
+   * ele deixou de ser atalho.
+   */
+  secoesNaTela: string[]
   onAdicionarServico: () => void
   onAdicionarPeca: () => void
   onIrParaFotos: () => void
 }) {
   const { flag } = useConfig()
-  const bloco = pendenciasDaEtapa(
+  const bruto = pendenciasDaEtapa(
     os,
     { onAdicionarServico, onAdicionarPeca, onIrParaFotos },
     { foto: flag(CHAVES.exigirFotos), checklist: flag(CHAVES.exigirChecklist) },
   )
-  if (!bloco) return null
+  if (!bruto) return null
+
+  // De que seção cada pendência fala. Quem não está neste mapa (mao de obra,
+  // por exemplo) nunca teve botão próprio e segue como estava.
+  const SECAO_DA_PENDENCIA: Record<string, string> = {
+    foto: 'recebimento',
+    checklist: 'recebimento',
+    servicos: 'servicos',
+    pecas: 'pecas',
+    cotar: 'pecas',
+    maoObra: 'valores',
+  }
+  const bloco = {
+    ...bruto,
+    itens: bruto.itens.map((item) =>
+      secoesNaTela.includes(SECAO_DA_PENDENCIA[item.chave] ?? '')
+        ? { ...item, acao: undefined }
+        : item,
+    ),
+  }
 
   const faltando = bloco.itens.filter((i) => !i.pronto)
   // O que TRAVA e o que decide a cor do bloco e o tom da frase. Pendencia que

@@ -259,6 +259,35 @@ Quem decide a etapa é `etapaDaOs(os)`, em
 `EM_DIAGNOSTICO`, a diferença vem do dado: sem serviço lançado é a 2; com
 peça `COMPRAR` ainda `SOLICITADA` é a 3; o resto é a 4.
 
+**Cada etapa mostra só o que é dela.** A primeira versão deixava todas as
+seções na tela ao mesmo tempo, só pintadas com a cor da etapa a que
+pertencem — e o dono recusou: "em cada etapa só quero os campos necessários
+para concluir cada etapa". A cor dizia "isto é de outra etapa" e a presença
+dizia "preencha agora".
+
+| Etapa | O que a tela mostra |
+|---|---|
+| 1. Recebimento | vistoria de entrada e as fotos de como o carro chegou |
+| 2. Peças e serviços | serviços e peças, para lançar |
+| 3. Cotação | peças, para marcar estoque e pôr preço |
+| 4. Mão de obra | mão de obra, desconto e total |
+| 5. Aprovação | o orçamento e o botão de mandar ao cliente |
+| 6. Serviço | serviços (executar), peças (chegada) e fotos |
+| 7. Entrega | serviços, peças, total e fotos — o registro do que foi feito |
+
+O que não é da etapa corrente não some: fica em **"Ver o que é das outras
+etapas"**, fechado, no pé do cartão. Conferir a vistoria de entrada com o
+carro já na bancada é uma coisa que se faz.
+
+**A foto de entrada só é cobrada nas etapas 1 e 5**, porque é só aí que o
+servidor trava: `exigirChecklistDeEntrada` é chamado ao entrar em
+`EM_DIAGNOSTICO` e ao entrar em `EM_EXECUCAO`. Cobrá-la nas etapas 2 a 4
+punha o trabalho da etapa 1 no lugar onde o trabalho é outro.
+
+**A pendência não repete um botão que a seção já mostra.** Na etapa 2 havia
+quatro botões para duas ações: o atalho nas pendências nasceu quando serviço
+e peça viviam em cartões soltos e era preciso rolar até eles.
+
 **A conta não pode usar preço.** Preço é mascarado para quem não vê
 dinheiro, então uma regra baseada em valor mostraria uma etapa para o dono e
 outra para o mecânico olhando o mesmo carro.

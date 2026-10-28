@@ -247,6 +247,54 @@ estiver pronta, é um clique.
 (`fluxo.desconto_maximo_percentual`) nasce em **0**: ninguém dá desconto até
 você dizer quanto. Dono e gerente nunca têm teto.
 
+### A régua da tela mostra essas sete
+
+A OS abre com uma régua de sete caixinhas, **com uma cor por etapa**, e
+serviço, peça e valores são seções *dentro* do cartão da etapa — cada uma
+com a barra na cor da etapa a que pertence. Antes eram cartões soltos abaixo
+da régua, visualmente iguais à wiki e à linha do tempo.
+
+Quem decide a etapa é `etapaDaOs(os)`, em
+`frontend/src/features/os/EtapasDaOs.tsx`. Como 2, 3 e 4 compartilham o estado
+`EM_DIAGNOSTICO`, a diferença vem do dado: sem serviço lançado é a 2; com
+peça `COMPRAR` ainda `SOLICITADA` é a 3; o resto é a 4.
+
+**A conta não pode usar preço.** Preço é mascarado para quem não vê
+dinheiro, então uma regra baseada em valor mostraria uma etapa para o dono e
+outra para o mecânico olhando o mesmo carro.
+
+**As cores das etapas não usam `marca-*`.** Essa é a cor da oficina, trocada
+em tempo de execução pelo tema (Configurações → Layout); no Delander ela é
+cinza-quase-preto. A paleta da marca também só tem os degraus 50, 100, 200,
+500, 600, 700 e 900 — `marca-300` não existe e a classe some sem erro.
+
+### Foto por serviço (V23)
+
+`arquivo_os.os_item_id` cola a foto em **um serviço** da OS, e é nulável: a
+foto de ENTRADA é do carro, não de serviço nenhum. `on delete set null` —
+apagar um serviço lançado errado não leva embora a foto do motor aberto.
+
+| Onde | O que aparece |
+|---|---|
+| linha do serviço, na OS | botão de câmera com contador |
+| cartão "Fotos do serviço" | galeria agrupada por serviço |
+| painel do mecânico | tira de miniaturas no cartão |
+| prontuário | fotos daquela passagem |
+| link do cliente | legenda com o nome do serviço |
+
+A foto do serviço **nasce interna**. Quem libera ao cliente é quem trabalha no
+carro (`PATCH /api/os/{os}/arquivos/{id}`), mesma regra do escopo do link: ele
+é quem sabe se a foto do motor aberto ajuda ou assusta. Apagar
+(`DELETE`) é da equipe, **menos a foto de ENTRADA**, que é prova e só a
+gerência tira.
+
+**Defeito antigo corrigido junto:** toda foto do sistema voltava **401**. O
+caminho é protegido por token e as telas o punham no `src` de um `<img>`, que
+não manda cabeçalho — o que aparecia era ícone de imagem quebrada, que todo
+mundo lia como "ainda não subiu". Valia para a foto do checklist de entrada
+desde o primeiro dia. Hoje os bytes vêm por `baixarArquivo()` e viram object
+URL, liberado no unmount.
+
 ### A regra de quem vê dinheiro
 
 `fluxo.mecanico_ve_valores` passou a ser aplicada **no servidor**, e não só na

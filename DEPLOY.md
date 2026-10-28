@@ -215,3 +215,40 @@ Render. O navegador continua vendo mesma origem, então **não entra CORS na his
 - **Tirar o sono e ganhar disco** é o plano Starter do Render (~US$ 7/mês). É o único
   jeito de PDF e foto sobreviverem, e de o primeiro clique ser instantâneo.
 - **Domínio próprio** (`oficina.com.br`) o Render aceita de graça, com HTTPS.
+
+---
+
+## O fluxo em sete etapas (28/10/2026)
+
+O atendimento passou a ter etapas explícitas. **Nenhum estado novo foi criado
+no banco**: as etapas 2, 3 e 4 acontecem todas com a OS em `EM_DIAGNOSTICO` —
+é o mesmo carro mudando de mão, não de lugar.
+
+| Etapa | Quem faz | O que trava |
+|---|---|---|
+| 1. Recebimento | mecânico | **foto de entrada**, se `fluxo.exigir_fotos_entrada` estiver ligada |
+| 2. Peças e serviços | mecânico | — (ele não vê nem escreve preço) |
+| 3. Verificação e cotação | balcão | peça sem preço não deixa o orçamento fechar |
+| 4. Mão de obra | balcão | desconto acima do teto |
+| 5. Aprovação do cliente | balcão | o total é congelado em `valor_aprovado` |
+| 6. Status do serviço | mecânico | — |
+| 7. Entrega e prontuário | balcão | serviço em aberto não deixa entregar |
+
+### Duas configurações novas, em Configurações → Fluxo
+
+**Como o valor da mão de obra é definido** (`fluxo.modo_mao_de_obra`)
+nasce em **Digitado**, e isso é uma mudança de comportamento: antes o valor
+era sempre a soma dos serviços pelo preço do catálogo. Nasce assim porque a
+tabela de preços da oficina ainda não existe — com catálogo vazio,
+"Pela tabela" soma zero e o orçamento sai de graça. No dia em que a tabela
+estiver pronta, é um clique.
+
+**Desconto que o balcão pode dar sozinho**
+(`fluxo.desconto_maximo_percentual`) nasce em **0**: ninguém dá desconto até
+você dizer quanto. Dono e gerente nunca têm teto.
+
+### A regra de quem vê dinheiro
+
+`fluxo.mecanico_ve_valores` passou a ser aplicada **no servidor**, e não só na
+tela: antes o JSON ia completo e só o React escondia. Hoje dono, gerente e
+recepção veem; o mecânico recebe os campos nulos.

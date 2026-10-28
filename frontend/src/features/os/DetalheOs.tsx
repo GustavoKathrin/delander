@@ -13,6 +13,7 @@ import {
   Trash2,
   User,
   Wrench,
+  BellRing,
   Pencil,
   Send,
 } from 'lucide-react'
@@ -163,6 +164,8 @@ export default function DetalheOs() {
 
   const [compartilhando, setCompartilhando] = useState(false)
   const [mandandoOrcamento, setMandandoOrcamento] = useState(false)
+  /** Perguntar sobre o aviso antes de iniciar a execução. */
+  const [iniciandoExecucao, setIniciandoExecucao] = useState(false)
   const [pausando, setPausando] = useState<StatusOs | null>(null)
   const [motivoParadaId, setMotivoParadaId] = useState('')
   const [descricaoParada, setDescricaoParada] = useState('')
@@ -246,6 +249,16 @@ export default function DetalheOs() {
       setDescricaoParada('')
       setErroAcao(undefined)
       avisar(`OS agora está em "${dados.resumo.statusDescricao}".`)
+    },
+    onError: (erro: Error) => setErroAcao(erro.message),
+  })
+
+  const avisarInicio = useMutation({
+    mutationFn: () => api<DetalheTipo>(`/os/${id}/avisar-inicio`, { metodo: 'POST' }),
+    onSuccess: (dados) => {
+      queryClient.setQueryData(['os', id], dados)
+      invalidar()
+      avisar('Cliente avisado de que o serviço começou.')
     },
     onError: (erro: Error) => setErroAcao(erro.message),
   })
@@ -364,6 +377,13 @@ export default function DetalheOs() {
       const padrao = motivos.data?.find((m) => m.categoria === 'PECA')
       setMotivoParadaId(padrao?.id ?? '')
       setParadaVisivel(padrao?.visivelClientePadrao ?? true)
+      return
+    }
+    // Comecar o servico e o unico momento em que o cliente ganha uma data
+    // nova. Perguntar aqui, uma vez, e o que o dono pediu -- e e menos
+    // atrito que uma configuracao que ninguem lembra de mexer.
+    if (status === 'EM_EXECUCAO') {
+      setIniciandoExecucao(true)
       return
     }
     transicionar.mutate({ status })
@@ -485,6 +505,27 @@ export default function DetalheOs() {
         </div>
 
         <AvisoErro mensagem={erroAcao} />
+
+        {/* "Depois" nao pode virar "nunca": o aviso pendente fica visivel
+            ate alguem mandar, e a data que vai para o cliente e a de HOJE,
+            nao a de quando o carro realmente comecou. */}
+        {os.avisoInicioPendente && (
+          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 p-3 ring-1 ring-amber-200 sem-impressao">
+            <BellRing className="size-4 flex-none text-amber-700" aria-hidden />
+            <p className="min-w-0 flex-1 text-sm text-amber-900">
+              O cliente ainda não sabe que o serviço começou — e o acompanhamento dele não mostra a
+              data de início.
+            </p>
+            <Botao
+              variante="secundario"
+              tamanho="toque"
+              carregando={avisarInicio.isPending}
+              onClick={() => avisarInicio.mutate()}
+            >
+              Avisar agora
+            </Botao>
+          </div>
+        )}
 
         {/* indicadores rapidos */}
         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-200 pt-3 sm:grid-cols-4">
@@ -1064,6 +1105,44 @@ export default function DetalheOs() {
           avisar('Serviço adicionado.')
         }}
       />
+
+      <Modal
+        aberto={iniciandoExecucao}
+        onFechar={() => setIniciandoExecucao(false)}
+        titulo="Começar o serviço"
+        descricao="O cliente fica sabendo agora, ou depois?"
+        rodape={
+          <>
+            <Botao
+              variante="secundario"
+              tamanho="toque"
+              carregando={transicionar.isPending}
+              onClick={() => {
+                setIniciandoExecucao(false)
+                transicionar.mutate({ status: 'EM_EXECUCAO', avisarCliente: false })
+              }}
+            >
+              Depois
+            </Botao>
+            <Botao
+              tamanho="toque"
+              carregando={transicionar.isPending}
+              onClick={() => {
+                setIniciandoExecucao(false)
+                transicionar.mutate({ status: 'EM_EXECUCAO', avisarCliente: true })
+              }}
+            >
+              Avisar agora
+            </Botao>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-700">
+          Escolhendo <strong>depois</strong>, o carro começa normalmente aqui dentro, mas o
+          acompanhamento do cliente <strong>não mostra a data em que o serviço começou</strong> —
+          e o aviso fica pendente nesta tela até alguém mandar.
+        </p>
+      </Modal>
 
       <ModalOrcamento
         aberto={mandandoOrcamento}

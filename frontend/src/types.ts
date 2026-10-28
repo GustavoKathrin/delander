@@ -239,6 +239,8 @@ export interface DetalheOs {
   valorTotal: number
   /** O total congelado no "sim" do cliente. Ausente enquanto não houve aprovação. */
   valorAprovado?: number
+  /** O serviço começou e o cliente ainda não foi avisado, por escolha da oficina. */
+  avisoInicioPendente: boolean
   proximosStatus: StatusOs[]
   itens: ItemOs[]
   apontamentos: ApontamentoOs[]

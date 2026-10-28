@@ -130,6 +130,16 @@ public class OrdemServico extends BaseEntity {
     @Column(name = "valor_aprovado", precision = 12, scale = 2)
     private BigDecimal valorAprovado;
 
+    /**
+     * O servico comecou e o cliente ainda nao foi avisado, de proposito.
+     *
+     * Enquanto for true, o evento de inicio nao vai para o link do cliente --
+     * nem o evento, nem a data dentro dele. A coluna existe para que
+     * "depois" nao vire "nunca": alguem precisa lembrar que ficou pendente.
+     */
+    @Column(name = "aviso_inicio_pendente", nullable = false)
+    private boolean avisoInicioPendente = false;
+
     @OneToMany(mappedBy = "ordemServico", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("ordem asc")
     private List<OsItem> itens = new ArrayList<>();

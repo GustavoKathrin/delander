@@ -514,6 +514,17 @@ public class OrdemServicoService {
             case EM_EXECUCAO -> {
                 if (os.getInicioExecucaoEm() == null) {
                     os.setInicioExecucaoEm(agora);
+                /*
+                 * "Avisar o cliente agora ou depois?"
+                 *
+                 * Depois nao e so adiar a mensagem: enquanto o aviso estiver
+                 * pendente, o cliente NAO pode ver a data em que o carro
+                 * comecou a ser mexido -- e a data vaza pelo evento da linha
+                 * do tempo, que carrega criadoEm. Por isso o pendente e
+                 * guardado aqui e o evento de inicio sai invisivel; ele vira
+                 * visivel quando alguem mandar o aviso.
+                 */
+                os.setAvisoInicioPendente(Boolean.FALSE.equals(req.avisarCliente()));
                 }
                 if (config.flag(oficinaId, Chaves.EXIGIR_APROVACAO) && os.getAprovadoEm() == null) {
                     os.setAprovadoEm(agora);
@@ -555,9 +566,13 @@ public class OrdemServicoService {
         os.setStatus(para);
         repository.save(os);
 
+        // Quando o aviso de inicio ficou pendente, este evento e o que
+        // entregaria a data ao cliente: ele carrega criadoEm. Fica so para a
+        // oficina ate alguem mandar o aviso.
+        boolean contaParaOCliente = !(para == StatusOs.EM_EXECUCAO && os.isAvisoInicioPendente());
         eventoService.registrar(oficinaId, os.getId(), EventoService.STATUS_ALTERADO,
                 "%s -> %s".formatted(de.descricao(), para.descricao()),
-                true, Map.of("de", de.name(), "para", para.name()));
+                contaParaOCliente, Map.of("de", de.name(), "para", para.name()));
 
         return detalhe(os.getId());
     }
@@ -705,6 +720,28 @@ public class OrdemServicoService {
                     "Seu limite de desconto e %d%%, que nesta OS da %s. Para passar disso, chame o dono."
                             .formatted(tetoPercentual, teto.setScale(2, RoundingMode.HALF_UP)));
         }
+    }
+
+    /**
+     * Mandar agora o aviso que ficou para depois.
+     *
+     * So aqui o evento de inicio vira visivel para o cliente -- com a data de
+     * HOJE, e nao a de quando o carro realmente comecou. Isso e de proposito:
+     * o que a oficina decidiu nao contar continua nao contado.
+     */
+    @Transactional
+    public OsDtos.Detalhe avisarInicio(UUID id) {
+        UUID oficinaId = contexto.oficinaId();
+        contexto.exigirMaoNaMassa();
+        OrdemServico os = buscarComItens(id, oficinaId);
+        if (!os.isAvisoInicioPendente()) {
+            throw new RegraNegocioException("Este cliente ja foi avisado de que o servico comecou.");
+        }
+        os.setAvisoInicioPendente(false);
+        repository.save(os);
+        eventoService.registrar(oficinaId, os.getId(), EventoService.STATUS_ALTERADO,
+                "Servico em andamento.", true);
+        return detalhe(id);
     }
 
     @Transactional
@@ -1091,6 +1128,7 @@ public class OrdemServicoService {
                 mostraValores ? os.getDesconto() : null,
                 mostraValores ? os.valorTotal() : null,
                 os.getValorAprovado(),
+                os.isAvisoInicioPendente(),
                 List.copyOf(MaquinaEstadosOs.proximos(os.getStatus())),
                 itens,
                 apontamentosDto,

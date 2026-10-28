@@ -133,7 +133,15 @@ public final class OsDtos {
             @NotNull(message = "Informe o novo status") StatusOs status,
             UUID motivoParadaId,
             @Size(max = 400) String descricao,
-            Boolean visivelCliente) {
+            Boolean visivelCliente,
+            /**
+             * Ao comecar o servico: avisar o cliente agora?
+             *
+             * Nulo ou true avisa na hora, que e o que sempre aconteceu.
+             * False guarda o aviso como pendente E esconde do cliente a data
+             * em que o carro comecou a ser mexido.
+             */
+            Boolean avisarCliente) {
     }
 
     public record AlocacaoRequisicao(LocalDate dataAgendada, UUID boxId) {
@@ -378,6 +386,8 @@ public final class OsDtos {
             BigDecimal valorTotal,
             /** O total congelado no "sim" do cliente. Null enquanto nao houve aprovacao. */
             BigDecimal valorAprovado,
+            /** O servico comecou e o cliente ainda nao foi avisado. */
+            boolean avisoInicioPendente,
             List<StatusOs> proximosStatus,
             List<ItemResposta> itens,
             List<ApontamentoResposta> apontamentos,

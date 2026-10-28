@@ -14,6 +14,7 @@ import {
   User,
   Wrench,
   Pencil,
+  Send,
 } from 'lucide-react'
 import { api } from '../../api/client'
 import type {
@@ -65,6 +66,7 @@ import { CarroTopo, Placa } from '../../components/oficina'
 import ModalCompartilhar from './ModalCompartilhar'
 import { RegistrarTrabalho } from './RegistrarTrabalho'
 import { ChecklistEntrada } from './ChecklistEntrada'
+import { ModalOrcamento } from './ModalOrcamento'
 import { RequisitosDaEtapa } from './RequisitosDaEtapa'
 import { AjudaDaTela } from '../../components/AjudaDaTela'
 import { EtapasDaOs } from './EtapasDaOs'
@@ -160,6 +162,7 @@ export default function DetalheOs() {
   const queryClient = useQueryClient()
 
   const [compartilhando, setCompartilhando] = useState(false)
+  const [mandandoOrcamento, setMandandoOrcamento] = useState(false)
   const [pausando, setPausando] = useState<StatusOs | null>(null)
   const [motivoParadaId, setMotivoParadaId] = useState('')
   const [descricaoParada, setDescricaoParada] = useState('')
@@ -860,7 +863,14 @@ export default function DetalheOs() {
             </Cartao>
           )}
 
-          {mostraValores && <CartaoValores os={os} osId={id} onSalvo={invalidar} />}
+          {mostraValores && (
+            <CartaoValores
+              os={os}
+              osId={id}
+              onSalvo={invalidar}
+              onMandarOrcamento={() => setMandandoOrcamento(true)}
+            />
+          )}
 
           <Cartao>
             <CartaoTitulo titulo="Apontamentos" descricao="Horário registrado pelo servidor" />
@@ -1055,6 +1065,12 @@ export default function DetalheOs() {
         }}
       />
 
+      <ModalOrcamento
+        aberto={mandandoOrcamento}
+        onFechar={() => setMandandoOrcamento(false)}
+        os={os}
+      />
+
       <ModalNovaPeca
         aberto={adicionandoPeca}
         onFechar={() => setAdicionandoPeca(false)}
@@ -1108,10 +1124,12 @@ function CartaoValores({
   os,
   osId,
   onSalvo,
+  onMandarOrcamento,
 }: {
   os: DetalheTipo
   osId: string
   onSalvo: () => void
+  onMandarOrcamento: () => void
 }) {
   const { gerencia } = useAuth()
   const { texto, numero } = useConfig()
@@ -1236,6 +1254,19 @@ function CartaoValores({
             <Linha rotulo="Cliente aprovou" valor={moeda(os.valorAprovado)} />
           )}
         </dl>
+      )}
+
+      {/* O caminho curto para o cliente. A Ficha existe e e papel -- serve
+          para imprimir e assinar; isto aqui e o que acontece de verdade:
+          alguem pega o celular e manda no WhatsApp. So aparece quando ha
+          algum valor, porque mandar orcamento zerado e so constrangimento. */}
+      {!editando && (os.valorTotal ?? 0) > 0 && (
+        <div className="border-t border-slate-200 p-3">
+          <Botao variante="tonal" tamanho="toque" bloco onClick={onMandarOrcamento}>
+            <Send className="size-4" aria-hidden />
+            Mandar o orçamento ao cliente
+          </Botao>
+        </div>
       )}
     </Cartao>
   )

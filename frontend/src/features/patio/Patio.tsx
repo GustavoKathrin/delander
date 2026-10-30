@@ -1,4 +1,4 @@
-import { Suspense, lazy, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, CalendarPlus, Loader2, Lock, LockOpen, Package, Plus } from 'lucide-react'
@@ -18,26 +18,6 @@ import {
 } from '../../components/oficina'
 import { dataCurta, horas } from '../../lib/format'
 import PainelAgendar from './PainelAgendar'
-
-/*
- * O 3D entra sob demanda.
- *
- * Sao 131 KB de three.js comprimidos, medidos. Carregados aqui dentro, viram
- * um pedaco separado do pacote: quem abre a OS, o quadro ou a wiki nunca
- * baixa nada disso, e o celular do mecanico -- que nem oferece a vista 3D --
- * continua exatamente como era.
- */
-const Patio3d = lazy(() => import('./tres/Patio3d'))
-import { LimiteDoTresD } from './tres/Limite'
-
-/** Preferencia de quem olha, igual a densidade: fica no navegador. */
-function tresDGuardado(): boolean {
-  try {
-    return localStorage.getItem('delander.patio.3d') !== 'nao'
-  } catch {
-    return true
-  }
-}
 
 function iniciais(nome: string): string {
   const partes = nome.trim().split(/\s+/)
@@ -172,7 +152,6 @@ export default function Patio() {
   // formatos ela ja e compacta e nao ha o que encolher.
   const alturaVaga =
     formato === 'CARTAO' && densidade === 'visual' ? ALTURA_VAGA_VISUAL : ALTURA_VAGA[formato]
-  const [tresDPreferido, setTresD] = useState(tresDGuardado)
   const [modoEdicao, setModoEdicao] = useState(false)
   const [posicoes, setPosicoes] = useState<Record<string, Posicao>>({})
   const [vagaArrastada, setVagaArrastada] = useState<string | null>(null)
@@ -181,15 +160,6 @@ export default function Patio() {
   const telaLarga = useTelaLarga()
   const podeAgendar = (gerencia || flag(CHAVES.mecanicoRealoca)) && !modoEdicao
   const colunas = numero(CHAVES.patioColunas, 6) || 6
-
-  /*
-   * O 3D so onde ele serve. No celular a planta nem aparece hoje -- barracao
-   * de vinte metros num visor de 375 px nao se le --, e arrumar a planta
-   * precisa do plano reto, porque a conta de "em que celula o dedo soltou"
-   * nao sobrevive a uma camera girada. Abrir o cadeado volta para o 2D
-   * sozinho, e fechar devolve o 3D.
-   */
-  const tresD = tresDPreferido && telaLarga && !modoEdicao
 
   const consulta = useQuery({
     queryKey: ['patio'],
@@ -409,35 +379,7 @@ export default function Patio() {
                 dava exatamente a mesma página -- medido, 1764px nas duas
                 opções. Controle que não pode mudar nada ensina a pessoa a
                 desconfiar dos outros controles. */}
-            {/* 3D e planta: a mesma oficina, dois ângulos de olhar */}
-            {telaLarga && !modoEdicao && (
-              <div className="flex overflow-hidden rounded-md ring-1 ring-white/20">
-                {([true, false] as const).map((emTresD) => (
-                  <button
-                    key={String(emTresD)}
-                    type="button"
-                    onClick={() => {
-                      setTresD(emTresD)
-                      try {
-                        localStorage.setItem('delander.patio.3d', emTresD ? 'sim' : 'nao')
-                      } catch {
-                        /* modo privado: fica so nesta sessao */
-                      }
-                    }}
-                    className={cx(
-                      'fonte-display px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider transition',
-                      tresDPreferido === emTresD
-                        ? 'bg-faixa sobre-destaque'
-                        : 'text-zinc-400 hover:bg-white/10 hover:text-white',
-                    )}
-                  >
-                    {emTresD ? '3D' : 'Planta'}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {formato === 'CARTAO' && !tresD && (
+            {formato === 'CARTAO' && (
             <div className="flex overflow-hidden rounded-md ring-1 ring-white/20">
               {(['detalhado', 'visual'] as const).map((d) => (
                 <button
@@ -540,39 +482,6 @@ export default function Patio() {
             colorida diz a situação; o formato da vaga muda em Configurações → Aparência.
           </AjudaDaTela>
         </div>
-        {/*
-          A vista em 3D e a MESMA planta, lida de outro angulo: ela converte
-          a celula de cada vaga em metro e desenha o barracao em cima disso.
-          Nao tem editor proprio -- arrumar a planta continua sendo aqui, na
-          vista 2D, com o cadeado. Por isso o botao alterna em vez de
-          substituir, e por isso arrumar a planta volta sozinho para o 2D.
-        */}
-        {tresD ? (
-          <LimiteDoTresD
-            aoFalhar={(motivo) => {
-              setTresD(false)
-              avisar(`Visão 3D indisponível nesta máquina: ${motivo}`, 'erro')
-            }}
-          >
-          <Suspense
-            fallback={
-              <div className="galpao grid h-[560px] place-items-center p-5">
-                <Carregando texto="Montando a oficina..." />
-              </div>
-            }
-          >
-            <Patio3d
-              vagas={patio.vagas}
-              colunas={colunas}
-              onAbrir={(osId) => navegar(`/os/${osId}`)}
-              onAgendar={(vagaId) =>
-                podeAgendar &&
-                setAgendar({ vagaId, data: patio.proximaVagaLivre ?? hojeIso() })
-              }
-            />
-          </Suspense>
-          </LimiteDoTresD>
-        ) : (
         <div
           ref={grade}
           className={cx(
@@ -651,7 +560,6 @@ export default function Patio() {
             />
           ))}
         </div>
-        )}
 
         {patio.elevadores.itens.length > 0 && (
           <section className="mt-4 rounded-lg bg-white/70 p-3 ring-1 ring-amber-400/60">

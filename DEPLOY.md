@@ -39,23 +39,61 @@ Três coisas, e nenhuma é surpresa depois:
 1. **Dorme.** Sem acesso por 15 minutos, o serviço desliga. O primeiro clique depois
    disso espera **cerca de 1 minuto**.
 
-   Isso agora tem remédio de graça: o workflow
-   [`manter-acordado.yml`](.github/workflows/manter-acordado.yml) visita o serviço de
-   10 em 10 minutos, **das 7h às 19h, de segunda a sábado**. Nesse intervalo ninguém
-   espera. Fora dele o serviço dorme de propósito — o plano grátis dá 750 horas por
-   mês e manter acordado 24h consome ~730, sem folga para nada.
+   **O remédio de graça não funciona — medido.** O workflow
+   [`manter-acordado.yml`](.github/workflows/manter-acordado.yml) pede visita de 10 em
+   10 minutos, das 7h às 19h, de segunda a sábado: seriam ~72 execuções por dia. Em
+   30/10/2026, a API do GitHub mostrava **11 execuções em quatro dias** — cerca de
+   duas ou três por dia. O GitHub estrangula `schedule` em repositório público grátis
+   e descarta a maioria dos disparos; ele não promete pontualidade e, na prática, nem
+   frequência.
 
-   Para o workflow funcionar, o repositório precisa estar no GitHub e as Actions
-   ligadas. O agendador do GitHub atrasa alguns minutos quando a fila está cheia; como
-   a margem é de 15 minutos e a visita é de 10 em 10, um atraso ocasional não derruba.
+   O arquivo fica, porque duas visitas por dia é melhor que nenhuma, mas **não conte
+   com ele**: na maior parte do dia o serviço está dormindo, e o primeiro clique de
+   cada pessoa paga o minuto de religar.
+
+   Quem quiser resolver de graça precisa de um pinger externo de verdade
+   (cron-job.org, UptimeRobot) — é cadastro em outro serviço. Quem quiser resolver de
+   vez paga o plano **0.5c-512mb do Render, US$ 7/mês**: a documentação é explícita,
+   *"paid compute plans do not spin down"*. Só o grátis dorme.
 
    Quem abrir às 6h da manhã ainda espera — mas agora a tela **diz** que o servidor
    está acordando, em vez de girar um spinner mudo que parece sistema quebrado.
 2. **Não guarda arquivo.** O plano grátis não tem disco. O banco inteiro sobrevive
    (carros, OS, leituras, wiki, configurações), mas o **PDF do scanner e as fotos da
-   wiki somem** a cada deploy ou reinício. Resolver isso é mandar arquivo para um
-   armazenamento externo — dá para fazer depois, é mexer em `ArmazenamentoArquivos`.
+   wiki somem** a cada deploy ou reinício. Duas saídas: mandar arquivo para um
+   armazenamento externo (mexer em `ArmazenamentoArquivos`) ou, no plano pago, pendurar
+   um disco — **US$ 0,25 por GB por mês**, e 1 GB já segura muita foto. Disco só existe
+   em serviço pago.
 3. **0,5 GB de banco.** Para uma oficina, isso demora anos a incomodar.
+
+## Quanto custa tirar a lentidão (30/10/2026)
+
+Os três números medidos em produção, para não discutir no escuro:
+
+| | Medido | Causa |
+|---|---|---|
+| Serviço acordado, chamada direta | **0,26 s** | — |
+| Mesma chamada pelo desvio da Vercel | **0,37–0,74 s** | um intermediário a mais por requisição |
+| Primeiro clique com o serviço dormindo | **~1 min** | plano grátis hiberna em 15 min |
+
+O desvio da Vercel já foi tirado: `frontend/vercel.json` define `VITE_API_BASE`, e o
+navegador fala direto com o Render (o `APP_CORS_ORIGENS` do `render.yaml` já
+autorizava). Isso é de graça e corta quase metade de cada chamada.
+
+**O que sobra é a hibernação, e ela só sai pagando.** Preços da página oficial do
+Render, lidos em 30/10/2026:
+
+| Item | Preço | O que muda |
+|---|---|---|
+| Workspace **Hobby** | **US$ 0/mês** | é onde o projeto está; não precisa trocar |
+| Compute **0.5c-512mb** (ex-"Starter") | **US$ 7/mês** | 0,5 CPU, 512 MB — **para de hibernar** |
+| Disco SSD | **US$ 0,25/GB/mês** | o PDF do scanner e a foto da wiki param de sumir |
+| Compute **1c-2g** | US$ 25/mês | 1 CPU, 2 GB — só se a oficina crescer muito |
+
+**US$ 7/mês resolve o que incomoda; com 1 GB de disco, US$ 7,25.** O banco continua
+no Neon, de graça: ele também dorme, mas acorda em fração de segundo, não em um
+minuto — trocar o Neon por Postgres pago (US$ 6 a US$ 19/mês) resolveria um problema
+que não existe.
 
 ## Antes de mandar para o ar: a senha
 

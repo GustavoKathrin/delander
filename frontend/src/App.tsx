@@ -12,6 +12,7 @@ import Prontuario from './features/os/Prontuario'
 import FichaOs from './features/os/FichaOs'
 import PainelMecanico from './features/mecanico/PainelMecanico'
 import Execucao from './features/execucao/Execucao'
+import Catalogo from './features/catalogo/Catalogo'
 import Dashboard from './features/dashboard/Dashboard'
 import Clientes from './features/cadastros/Clientes'
 import Funcionarios from './features/cadastros/Funcionarios'
@@ -84,6 +85,7 @@ export default function App() {
         <Route path="/clientes" element={<Clientes />} />
         <Route path="/funcionarios" element={<Funcionarios />} />
         <Route path="/pecas" element={<Pecas />} />
+        <Route path="/catalogo" element={<Catalogo />} />
         <Route path="/configuracoes" element={<Configuracoes />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

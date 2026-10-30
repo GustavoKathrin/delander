@@ -7,7 +7,6 @@ import {
   ChartNoAxesColumn,
   ClipboardList,
   LayoutGrid,
-  ListOrdered,
   Lightbulb,
   LogOut,
   Menu,
@@ -46,7 +45,6 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
       // inteira -- e dele que vem a pergunta "quem esta no elevador agora".
       { para: '/execucao', rotulo: 'Oficina agora', Icone: Activity },
       { para: '/quadro', rotulo: 'Semana', Icone: CalendarDays },
-      { para: '/fila', rotulo: 'Fila de espera', Icone: ListOrdered },
       { para: '/meus-servicos', rotulo: 'Meus serviços', Icone: Wrench },
     ],
   },
@@ -70,6 +68,10 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
     titulo: 'Cadastro',
     itens: [
       { para: '/clientes', rotulo: 'Clientes e veículos', Icone: ClipboardList },
+      // Catalogo com entrada propria: e dele que sai o tempo e o preco de
+      // todo servico lancado. Isso nao e configuracao, e o que a oficina
+      // vende -- estava numa aba dentro de Configuracoes > Cadastros.
+      { para: '/catalogo', rotulo: 'Serviços e mão de obra', Icone: Wrench, somenteGerencia: true },
       { para: '/funcionarios', rotulo: 'Funcionários', Icone: Users, somenteGerencia: true },
       { para: '/configuracoes', rotulo: 'Configurações', Icone: Settings, somenteGerencia: true },
     ],

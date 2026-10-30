@@ -485,7 +485,14 @@ export default function Patio() {
         <div
           ref={grade}
           className={cx(
-            'grid gap-3',
+            // `galpao`: parede com espessura e a sombra do telhado no chao.
+            // A profundidade e desenhada, nao girada -- inclinar o plano
+            // quebraria a conta de onde o dedo soltou a vaga.
+            'galpao grid gap-3 p-5',
+            // Inclinado so para olhar: arrumar a planta precisa do plano reto,
+            // porque a conta de "em que celula o mouse soltou" nao sobrevive
+            // a uma rotacao.
+            !modoEdicao && 'galpao-inclinado',
             !plantaArrumada && '[grid-template-columns:repeat(auto-fill,minmax(210px,1fr))]',
           )}
           style={
@@ -852,7 +859,7 @@ function CelulaVaga({
           : undefined),
       }}
       className={cx(
-        'group relative flex flex-col overflow-hidden rounded-lg text-left transition',
+        'vaga-relevo group relative flex flex-col overflow-hidden rounded-lg text-left transition',
         // a borda carrega a SITUACAO (azul andando, ambar parado, verde pronto).
         // alerta critico entra como tarja vermelha na lateral, para nao apagar
         // a leitura de estado deixando todo card igual.
@@ -997,12 +1004,22 @@ function CelulaVaga({
                 a vaga inteira tem, e a placa já identifica o carro. A cor
                 continua sendo lida — está na borda da vaga. */}
             {!compacto && (
-              <CarroTopo cor={os.cor} largura={planta ? 44 : visual ? 74 : 54} titulo={` `} />
+              <CarroTopo
+                cor={os.cor}
+                largura={planta ? 44 : visual ? 74 : 54}
+                titulo={` `}
+                className="carro-no-chao"
+              />
             )}
           </span>
         ) : futuro ? (
           <span className="flex flex-col items-center gap-1 opacity-45">
-            <CarroTopo cor={futuro.cor} largura={44} titulo={`${futuro.veiculo} (chega depois)`} />
+            <CarroTopo
+              cor={futuro.cor}
+              largura={44}
+              titulo={`${futuro.veiculo} (chega depois)`}
+              className="carro-no-chao opacity-70"
+            />
           </span>
         ) : (
           <span className="fonte-display flex flex-col items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-stone-600">

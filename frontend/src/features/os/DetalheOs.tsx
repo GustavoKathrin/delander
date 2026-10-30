@@ -70,6 +70,7 @@ import { RegistrarTrabalho } from './RegistrarTrabalho'
 import { ChecklistEntrada } from './ChecklistEntrada'
 import { PrecoDaPeca } from '../../components/PrecoDaPeca'
 import { GaleriaFotos } from './GaleriaFotos'
+import { HistoricoDaOs } from './HistoricoDaOs'
 import { ModalOrcamento } from './ModalOrcamento'
 import { RequisitosDaEtapa } from './RequisitosDaEtapa'
 import { AjudaDaTela } from '../../components/AjudaDaTela'
@@ -663,8 +664,210 @@ export default function DetalheOs() {
     </SecaoDaEtapa>
   )
 
+  /**
+   * Agenda e vaga: etapa 1, e nao cartao solto.
+   *
+   * Dizer quando o carro entra e em que box e o passo 4 do check-in -- e
+   * trabalho do recebimento. Ficava num cartao da coluna lateral, longe da
+   * etapa que o pede, junto de mais cinco cartoes que nao eram de etapa
+   * nenhuma. O dono, pela terceira vez: "os campos estao dentro das etapas,
+   * nao fora delas".
+   */
+  const secaoAgenda = gerencia ? (
+    <SecaoDaEtapa
+      key="agenda"
+      etapa={1}
+      titulo="Agenda e vaga"
+      descricao="Que dia o carro entra e em qual vaga ele fica"
+    >
+      <div className="space-y-3 p-4">
+        <Campo rotulo="Dia na agenda">
+          <Entrada
+            type="date"
+            value={r.dataAgendada ?? ''}
+            onChange={(e) =>
+              alocar.mutate({ dataAgendada: e.target.value || null, boxId: r.boxId ?? null })
+            }
+          />
+        </Campo>
+        <Campo rotulo="Box / vaga">
+          <Selecao
+            value={r.boxId ?? ''}
+            onChange={(e) =>
+              alocar.mutate({
+                dataAgendada: r.dataAgendada ?? null,
+                boxId: e.target.value || null,
+              })
+            }
+          >
+            <option value="">Sem vaga definida</option>
+            {(boxes.data ?? []).map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.nome}
+              </option>
+            ))}
+          </Selecao>
+        </Campo>
+        {r.previsaoEntrega && (
+          <p className={cx('text-xs', r.atrasada ? 'text-red-600' : 'text-slate-500')}>
+            Entrega prometida: {dataCompleta(r.previsaoEntrega)}
+            {r.atrasada && ' (atrasada)'}
+          </p>
+        )}
+
+        {/* elevador: um carro por vez, e o tempo corre em hora */}
+        <div className="border-t border-slate-200 pt-1">
+          <Interruptor
+            ativo={r.precisaElevador}
+            onChange={(v) => marcarElevador.mutate(v)}
+            rotulo="Precisa de elevador"
+            descricao="Entra na fila do elevador; um carro sobe de cada vez."
+          />
+
+          {r.precisaElevador && (
+            <div className="flex flex-wrap items-center gap-2 pb-1">
+              {elevadores.length === 0 ? (
+                <p className="text-xs text-amber-700">
+                  Nenhum elevador cadastrado. Ajuste em Configurações › Capacidade.
+                </p>
+              ) : reservaAtual?.status === 'EM_USO' ? (
+                <>
+                  <span className="rounded bg-blue-600 px-2 py-1 text-xs font-semibold text-white">
+                    {reservaAtual.boxNome} · {reservaAtual.rotulo}
+                  </span>
+                  <Botao variante="secundario" onClick={() => descerElevador.mutate()}>
+                    Descer
+                  </Botao>
+                </>
+              ) : (
+                <>
+                  <Selecao
+                    value={elevadorEscolhido}
+                    onChange={(e) => setElevadorEscolhido(e.target.value)}
+                    className="w-auto min-w-40"
+                  >
+                    <option value="">Escolha o elevador</option>
+                    {elevadores.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.nome}
+                      </option>
+                    ))}
+                  </Selecao>
+                  <Botao
+                    tamanho="toque"
+                    onClick={() => subirElevador.mutate(elevadorEscolhido)}
+                    disabled={!elevadorEscolhido}
+                  >
+                    Subir agora
+                  </Botao>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </SecaoDaEtapa>
+  ) : null
+
+  /**
+   * O que o carro ja contou: scanner e wiki. Etapa 2, que e quando se
+   * descobre o que ele precisa -- e e para isso que esses dois servem.
+   */
+  const temContexto =
+    (leiturasDoCarro.data ?? []).length > 0 || (wikiDoCarro.data ?? []).length > 0
+  const secaoContexto = (
+    <SecaoDaEtapa
+      key="contexto"
+      etapa={2}
+      titulo="O que este carro ja contou"
+      descricao={
+        temContexto
+          ? 'Leituras do scanner e o que a oficina ja resolveu em carro igual'
+          : 'Ainda nao ha leitura de scanner nem artigo da wiki para este modelo'
+      }
+    >
+      <div className="divide-y divide-slate-100">
+      {(leiturasDoCarro.data ?? []).length === 0 ? (
+        <div className="px-4 py-5">
+          <p className="text-sm text-slate-500">Nenhuma leitura deste carro ainda.</p>
+          {/* Link virou alvo de 44px: dentro do paragrafo ele tinha 37
+              e era o unico da tela abaixo da regra -- e quem aperta
+              esta de luva com o tablet na mao. */}
+          <Link
+            to="/leituras"
+            className="mt-1 -ml-2 inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium text-marca-600 transition hover:bg-slate-100 hover:underline"
+          >
+            Importar o PDF do scanner
+          </Link>
+        </div>
+      ) : (
+        <div className="divide-y divide-slate-100">
+          {leiturasDoCarro.data!.map((l) => (
+            <Link
+              key={l.id}
+              to={`/leituras/${l.id}`}
+              className="flex items-center gap-2 px-4 py-2 hover:bg-slate-50"
+            >
+              <Etiqueta
+                className={
+                  l.tipo === 'OFICIAL'
+                    ? 'bg-emerald-100 text-emerald-800 ring-emerald-200'
+                    : 'bg-amber-100 text-amber-800 ring-amber-200'
+                }
+              >
+                {l.tipoDescricao}
+              </Etiqueta>
+              <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
+                {l.condicao ?? l.modeloDescricao}
+              </span>
+              <span className="flex-none text-xs text-slate-500">
+                {l.modulos} mód · {l.itens} itens
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+      {/* Sem moldura de cartao: a seção da etapa já é a moldura. */}
+      {(wikiDoCarro.data ?? []).length > 0 && (
+        <div>
+          <p className="bg-slate-50 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            A oficina já viu isso neste modelo
+          </p>
+          {wikiDoCarro.data!.map((a) => (
+            <Link key={a.id} to={`/wiki/${a.id}`} className="block px-4 py-2 hover:bg-slate-50">
+              <p className="text-sm font-medium text-slate-800">{a.titulo}</p>
+              <p className="text-xs text-marca-700">{a.alcance}</p>
+            </Link>
+          ))}
+        </div>
+      )}
+      </div>
+    </SecaoDaEtapa>
+  )
+
+  /**
+   * Registrar trabalho: etapa 6.
+   *
+   * E o registro do que esta sendo feito no carro -- nao cabe em quem ainda
+   * nem comecou. O que e de UM servico continua saindo pelo "Anotar" da
+   * linha dele; aqui fica o que e do carro inteiro.
+   */
+  const secaoRegistro = podeRegistrarTrabalho ? (
+    <SecaoDaEtapa
+      key="registro"
+      etapa={6}
+      titulo="Registrar trabalho"
+      descricao="O que voce esta fazendo agora. Entra no historico do carro."
+    >
+      <RegistrarTrabalho os={os} semCartao />
+    </SecaoDaEtapa>
+  ) : null
+
   const TODAS_AS_SECOES = [
     { chave: 'recebimento', etapa: 1, no: secaoRecebimento },
+    { chave: 'agenda', etapa: 1, no: secaoAgenda },
+    { chave: 'contexto', etapa: 2, no: secaoContexto },
+    { chave: 'registro', etapa: 6, no: secaoRegistro },
     { chave: 'servicos', etapa: etapaDoServico, no: secaoServicos },
     { chave: 'pecas', etapa: etapaDaPeca, no: secaoPecas },
     { chave: 'valores', etapa: etapaDosValores, no: secaoValores },
@@ -900,282 +1103,10 @@ export default function DetalheOs() {
         )}
       </Cartao>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* ---------------- coluna principal ---------------- */}
-        <div className="space-y-4 lg:col-span-2">
-          {/* Clicar no carro e ver os relatorios dele: e para isto que as
-              leituras do scanner existem. */}
-          <Cartao>
-            <CartaoTitulo
-              titulo="Leituras do scanner"
-              descricao="Os dados dos módulos deste carro"
-            />
-            {(leiturasDoCarro.data ?? []).length === 0 ? (
-              <div className="px-4 py-5">
-                <p className="text-sm text-slate-500">Nenhuma leitura deste carro ainda.</p>
-                {/* Link virou alvo de 44px: dentro do paragrafo ele tinha 37
-                    e era o unico da tela abaixo da regra -- e quem aperta
-                    esta de luva com o tablet na mao. */}
-                <Link
-                  to="/leituras"
-                  className="mt-1 -ml-2 inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium text-marca-600 transition hover:bg-slate-100 hover:underline"
-                >
-                  Importar o PDF do scanner
-                </Link>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {leiturasDoCarro.data!.map((l) => (
-                  <Link
-                    key={l.id}
-                    to={`/leituras/${l.id}`}
-                    className="flex items-center gap-2 px-4 py-2 hover:bg-slate-50"
-                  >
-                    <Etiqueta
-                      className={
-                        l.tipo === 'OFICIAL'
-                          ? 'bg-emerald-100 text-emerald-800 ring-emerald-200'
-                          : 'bg-amber-100 text-amber-800 ring-amber-200'
-                      }
-                    >
-                      {l.tipoDescricao}
-                    </Etiqueta>
-                    <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
-                      {l.condicao ?? l.modeloDescricao}
-                    </span>
-                    <span className="flex-none text-xs text-slate-500">
-                      {l.modulos} mód · {l.itens} itens
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </Cartao>
-
-          {/* O que a oficina ja resolveu em carro igual a este. */}
-          {(wikiDoCarro.data ?? []).length > 0 && (
-            <Cartao>
-              <CartaoTitulo
-                titulo="A oficina já viu isso"
-                descricao="Artigos da wiki que servem para este modelo"
-              />
-              <div className="divide-y divide-slate-100">
-                {wikiDoCarro.data!.map((a) => (
-                  <Link
-                    key={a.id}
-                    to={`/wiki/${a.id}`}
-                    className="block px-4 py-2 hover:bg-slate-50"
-                  >
-                    <p className="text-sm font-medium text-slate-800">{a.titulo}</p>
-                    <p className="text-xs text-marca-700">{a.alcance}</p>
-                  </Link>
-                ))}
-              </div>
-            </Cartao>
-          )}
-
-          {/* O registro solto fica aqui embaixo, e não dentro de uma etapa:
-              ele é do carro e não de nenhuma delas — "cliente ligou
-              perguntando", "levei para o teste". O que é de um serviço sai
-              pelo botão Anotar da linha dele. */}
-          {podeRegistrarTrabalho && <RegistrarTrabalho os={os} />}
-
-          <Cartao>
-            <CartaoTitulo titulo="Linha do tempo" descricao="Tudo que aconteceu com este veículo" />
-            {os.eventos.length === 0 ? (
-              <Vazio icone={<History className="size-8" />} titulo="Sem eventos ainda" />
-            ) : (
-              <ol className="space-y-0 px-4 py-3">
-                {[...os.eventos].reverse().map((evento, indice) => (
-                  <li key={evento.id} className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <span
-                        className={cx(
-                          'mt-1.5 size-2 flex-none rounded-full',
-                          indice === 0 ? 'bg-marca-600' : 'bg-slate-300',
-                        )}
-                        aria-hidden
-                      />
-                      {indice < os.eventos.length - 1 && (
-                        <span className="w-px flex-1 bg-slate-200" aria-hidden />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1 pb-3">
-                      <p className="text-sm text-slate-800">{evento.descricao ?? evento.tipo}</p>
-                      <p className="text-[11px] text-slate-500">
-                        {dataHora(evento.quando)}
-                        {evento.autor && ` · ${evento.autor}`}
-                        {evento.visivelCliente && ' · visível ao cliente'}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </Cartao>
-        </div>
-
-        {/* ---------------- coluna lateral ---------------- */}
-        <div className="space-y-4">
-          {gerencia && (
-            <Cartao>
-              <CartaoTitulo titulo="Agenda e vaga" />
-              <div className="space-y-3 p-4">
-                <Campo rotulo="Dia na agenda">
-                  <Entrada
-                    type="date"
-                    value={r.dataAgendada ?? ''}
-                    onChange={(e) =>
-                      alocar.mutate({ dataAgendada: e.target.value || null, boxId: r.boxId ?? null })
-                    }
-                  />
-                </Campo>
-                <Campo rotulo="Box / vaga">
-                  <Selecao
-                    value={r.boxId ?? ''}
-                    onChange={(e) =>
-                      alocar.mutate({
-                        dataAgendada: r.dataAgendada ?? null,
-                        boxId: e.target.value || null,
-                      })
-                    }
-                  >
-                    <option value="">Sem vaga definida</option>
-                    {(boxes.data ?? []).map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.nome}
-                      </option>
-                    ))}
-                  </Selecao>
-                </Campo>
-                {r.previsaoEntrega && (
-                  <p className={cx('text-xs', r.atrasada ? 'text-red-600' : 'text-slate-500')}>
-                    Entrega prometida: {dataCompleta(r.previsaoEntrega)}
-                    {r.atrasada && ' (atrasada)'}
-                  </p>
-                )}
-
-                {/* elevador: um carro por vez, e o tempo corre em hora */}
-                <div className="border-t border-slate-200 pt-1">
-                  <Interruptor
-                    ativo={r.precisaElevador}
-                    onChange={(v) => marcarElevador.mutate(v)}
-                    rotulo="Precisa de elevador"
-                    descricao="Entra na fila do elevador; um carro sobe de cada vez."
-                  />
-
-                  {r.precisaElevador && (
-                    <div className="flex flex-wrap items-center gap-2 pb-1">
-                      {elevadores.length === 0 ? (
-                        <p className="text-xs text-amber-700">
-                          Nenhum elevador cadastrado. Ajuste em Configurações › Capacidade.
-                        </p>
-                      ) : reservaAtual?.status === 'EM_USO' ? (
-                        <>
-                          <span className="rounded bg-blue-600 px-2 py-1 text-xs font-semibold text-white">
-                            {reservaAtual.boxNome} · {reservaAtual.rotulo}
-                          </span>
-                          <Botao variante="secundario" onClick={() => descerElevador.mutate()}>
-                            Descer
-                          </Botao>
-                        </>
-                      ) : (
-                        <>
-                          <Selecao
-                            value={elevadorEscolhido}
-                            onChange={(e) => setElevadorEscolhido(e.target.value)}
-                            className="w-auto min-w-40"
-                          >
-                            <option value="">Escolha o elevador</option>
-                            {elevadores.map((b) => (
-                              <option key={b.id} value={b.id}>
-                                {b.nome}
-                              </option>
-                            ))}
-                          </Selecao>
-                          <Botao
-                            tamanho="toque"
-                            onClick={() => subirElevador.mutate(elevadorEscolhido)}
-                            disabled={!elevadorEscolhido}
-                          >
-                            Subir agora
-                          </Botao>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Cartao>
-          )}
-
-          <Cartao>
-            <CartaoTitulo titulo="Apontamentos" descricao="Horário registrado pelo servidor" />
-            {os.apontamentos.length === 0 ? (
-              <p className="px-4 py-6 text-center text-xs text-slate-500">
-                Nenhuma hora apontada ainda.
-              </p>
-            ) : (
-              <ul className="divide-y divide-slate-100">
-                {[...os.apontamentos].reverse().map((a) => (
-                  <li key={a.id} className="px-4 py-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-xs font-medium text-slate-700">
-                        {a.funcionarioNome}
-                      </p>
-                      <span
-                        className={cx(
-                          'text-xs font-semibold',
-                          a.fim ? 'text-slate-700' : 'text-blue-600',
-                        )}
-                      >
-                        {horas(a.horas)}
-                        {!a.fim && ' (rodando)'}
-                      </span>
-                    </div>
-                    <p className="truncate text-[11px] text-slate-500">{a.itemDescricao}</p>
-                    <p className="text-[11px] text-slate-500">
-                      {horaMinuto(a.inicio)} → {a.fim ? horaMinuto(a.fim) : '...'}
-                      {a.horasEstimadasInformadas &&
-                        ` · previu ${horas(a.horasEstimadasInformadas)}`}
-                      {a.encerradoAutomaticamente && ' · fechado no fim do turno'}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Cartao>
-
-          {os.paradas.length > 0 && (
-            <Cartao>
-              <CartaoTitulo titulo="Paradas" descricao="Por que o carro ficou sem andar" />
-              <ul className="divide-y divide-slate-100">
-                {[...os.paradas].reverse().map((p) => (
-                  <li key={p.id} className="px-4 py-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-xs font-medium text-slate-700">{p.motivo}</p>
-                      <span
-                        className={cx(
-                          'text-xs font-semibold',
-                          p.fim ? 'text-slate-700' : 'text-orange-600',
-                        )}
-                      >
-                        {horas(p.horas)}
-                        {!p.fim && ' (em aberto)'}
-                      </span>
-                    </div>
-                    {p.descricao && <p className="text-[11px] text-slate-500">{p.descricao}</p>}
-                    <p className="text-[11px] text-slate-500">
-                      desde {dataHora(p.inicio)}
-                      {p.visivelCliente ? ' · visível ao cliente' : ' · interno'}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </Cartao>
-          )}
-        </div>
-      </div>
+      {/* O que passou fica fechado: nenhum destes tres e campo de etapa
+          nenhuma, e registro nao disputa o meio da tela com o proximo
+          passo. Continua a um toque. */}
+      <HistoricoDaOs os={os} />
 
       {/* ---------------- modais ---------------- */}
       <ModalMotivoServico

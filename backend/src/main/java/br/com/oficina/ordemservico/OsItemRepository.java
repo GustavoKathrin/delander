@@ -56,4 +56,13 @@ public interface OsItemRepository extends JpaRepository<OsItem, UUID> {
     List<OsItem> findByOrdemServicoIdOrderByOrdem(UUID ordemServicoId);
 
     long countByOrdemServicoIdAndStatusNot(UUID ordemServicoId, StatusItem status);
+
+    /**
+     * Quantas OS ja usaram este servico do catalogo.
+     *
+     * Serve para recusar a exclusao: apagar um servico que esta em OS antiga
+     * apagaria o nome do que foi feito naquele carro, e o historico e o que
+     * a oficina mostra quando o cliente volta reclamando.
+     */
+    long countByCatalogoServicoId(UUID catalogoServicoId);
 }

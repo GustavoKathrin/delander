@@ -88,6 +88,108 @@ h2,
     radial-gradient(circle at 80% 70%, rgb(0 0 0 / 0.05), transparent 40%);
 }
 
+/*
+ * O galpao, visto de cima.
+ *
+ * O dono olhou a planta e disse: "nao queria um fundo quadrado, queria um
+ * tipo um galpao de cima pra baixo em 3D". O piso de concreto ja existia; o
+ * que faltava era o predio em volta dele -- sem parede, um piso texturizado
+ * e so um fundo.
+ *
+ * A profundidade vem toda de sombra, e nao de `transform: rotateX`. Girar o
+ * container daria perspectiva de verdade e quebraria a planta: a vaga e
+ * arrastavel e redimensionavel, e a conta de "onde o dedo soltou" deixa de
+ * bater quando o plano esta inclinado. Entao o truque e o do desenho
+ * tecnico: parede com espessura, quina interna escura e a sombra que o
+ * telhado projeta no chao. Olha-se de cima, e o chao fica la embaixo.
+ */
+.galpao {
+  position: relative;
+  border-radius: 16px;
+  background-color: var(--color-piso);
+  box-shadow:
+    /* a parede, com espessura */
+    inset 0 0 0 12px #cfccc6,
+    /* a quina de dentro, onde a parede encontra o piso */
+    inset 0 0 0 13px rgb(0 0 0 / 0.28),
+    /* o que o telhado projeta: mais forte em cima, como luz de galpao */
+    inset 0 26px 34px -16px rgb(0 0 0 / 0.42),
+    inset 16px 0 28px -16px rgb(0 0 0 / 0.26),
+    inset -16px 0 28px -16px rgb(0 0 0 / 0.26),
+    inset 0 -18px 28px -18px rgb(0 0 0 / 0.22),
+    /* e o predio inteiro assentado na pagina */
+    0 20px 44px -16px rgb(15 23 42 / 0.45);
+}
+
+/*
+ * A inclinacao que faz o galpao ser 3D de verdade.
+ *
+ * So no modo de OLHAR. Com o cadeado aberto a planta volta a ficar plana,
+ * porque arrumar a planta usa a posicao do mouse para descobrir em que
+ * celula a vaga caiu -- e essa conta deixa de bater num plano inclinado.
+ * Arruma-se de frente, olha-se em perspectiva.
+ *
+ * 20 graus e o limite do legivel: dali para cima a placa do carro e o nome
+ * da vaga comecam a deitar, e uma planta que nao se le nao e planta.
+ * `translateZ` nas vagas vem do proprio `preserve-3d`: elas sobem do piso.
+ */
+.galpao-inclinado {
+  /*
+   * O `scale` nao e enfeite: em perspectiva a borda de BAIXO fica mais
+   * perto da camera e sai mais larga que o container. Sem compensar, a
+   * pagina ganhava barra de rolagem horizontal -- e pagina que rola de lado
+   * e exatamente o que esta proibido no projeto, medido a cada tela.
+   */
+  transform: perspective(1600px) rotateX(20deg) scale(0.9);
+  transform-origin: 50% 0%;
+  transform-style: preserve-3d;
+}
+
+.galpao-inclinado > * {
+  transform: translateZ(14px);
+  transition: transform 0.15s ease;
+}
+
+/* As tesouras do telhado, de leve: diz "coberto" sem virar enfeite. */
+.galpao::before {
+  content: '';
+  position: absolute;
+  inset: 13px;
+  border-radius: 6px;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0 118px,
+    rgb(0 0 0 / 0.055) 118px 126px
+  );
+}
+
+/*
+ * A vaga com relevo: lipe claro em cima, sombra embaixo.
+ *
+ * E o mesmo recurso da parede, em escala de vaga -- a caixa deixa de ser um
+ * retangulo pintado e passa a ter espessura. Sem isto, com o galpao em volta,
+ * as vagas ficavam afundadas no desenho e o carro parecia adesivo.
+ */
+.vaga-relevo {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.75),
+    inset 0 -2px 4px -1px rgb(0 0 0 / 0.1),
+    0 1px 0 rgb(0 0 0 / 0.06),
+    0 8px 14px -8px rgb(15 23 42 / 0.4);
+}
+
+/*
+ * A sombra do carro no piso.
+ *
+ * E o unico jeito honesto de um desenho visto de cima dizer que o objeto
+ * esta ACIMA do chao: a sombra desenca para um lado, como a luz do galpao.
+ */
+.carro-no-chao {
+  filter: drop-shadow(2px 5px 4px rgb(15 23 42 / 0.38))
+    drop-shadow(0 1px 1px rgb(15 23 42 / 0.25));
+}
+
 /* Faixa de seguranca amarelo/preto, como a do chao da oficina. */
 .faixa-seguranca {
   background-image: repeating-linear-gradient(

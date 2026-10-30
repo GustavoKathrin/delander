@@ -1,6 +1,7 @@
 package br.com.oficina.cadastro;
 
 import br.com.oficina.common.Contexto;
+import br.com.oficina.ordemservico.OsItemRepository;
 import br.com.oficina.common.RecursoNaoEncontradoException;
 import br.com.oficina.common.RegraNegocioException;
 import br.com.oficina.configuracao.ConfiguracaoService;
@@ -25,6 +26,7 @@ public class CadastroService {
     private final BoxRepository boxRepository;
     private final MotivoParadaRepository motivoRepository;
     private final CatalogoServicoRepository catalogoRepository;
+    private final OsItemRepository itemRepository;
     private final ConfiguracaoService config;
     private final Contexto contexto;
 
@@ -32,12 +34,14 @@ public class CadastroService {
                            BoxRepository boxRepository,
                            MotivoParadaRepository motivoRepository,
                            CatalogoServicoRepository catalogoRepository,
+                           OsItemRepository itemRepository,
                            ConfiguracaoService config,
                            Contexto contexto) {
         this.especialidadeRepository = especialidadeRepository;
         this.boxRepository = boxRepository;
         this.motivoRepository = motivoRepository;
         this.catalogoRepository = catalogoRepository;
+        this.itemRepository = itemRepository;
         this.config = config;
         this.contexto = contexto;
     }
@@ -262,6 +266,37 @@ public class CadastroService {
                 .orElseThrow(() -> RecursoNaoEncontradoException.de("Servico", id));
         aplicar(c, req);
         return CadastroDtos.ServicoResposta.de(catalogoRepository.save(c));
+    }
+
+    /**
+     * Apaga um servico do catalogo -- so o que nunca foi usado.
+     *
+     * O catalogo ja tinha criar e editar, e "desativar" fazia as vezes de
+     * apagar: o servico sumia das listas e continuava no banco. Serve para o
+     * servico que a oficina parou de oferecer, e nao para o que entrou
+     * errado -- "Trocar oleo" digitado tres vezes fica tres vezes la, so
+     * que invisivel.
+     *
+     * Quem ja foi usado nao pode sumir: o nome dele e o que a OS antiga
+     * mostra. Nesse caso a mensagem manda desativar, que e exatamente o que
+     * a pessoa queria quando o servico ja rodou.
+     */
+    @Transactional
+    public void apagarServico(UUID id) {
+        contexto.exigirGerencia();
+        CatalogoServico c = catalogoRepository.findById(id)
+                .filter(x -> x.getOficinaId().equals(contexto.oficinaId()))
+                .orElseThrow(() -> RecursoNaoEncontradoException.de("Servico", id));
+
+        long emUso = itemRepository.countByCatalogoServicoId(id);
+        if (emUso > 0) {
+            throw new RegraNegocioException(
+                    ("'%s' já foi usado em %d %s. Apagar tiraria o nome do serviço do histórico "
+                            + "desses carros — desative em vez de apagar: ele some das listas e o "
+                            + "passado continua de pé.")
+                            .formatted(c.getDescricao(), emUso, emUso == 1 ? "ordem de serviço" : "ordens de serviço"));
+        }
+        catalogoRepository.delete(c);
     }
 
     private void aplicar(CatalogoServico c, CadastroDtos.ServicoRequisicao req) {

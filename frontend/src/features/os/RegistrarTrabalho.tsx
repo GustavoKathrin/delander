@@ -28,7 +28,19 @@ import { plural } from '../../lib/format'
  * quer mandar as seis de uma vez precisa do seletor sem `capture`. Um botão
  * só serviria mal aos dois.
  */
-export function RegistrarTrabalho({ os }: { os: DetalheOs }) {
+export function RegistrarTrabalho({
+  os,
+  semCartao = false,
+}: {
+  os: DetalheOs
+  /**
+   * Sem a moldura de cartao: quando isto mora DENTRO de uma seção de etapa,
+   * que já tem título, descrição e a barra colorida da etapa. Cartão dentro
+   * de cartão vira caixa dentro de caixa, e no celular a margem dupla come
+   * 32px de largura útil.
+   */
+  semCartao?: boolean
+}) {
   const avisar = useAviso()
   const queryClient = useQueryClient()
   const cameraRef = useRef<HTMLInputElement>(null)
@@ -97,13 +109,8 @@ export function RegistrarTrabalho({ os }: { os: DetalheOs }) {
 
   const pronto = texto.trim().length > 2
 
-  return (
-    <Cartao>
-      <CartaoTitulo
-        titulo="Registrar trabalho"
-        descricao="O que você está fazendo agora. Entra no histórico do carro."
-      />
-      <div className="space-y-3 p-4">
+  const miolo = (
+    <div className="space-y-3 p-4">
         <AreaTexto
           rows={2}
           value={texto}
@@ -198,6 +205,17 @@ export function RegistrarTrabalho({ os }: { os: DetalheOs }) {
           Registrar
         </Botao>
       </div>
+  )
+
+  if (semCartao) return miolo
+
+  return (
+    <Cartao>
+      <CartaoTitulo
+        titulo="Registrar trabalho"
+        descricao="O que você está fazendo agora. Entra no histórico do carro."
+      />
+      {miolo}
     </Cartao>
   )
 }

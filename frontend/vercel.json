@@ -4,12 +4,11 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "_comentario": [
-    "VITE_API_BASE faz o navegador falar DIRETO com o Render.",
-    "Medido em 30/10/2026, mesma chamada: 0,26s direto contra 0,37-0,74s",
-    "pelo desvio da Vercel. O desvio continua aqui embaixo como rede de",
-    "seguranca, mas o cliente ja nao passa por ele.",
-    "Exige APP_CORS_ORIGENS=https://delander.vercel.app no Render, que o",
-    "render.yaml ja define. Quem copiar este projeto troca os dois juntos."
+    "A reescrita de /api continua como rede de seguranca, mas o cliente ja nao",
+    "passa por ela: o .env.production manda o navegador falar direto com o",
+    "Render. Medido em 30/10/2026: 0,26s direto contra 0,37-0,74s pelo desvio.",
+    "Nao tente por VITE_API_BASE aqui em build.env -- essa propriedade saiu da",
+    "configuracao da Vercel e e ignorada em silencio."
   ],
   "rewrites": [
     {
@@ -20,10 +19,5 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "build": {
-    "env": {
-      "VITE_API_BASE": "https://delander.onrender.com/api"
-    }
-  }
+  ]
 }

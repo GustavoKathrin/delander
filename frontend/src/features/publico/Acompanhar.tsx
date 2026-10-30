@@ -10,7 +10,7 @@ import {
   PauseCircle,
   Wrench,
 } from 'lucide-react'
-import { api, ErroApi } from '../../api/client'
+import { api, ErroApi, urlDoServidor } from '../../api/client'
 import type { AcompanhamentoPublico } from '../../types'
 import { Botao, Campo, Carregando, Entrada, cx } from '../../components/ui'
 import { dataCompleta, dataHora, horas, moeda } from '../../lib/format'
@@ -327,9 +327,15 @@ function GaleriaDeFotos({
       {descricao && <p className="mb-2 text-xs text-slate-500">{descricao}</p>}
       <div className={cx('grid grid-cols-3 gap-2', !descricao && 'mt-2')}>
         {fotos.map((f) => (
-          <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="block">
+          <a
+            key={f.url}
+            href={urlDoServidor(f.url)}
+            target="_blank"
+            rel="noreferrer"
+            className="block"
+          >
             <img
-              src={f.url}
+              src={urlDoServidor(f.url)}
               alt={f.servico ?? titulo}
               loading="lazy"
               className="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200"

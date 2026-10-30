@@ -104,7 +104,10 @@ export function FotoProtegida({
       <span
         ref={caixa}
         title="Não foi possível carregar esta foto"
-        className={cx('grid place-items-center bg-slate-100 text-slate-400', className)}
+        className={cx(
+          'grid min-h-16 min-w-16 place-items-center bg-slate-100 text-slate-400',
+          className,
+        )}
       >
         <ImageOff className="size-5" aria-hidden />
       </span>
@@ -115,7 +118,15 @@ export function FotoProtegida({
     return (
       <span
         ref={caixa}
-        className={cx('grid animate-pulse place-items-center bg-slate-100', className)}
+        // `min-size-16`: no visor em tela cheia o className que chega e
+        // `max-h-full max-w-full`, que sem conteudo colapsa para o tamanho
+        // do icone -- um quadradinho de 16px no meio do preto enquanto a
+        // foto grande baixa. Nas miniaturas o minimo nao muda nada, porque
+        // elas ja tem tamanho proprio.
+        className={cx(
+          'grid min-h-16 min-w-16 animate-pulse place-items-center bg-slate-100',
+          className,
+        )}
       >
         {visivel && <Loader2 className="size-4 animate-spin text-slate-400" aria-hidden />}
       </span>

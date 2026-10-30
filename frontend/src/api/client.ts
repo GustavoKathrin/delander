@@ -14,6 +14,19 @@ import type { TokenResposta } from '../types'
  * dois lados nao fica sem sistema, so sem o ganho.
  */
 const BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || '/api'
+
+/**
+ * Transforma um caminho que o servidor devolveu em URL para o navegador.
+ *
+ * O servidor manda caminhos prontos para um `<img src>` -- `/api/publico/...`
+ * -- e eles so funcionam porque a Vercel reescreve `/api` para o Render. No
+ * dia em que alguem preencher VITE_API_BASE e tirar a reescrita ("o front ja
+ * fala direto com o Render"), a foto do cliente quebra sem aviso. Aqui o
+ * caminho passa pela mesma base de todo o resto.
+ */
+export function urlDoServidor(caminho: string): string {
+  return BASE + caminho.replace(/^\/api/, '')
+}
 const CHAVE_SESSAO = 'oficina.sessao'
 
 export interface Sessao {

@@ -183,6 +183,8 @@ export interface PecaOs {
   previsaoChegada?: string
   valorUnitario?: number
   total: number
+  /** Ainda sem preço. Não é mascarado: é a ausência do valor, não o valor. */
+  semCotacao: boolean
 }
 
 export interface EventoOs {
@@ -433,6 +435,81 @@ export interface MeuServico {
   precisaElevador: boolean
   /** As fotos deste serviço. */
   fotos: ArquivoOs[]
+}
+
+/* ------------------------------------------------- painel da Etapa 6 */
+
+export interface ServicoEmExecucao {
+  itemId: string
+  descricao: string
+  status: StatusItem
+  statusDescricao: string
+  mecanico?: string
+  especialidade?: string
+  especialidadeCor?: string
+  horasEstimadas: number
+  horasTrabalhadas: number
+  /** Nulo quando o cronômetro não está rodando. */
+  rodandoDesde?: string
+  motivoParada?: string
+  paradoDesde?: string
+}
+
+export interface CarroEmExecucao {
+  osId: string
+  numero: number
+  placa: string
+  veiculo: string
+  cor?: string
+  cliente: string
+  box?: string
+  prioridade: Prioridade
+  status: StatusOs
+  precisaElevador: boolean
+  previsaoEntrega?: string
+  inicioExecucaoEm?: string
+  servicosTotal: number
+  servicosConcluidos: number
+  horasEstimadas: number
+  horasTrabalhadas: number
+  servicos: ServicoEmExecucao[]
+  fotos: ArquivoOs[]
+}
+
+export interface CarroAguardando {
+  osId: string
+  numero: number
+  placa: string
+  veiculo: string
+  cliente: string
+  prioridade: Prioridade
+  previsaoEntrega?: string
+  horasEstimadas: number
+  servicos: number
+  diasParado: number
+}
+
+export interface ResumoExecucao {
+  carros: number
+  rodando: number
+  /** A OS inteira em PAUSADO: a vaga ocupada sem nada acontecendo. */
+  carrosParados: number
+  /** Serviços travados com motivo registrado, dentro de qualquer carro. */
+  servicosParados: number
+  aEsperar: number
+  mecanicos: number
+  estourados: number
+  concluidosHoje: number
+  entreguesHoje: number
+  horasHoje: number
+  horasFeitas: number
+  horasPrevistas: number
+}
+
+export interface PainelExecucao {
+  resumo: ResumoExecucao
+  carros: CarroEmExecucao[]
+  aguardando: CarroAguardando[]
 }
 
 export interface Especialidade {

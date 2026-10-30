@@ -1060,8 +1060,11 @@ public class OrdemServicoService {
                             i.getMotivoCancelamento(),
                             i.getCanceladoEm(),
                             // Quem decide o que cabe e o servidor; a tela so
-                            // desenha os botoes que vieram.
-                            List.copyOf(MaquinaEstadosItem.proximos(i.getStatus())));
+                            // desenha os botoes que vieram. E o que cabe
+                            // depende dos DOIS estados: um servico pendente
+                            // num carro que ainda nao foi aprovado nao pode
+                            // ser iniciado, por mais pendente que esteja.
+                            List.copyOf(MaquinaEstadosItem.proximos(i.getStatus(), os.getStatus())));
                 })
                 .toList();
 
@@ -1101,7 +1104,8 @@ public class OrdemServicoService {
                         p.getMomentoNecessario(), p.getMomentoNecessario().descricao(),
                         p.getPrevisaoChegada(),
                         mostraValores ? p.getValorUnitario() : null,
-                        mostraValores ? p.total() : null))
+                        mostraValores ? p.total() : null,
+                        p.getValorUnitario() == null))
                 .toList();
 
         List<OsDtos.ChecklistResposta> checklist = checklistRepository

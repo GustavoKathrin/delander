@@ -190,7 +190,17 @@ export function ChecklistEntrada({ os, gerencia }: { os: DetalheOs; gerencia: bo
       </div>
 
       <div className="border-t border-slate-200 p-4">
-        <Botao className="w-full" tamanho="toque" carregando={salvar.isPending} onClick={() => salvar.mutate()}>
+        {/* Secundario, e nao primario. O azul cheio de largura inteira
+            pertence ao proximo passo da ETAPA, que fica logo abaixo deste
+            -- dois botoes azuis empilhados competiam, e o de cima nao e o
+            que faz o carro andar. */}
+        <Botao
+          variante="secundario"
+          className="w-full"
+          tamanho="toque"
+          carregando={salvar.isPending}
+          onClick={() => salvar.mutate()}
+        >
           Salvar checklist
         </Botao>
       </div>

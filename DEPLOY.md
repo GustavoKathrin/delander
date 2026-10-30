@@ -257,7 +257,14 @@ da régua, visualmente iguais à wiki e à linha do tempo.
 Quem decide a etapa é `etapaDaOs(os)`, em
 `frontend/src/features/os/EtapasDaOs.tsx`. Como 2, 3 e 4 compartilham o estado
 `EM_DIAGNOSTICO`, a diferença vem do dado: sem serviço lançado é a 2; com
-peça `COMPRAR` ainda `SOLICITADA` é a 3; o resto é a 4.
+peça `COMPRAR` ainda **sem preço** é a 3; o resto é a 4.
+
+> Já foi *status* da peça em vez de preço, e estava errado: a peça continua
+> `SOLICITADA` depois de cotada — comprar só acontece depois do "sim" do
+> cliente —, então o carro ficava preso na etapa 3 com a pendência "1 peça
+> esperando preço" em cima de uma peça que já tinha preço. Quem mede isso é
+> `PecaResposta.semCotacao`, um booleano que o servidor manda para todo
+> mundo: é a *ausência* do preço, não o preço, e por isso não é mascarado.
 
 **Cada etapa mostra só o que é dela.** A primeira versão deixava todas as
 seções na tela ao mesmo tempo, só pintadas com a cor da etapa a que
@@ -272,7 +279,7 @@ dizia "preencha agora".
 | 3. Cotação | peças, para marcar estoque e pôr preço |
 | 4. Mão de obra | mão de obra, desconto e total |
 | 5. Aprovação | o orçamento e o botão de mandar ao cliente |
-| 6. Serviço | serviços (executar), peças (chegada) e fotos |
+| 6. Serviço | serviços (executar), peças (chegada) e fotos — e o painel **Oficina agora** |
 | 7. Entrega | serviços, peças, total e fotos — o registro do que foi feito |
 
 O que não é da etapa corrente não some: fica em **"Ver o que é das outras
@@ -288,14 +295,64 @@ punha o trabalho da etapa 1 no lugar onde o trabalho é outro.
 quatro botões para duas ações: o atalho nas pendências nasceu quando serviço
 e peça viviam em cartões soltos e era preciso rolar até eles.
 
-**A conta não pode usar preço.** Preço é mascarado para quem não vê
-dinheiro, então uma regra baseada em valor mostraria uma etapa para o dono e
-outra para o mecânico olhando o mesmo carro.
+**A conta não pode usar o VALOR.** Valor é mascarado para quem não vê
+dinheiro, então uma regra baseada nele mostraria uma etapa para o dono e
+outra para o mecânico olhando o mesmo carro. `semCotacao` existe para isso:
+diz se há preço sem dizer qual é.
+
+**O preço da peça se põe na própria etapa 3.** O editor é
+`components/PrecoDaPeca.tsx`, usado tanto na linha da peça dentro da OS
+quanto na fila de compras (`/pecas`). Antes a etapa 3 mandava "ponha o preço
+do que precisa comprar" e a linha da peça era só leitura — a única tela que
+cotava era a fila, e a etapa não levava até ela.
+
+**O próximo passo é o destino mais próximo adiante**, e não o primeiro que o
+servidor devolve. A régua tem sete etapas mas a comparação usa uma escala
+mais fina (`ordemDoStatus`): "aguardando aprovação" e "orçamento aprovado"
+valiam 5 os dois, nenhum candidato passava no "maior que", e o botão grande
+da etapa 5 caía em **"Cliente recusou"** — a tela destacava a recusa e
+escondia o "sim" atrás de "Outras opções".
 
 **As cores das etapas não usam `marca-*`.** Essa é a cor da oficina, trocada
 em tempo de execução pelo tema (Configurações → Layout); no Delander ela é
 cinza-quase-preto. A paleta da marca também só tem os degraus 50, 100, 200,
 500, 600, 700 e 900 — `marca-300` não existe e a classe some sem erro.
+
+### Oficina agora — o painel da etapa 6 (30/10/2026)
+
+`/execucao`, no menu como **Oficina agora**. É a etapa 6 vista de fora: a
+oficina inteira agora, **um cartão por carro**, não por serviço.
+
+Já existiam duas telas da execução e nenhuma respondia a esta pergunta. A OS
+mostra um carro. O Painel do Mecânico mostra um serviço por cartão, na ordem
+da agenda — é a tela de quem está com a chave na mão. Quem olha a oficina
+inteira pergunta "onde está cada carro, e o que falta nele", e a resposta
+disso é por carro.
+
+Cada cartão traz a rosca de progresso (serviços concluídos sobre o total), a
+placa, o box, a entrega prometida, e dentro dele uma linha por serviço com o
+mecânico, o cronômetro ao vivo, a barra contra a estimativa e **o motivo da
+parada**. No pé, as seis fotos mais recentes do trabalho. Abaixo dos cartões,
+a fila: carros **aprovados que ninguém começou**, ordenados pelo tempo de
+espera — o pior número da oficina, porque o cliente já disse sim e a vaga
+continua ocupada.
+
+Três coisas que valem saber antes de mexer:
+
+- **Azul é a cor da etapa 6**, a mesma da régua da OS. Não é `marca-*`.
+- **Carro parado não se conta pelos serviços.** O caminho mais comum de um
+  carro virar `PAUSADO` não pausa serviço nenhum: quando o último cronômetro
+  fecha, `ReconciliacaoOs` põe a OS em `PAUSADO` e não toca nos itens. Por
+  isso o resumo tem `carrosParados` **e** `servicosParados`.
+- **Nenhum preço entra na tela.** Ela serve aos quatro perfis sem máscara:
+  hora de trabalho o mecânico já vê, dinheiro não — e assim o painel é o
+  mesmo para todo mundo.
+
+Servidor: `GET /api/execucao`, em
+`backend/.../apontamento/ExecucaoService.java`. Monta tudo em consultas de
+tamanho fixo porque a tela recarrega sozinha a cada 20 segundos, e a ordem
+dos cartões (`POR_URGENCIA`) é regra de negócio com teste próprio: parado
+primeiro, depois quem tem gente trabalhando, depois o resto.
 
 ### Foto por serviço (V23)
 

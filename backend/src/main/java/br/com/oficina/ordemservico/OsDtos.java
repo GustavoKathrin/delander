@@ -288,7 +288,17 @@ public final class OsDtos {
             String momentoDescricao,
             LocalDate previsaoChegada,
             BigDecimal valorUnitario,
-            BigDecimal total) {
+            BigDecimal total,
+            /**
+             * A peca ainda nao tem preco.
+             *
+             * NAO e mascarado, de proposito: nao e valor, e a ausencia dele.
+             * A etapa 3 -- "Cotacao" -- acaba quando toda peca de comprar tem
+             * preco, e a regua precisa dar a mesma resposta para o dono e
+             * para o mecanico. Com `valorUnitario`, que e mascarado, o mesmo
+             * carro aparecia na etapa 3 para um e na 4 para o outro.
+             */
+            boolean semCotacao) {
     }
 
     /**

@@ -35,6 +35,30 @@ public interface OrdemServicoRepository extends JpaRepository<OrdemServico, UUID
             """)
     Optional<OrdemServico> buscarComItens(UUID id);
 
+    /**
+     * O chao de fabrica agora: carro na bancada e carro aprovado esperando mao.
+     *
+     * Uma consulta para os dois porque o painel da Etapa 6 mostra os dois
+     * lados da mesma pergunta -- o que esta sendo feito, e o que ja podia
+     * estar sendo feito. Duas consultas para dividir isso seriam duas idas ao
+     * banco para a mesma tela, que recarrega sozinha a cada 20 segundos.
+     */
+    @Query("""
+            select distinct os from OrdemServico os
+              join fetch os.cliente
+              join fetch os.veiculo
+              left join fetch os.box
+              left join fetch os.itens i
+              left join fetch i.funcionario
+              left join fetch i.especialidade
+            where os.oficinaId = ?1
+              and os.status in (br.com.oficina.ordemservico.StatusOs.EM_EXECUCAO,
+                                br.com.oficina.ordemservico.StatusOs.PAUSADO,
+                                br.com.oficina.ordemservico.StatusOs.ORCAMENTO_APROVADO)
+            order by os.prioridade desc, os.numero
+            """)
+    List<OrdemServico> naBancada(UUID oficinaId);
+
     /** Carros que ainda ocupam espaco fisico na oficina. */
     @Query("""
             select distinct os from OrdemServico os
@@ -229,6 +253,9 @@ public interface OrdemServicoRepository extends JpaRepository<OrdemServico, UUID
             where os.oficinaId = ?1 and os.entregueEm >= ?2 and os.entregueEm < ?3
             """)
     List<OrdemServico> entreguesNoPeriodo(UUID oficinaId, OffsetDateTime de, OffsetDateTime ate);
+
+    /** Carros entregues desde um instante: o placar do dia no painel da Etapa 6. */
+    long countByOficinaIdAndEntregueEmGreaterThanEqual(UUID oficinaId, OffsetDateTime desde);
 
     @Query(value = "select nextval('os_numero_seq')", nativeQuery = true)
     Long proximoNumero();

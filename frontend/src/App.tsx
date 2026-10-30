@@ -11,6 +11,7 @@ import DetalheOs from './features/os/DetalheOs'
 import Prontuario from './features/os/Prontuario'
 import FichaOs from './features/os/FichaOs'
 import PainelMecanico from './features/mecanico/PainelMecanico'
+import Execucao from './features/execucao/Execucao'
 import Dashboard from './features/dashboard/Dashboard'
 import Clientes from './features/cadastros/Clientes'
 import Funcionarios from './features/cadastros/Funcionarios'
@@ -74,6 +75,7 @@ export default function App() {
         <Route path="/os/:id" element={<DetalheOs />} />
         <Route path="/veiculo/:id/prontuario" element={<Prontuario />} />
         <Route path="/meus-servicos" element={<PainelMecanico />} />
+        <Route path="/execucao" element={<Execucao />} />
         <Route path="/painel" element={<Dashboard />} />
         <Route path="/leituras" element={<Leituras />} />
         <Route path="/leituras/:id" element={<DetalheLeitura />} />

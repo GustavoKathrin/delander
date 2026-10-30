@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
+  Activity,
   BookOpen,
   CalendarDays,
   ChartNoAxesColumn,
@@ -41,6 +42,9 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
     titulo: 'Oficina',
     itens: [
       { para: '/patio', rotulo: 'Pátio', Icone: LayoutGrid },
+      // Nao e somenteGerencia: o mecanico tambem ganha em ver a oficina
+      // inteira -- e dele que vem a pergunta "quem esta no elevador agora".
+      { para: '/execucao', rotulo: 'Oficina agora', Icone: Activity },
       { para: '/quadro', rotulo: 'Semana', Icone: CalendarDays },
       { para: '/fila', rotulo: 'Fila de espera', Icone: ListOrdered },
       { para: '/meus-servicos', rotulo: 'Meus serviços', Icone: Wrench },

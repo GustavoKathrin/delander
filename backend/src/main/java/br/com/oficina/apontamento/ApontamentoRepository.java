@@ -35,6 +35,37 @@ public interface ApontamentoRepository extends JpaRepository<Apontamento, UUID> 
     @Query("select a from Apontamento a where a.oficinaId = ?1 and a.fim is null")
     List<Apontamento> abertos(UUID oficinaId);
 
+    /**
+     * O mesmo, com o mecanico e o servico ja carregados.
+     *
+     * O painel da Etapa 6 precisa do NOME de quem esta com a mao no carro, e
+     * `abertos` devolve a referencia preguicosa: uma ida ao banco por
+     * cronometro aberto, so para escrever "Carlos" na tela.
+     */
+    @Query("""
+            select a from Apontamento a
+              join fetch a.funcionario
+              join fetch a.osItem
+            where a.oficinaId = ?1 and a.fim is null
+            """)
+    List<Apontamento> abertosComMecanico(UUID oficinaId);
+
+    /**
+     * Horas trabalhadas por SERVICO de uma lista, numa consulta.
+     *
+     * `horasPorOs` nao serve ao painel da Etapa 6: ele mostra a barra de
+     * cada servico contra a estimativa daquele servico, e a soma do carro
+     * esconde justamente o servico que estourou.
+     */
+    @Query(value = """
+            select os_item_id as itemId,
+                   coalesce(sum(extract(epoch from (coalesce(fim, :agora) - inicio))), 0) / 3600.0 as horas
+            from apontamento
+            where os_item_id in (:itemIds)
+            group by os_item_id
+            """, nativeQuery = true)
+    List<Object[]> horasPorItem(@Param("itemIds") List<UUID> itemIds, @Param("agora") OffsetDateTime agora);
+
     @Query(value = """
             select coalesce(sum(extract(epoch from (coalesce(fim, :agora) - inicio))), 0)
             from apontamento where ordem_servico_id = :osId

@@ -91,7 +91,11 @@ function pendenciasDaEtapa(
     os.checklist.length === 0 || os.checklist.every((c) => c.ok !== undefined && c.ok !== null)
   const servicos = os.itens.filter((i) => i.status !== 'CANCELADO')
   const servicosAbertos = servicos.filter((i) => i.status !== 'CONCLUIDO')
-  const aCotar = os.pecas.filter((p) => p.origem === 'COMPRAR' && p.status === 'SOLICITADA')
+  // Mesma conta da regua (`etapaDaOs`): peca de comprar que ainda nao tem
+  // preco. Com `status === 'SOLICITADA'` esta lista continuava cheia depois
+  // da cotacao -- a peca so sai de SOLICITADA quando e comprada, e comprar e
+  // depois do "sim" do cliente.
+  const aCotar = os.pecas.filter((p) => p.origem === 'COMPRAR' && p.semCotacao)
 
   const foto: Pendencia = {
     chave: 'foto',
@@ -201,7 +205,9 @@ function pendenciasDaEtapa(
     // -------------------------------------------------- 4. Mão de obra
     case 4:
       return {
-        titulo: 'Falta o preço do trabalho',
+        // O titulo precisa valer nos dois estados. "Falta o preco do
+        // trabalho" continuava escrito depois de o preco estar la.
+        titulo: 'Quanto a oficina vai cobrar pelo trabalho',
         itens: [
           // Quem nao ve dinheiro nao ve esta linha. Antes ela aparecia para
           // o mecanico com check verde em cima de "Mao de obra ainda em
@@ -228,6 +234,24 @@ function pendenciasDaEtapa(
             pronto: servicos.length > 0,
             lista: servicos.map((i) => i.descricao),
             acao: lancarServico,
+          },
+          // A peca tambem precisa estar alcancavel daqui.
+          //
+          // Lancar o primeiro servico ja empurra o carro da etapa 2 para a 4
+          // quando nao ha peca a cotar -- e a secao de pecas, que e da etapa
+          // 2, sai da tela junto. Sem esta linha, quem descobre no meio do
+          // orcamento que falta uma peca tem de achar a gaveta "ver o que e
+          // das outras etapas" para registrar.
+          {
+            chave: 'pecas',
+            rotulo:
+              os.pecas.length === 0
+                ? 'Nenhuma peça no orçamento'
+                : `${plural(os.pecas.length, 'peça')} ${os.pecas.length === 1 ? 'no orçamento' : 'no orçamento'}`,
+            pronto: true,
+            opcional: true,
+            lista: os.pecas.map((p) => p.descricao),
+            acao: lancarPeca,
           },
         ],
       }
@@ -367,11 +391,20 @@ export function RequisitosDaEtapa({
           <span className="font-normal text-amber-900">
             — o sistema não deixa avançar sem {trava.length === 1 ? 'isto' : 'estes itens'}
           </span>
+        ) : faltando.length === 0 ? (
+          // Dizer que acabou vale tanto quanto dizer o que falta: sem isto, a
+          // lista toda verde ficava sob um titulo que nao comentava nada, e
+          // quem olhava de longe nao sabia se podia apertar o botao.
+          <span className="font-normal text-emerald-700">— tudo pronto para seguir</span>
         ) : (
           faltando.length > 0 && (
             <span className="font-normal text-slate-500">
-              — falta {faltando.length === 1 ? '1 coisa' : `${faltando.length} coisas`}, mas dá para
-              seguir
+              {/* "falta 2 coisas" é o tipo de erro que, sozinho, não atrapalha
+                  ninguém — e repetido em vinte telas é exatamente o que faz um
+                  sistema parecer inacabado. O verbo concorda com o número. */}
+              {faltando.length === 1
+                ? '— falta 1 coisa, mas dá para seguir'
+                : `— faltam ${faltando.length} coisas, mas dá para seguir`}
             </span>
           )
         )}
@@ -407,7 +440,13 @@ export function RequisitosDaEtapa({
 
             <span className={cx('min-w-0', item.pronto ? 'text-slate-600' : 'font-medium text-slate-900')}>
               {item.rotulo}
-              <span className="sr-only">{item.pronto ? ' — feito' : ' — pendente'}</span>
+              {/* O leitor de tela precisa ouvir o que o icone mostra. No item
+                  opcional vazio o icone e um traco cinza, e dizer "feito" ali
+                  anunciava "Nenhuma peca registrada, feito" -- que e o
+                  contrario do que o traco quer dizer. */}
+              <span className="sr-only">
+                {!item.pronto ? ' — pendente' : vazio ? ' — opcional, nada registrado' : ' — feito'}
+              </span>
             </span>
 
             {item.acao && (

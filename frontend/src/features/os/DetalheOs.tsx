@@ -68,6 +68,7 @@ import { CarroTopo, Placa } from '../../components/oficina'
 import ModalCompartilhar from './ModalCompartilhar'
 import { RegistrarTrabalho } from './RegistrarTrabalho'
 import { ChecklistEntrada } from './ChecklistEntrada'
+import { PrecoDaPeca } from '../../components/PrecoDaPeca'
 import { GaleriaFotos } from './GaleriaFotos'
 import { ModalOrcamento } from './ModalOrcamento'
 import { RequisitosDaEtapa } from './RequisitosDaEtapa'
@@ -505,7 +506,23 @@ export default function DetalheOs() {
               onAtribuir={(funcionarioId) => atribuir.mutate({ itemId: item.id, funcionarioId })}
               onAcao={(acao) => setAcaoServico({ item, acao })}
               onIniciar={() =>
-                transicionarItem.mutate({ itemId: item.id, corpo: { status: 'EM_EXECUCAO' } })
+                transicionarItem.mutate({
+                  itemId: item.id,
+                  corpo: {
+                    status: 'EM_EXECUCAO',
+                    // A estimativa do próprio serviço vai junto.
+                    //
+                    // Sem ela, este botão NUNCA funcionava: a oficina com
+                    // "exigir estimativa" ligada (o padrão) devolvia 409
+                    // "Informe quanto tempo você pretende gastar" em todo
+                    // toque, e o mecânico não tinha onde informar — o campo
+                    // só existe no modal do Painel do Mecânico. O serviço já
+                    // traz a previsão do catálogo; começar com ela é melhor
+                    // resposta que um erro, e quem quiser mudar muda no
+                    // painel.
+                    horasEstimadas: item.horasEstimadas,
+                  },
+                })
               }
               onRegistrarTrabalho={() => setAnotando(item)}
               onFotoEnviada={invalidar}
@@ -585,9 +602,23 @@ export default function DetalheOs() {
               >
                 {peca.statusDescricao}
               </Etiqueta>
-              {mostraValores && (
-                <span className="w-24 text-right text-xs text-slate-600">{moeda(peca.total)}</span>
-              )}
+              {/* O preço entra aqui, editável.
+                  A etapa 3 manda "ponha o preço do que precisa comprar" e
+                  esta linha era só leitura: a única tela que cotava era a
+                  fila de compras, e a etapa não levava até ela. Quem não vê
+                  dinheiro não vê nada disto; peça de estoque também não,
+                  porque o preço dela vem do cadastro. */}
+              {mostraValores &&
+                (peca.origem === 'COMPRAR' ? (
+                  <span className="flex items-center gap-2">
+                    {peca.quantidade > 1 && peca.valorUnitario != null && (
+                      <span className="text-xs text-slate-500">{moeda(peca.total)}</span>
+                    )}
+                    <PrecoDaPeca osId={os.resumo.id} peca={peca} onSalvou={invalidar} />
+                  </span>
+                ) : (
+                  <span className="w-24 text-right text-xs text-slate-600">{moeda(peca.total)}</span>
+                ))}
             </li>
           ))}
         </ul>
@@ -881,13 +912,16 @@ export default function DetalheOs() {
             />
             {(leiturasDoCarro.data ?? []).length === 0 ? (
               <div className="px-4 py-5">
-                <p className="text-sm text-slate-500">
-                  Nenhuma leitura deste carro ainda.{' '}
-                  <Link to="/leituras" className="font-medium text-marca-600 hover:underline">
-                    Importar o PDF do scanner
-                  </Link>
-                  .
-                </p>
+                <p className="text-sm text-slate-500">Nenhuma leitura deste carro ainda.</p>
+                {/* Link virou alvo de 44px: dentro do paragrafo ele tinha 37
+                    e era o unico da tela abaixo da regra -- e quem aperta
+                    esta de luva com o tablet na mao. */}
+                <Link
+                  to="/leituras"
+                  className="mt-1 -ml-2 inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium text-marca-600 transition hover:bg-slate-100 hover:underline"
+                >
+                  Importar o PDF do scanner
+                </Link>
               </div>
             ) : (
               <div className="divide-y divide-slate-100">

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, BadgeCheck, Car, ListOrdered, Package, ShoppingCart, Tag } from 'lucide-react'
 import { api } from '../../api/client'
+import { PrecoDaPeca } from '../../components/PrecoDaPeca'
 import {
   Botao,
   Campo,
@@ -393,86 +394,24 @@ function ModalRecebimento({
 }
 
 /**
- * O preco da peca, editavel no lugar.
+ * O preco da peca nesta fila.
  *
- * Cotar e a tarefa da etapa, e abrir um modal para digitar um numero seria
- * tres cliques para cada peca de uma lista de quinze. Aqui o valor E o
- * botao: toca, digita, sai do campo e salvou.
- *
- * Peca sem preco aparece como "sem preco" em ambar, porque e o que impede o
- * orcamento de fechar -- e nao como "R$ 0,00", que parece peca de graca.
+ * O editor em si mora em `components/PrecoDaPeca`: a etapa 3 da propria OS
+ * pede a mesma coisa, e por um tempo pediu sem ter onde -- a linha da peca
+ * la era so leitura. Aqui fica so o que e desta tela: quais consultas
+ * recarregar depois de salvar.
  */
 function Cotacao({ peca }: { peca: PecaPendente }) {
   const queryClient = useQueryClient()
-  const avisar = useAviso()
-  const [editando, setEditando] = useState(false)
-  const [valor, setValor] = useState('')
-
-  const salvar = useMutation({
-    mutationFn: () =>
-      api(`/os/${peca.osId}/pecas/${peca.id}`, {
-        metodo: 'PUT',
-        corpo: {
-          descricao: peca.descricao,
-          quantidade: peca.quantidade,
-          fornecedor: peca.fornecedor,
-          status: peca.status,
-          momentoNecessario: peca.momentoNecessario,
-          previsaoChegada: peca.previsaoChegada,
-          valorUnitario: valor === '' ? null : Number(valor),
-        },
-      }),
-    onSuccess: () => {
-      setEditando(false)
-      void queryClient.invalidateQueries({ queryKey: ['pecas-pendentes'] })
-      void queryClient.invalidateQueries({ queryKey: ['os'] })
-      avisar('Preço salvo.')
-    },
-    onError: (erro: Error) => avisar(erro.message, 'erro'),
-  })
-
-  if (editando) {
-    return (
-      <span className="flex items-center gap-1">
-        <Entrada
-          autoFocus
-          type="number"
-          step="0.01"
-          min="0"
-          inputMode="decimal"
-          className="w-28"
-          aria-label={`Preço de ${peca.descricao}`}
-          value={valor}
-          onChange={(e) => setValor(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') salvar.mutate()
-            if (e.key === 'Escape') setEditando(false)
-          }}
-        />
-        <Botao tamanho="toque" carregando={salvar.isPending} onClick={() => salvar.mutate()}>
-          Salvar
-        </Botao>
-      </span>
-    )
-  }
-
   return (
-    <button
-      type="button"
-      onClick={() => {
-        setValor(peca.valorUnitario != null ? String(peca.valorUnitario) : '')
-        setEditando(true)
+    <PrecoDaPeca
+      osId={peca.osId}
+      peca={peca}
+      onSalvou={() => {
+        void queryClient.invalidateQueries({ queryKey: ['pecas-pendentes'] })
+        void queryClient.invalidateQueries({ queryKey: ['os'] })
       }}
-      className={cx(
-        'flex h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition',
-        peca.semCotacao
-          ? 'bg-amber-50 text-amber-900 ring-1 ring-amber-300 hover:bg-amber-100'
-          : 'text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50',
-      )}
-    >
-      <Tag className="size-4" aria-hidden />
-      {peca.semCotacao ? 'sem preço' : moeda(peca.valorUnitario)}
-    </button>
+    />
   )
 }
 

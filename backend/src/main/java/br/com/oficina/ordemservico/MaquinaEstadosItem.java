@@ -54,6 +54,38 @@ public final class MaquinaEstadosItem {
         return PERMITIDAS.getOrDefault(atual, EnumSet.noneOf(StatusItem.class));
     }
 
+    /**
+     * O que cabe neste servico considerando tambem onde o CARRO esta.
+     *
+     * Iniciar um servico sobe a OS para EM_EXECUCAO, e a maquina de estados
+     * da OS so permite isso vindo de orcamento aprovado ou de uma pausa.
+     * Esta sobrecarga existe porque a tela desenha os botoes a partir de
+     * `proximosStatus`, e com a conta olhando so o item ela oferecia
+     * "Iniciar" num carro ainda em diagnostico. Quem apertava era mandado
+     * atribuir um mecanico, depois informar a estimativa, e so entao ouvia
+     * "Nao e possivel ir de 'Em diagnostico' para 'Em execucao'" -- tres
+     * passos para um nao que ja se sabia na hora de desenhar o botao.
+     *
+     * Pausar, concluir e cancelar continuam valendo em qualquer ponto: o
+     * servico de dois minutos que ninguem cronometra, o item que o cliente
+     * tirou do orcamento e a peca que nao vem sao coisas do diagnostico
+     * tanto quanto da bancada.
+     */
+    public static Set<StatusItem> proximos(StatusItem atual, StatusOs doCarro) {
+        EnumSet<StatusItem> cabem = EnumSet.copyOf(proximos(atual));
+        if (!aceitaTrabalho(doCarro)) {
+            cabem.remove(EM_EXECUCAO);
+        }
+        return cabem;
+    }
+
+    /** O carro esta num ponto em que da para por a mao nele. */
+    private static boolean aceitaTrabalho(StatusOs doCarro) {
+        return doCarro == StatusOs.ORCAMENTO_APROVADO
+                || doCarro == StatusOs.EM_EXECUCAO
+                || doCarro == StatusOs.PAUSADO;
+    }
+
     public static boolean permite(StatusItem de, StatusItem para) {
         return proximos(de).contains(para);
     }

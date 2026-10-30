@@ -73,4 +73,47 @@ class MaquinaEstadosItemTest {
         assertThatThrownBy(() -> MaquinaEstadosItem.validar(StatusItem.CANCELADO, StatusItem.PENDENTE))
                 .isInstanceOf(RegraNegocioException.class);
     }
+
+    // ------------------------------------------- o estado do CARRO tambem conta
+
+    @Test
+    @DisplayName("servico pendente em carro no diagnostico nao oferece 'Iniciar'")
+    void naoIniciaComCarroEmDiagnostico() {
+        assertThat(MaquinaEstadosItem.proximos(StatusItem.PENDENTE, StatusOs.EM_DIAGNOSTICO))
+                .doesNotContain(StatusItem.EM_EXECUCAO)
+                .contains(StatusItem.PAUSADO, StatusItem.CONCLUIDO, StatusItem.CANCELADO);
+    }
+
+    @Test
+    @DisplayName("carro esperando o cliente responder tambem nao oferece 'Iniciar'")
+    void naoIniciaEsperandoAprovacao() {
+        assertThat(MaquinaEstadosItem.proximos(StatusItem.PENDENTE, StatusOs.AGUARDANDO_APROVACAO))
+                .doesNotContain(StatusItem.EM_EXECUCAO);
+    }
+
+    @Test
+    @DisplayName("orcamento aprovado libera o inicio: e dali que a execucao comeca")
+    void iniciaDepoisDoSim() {
+        assertThat(MaquinaEstadosItem.proximos(StatusItem.PENDENTE, StatusOs.ORCAMENTO_APROVADO))
+                .contains(StatusItem.EM_EXECUCAO);
+    }
+
+    @Test
+    @DisplayName("servico pausado volta a rodar com o carro em execucao ou pausado")
+    void retomaNaBancada() {
+        assertThat(MaquinaEstadosItem.proximos(StatusItem.PAUSADO, StatusOs.EM_EXECUCAO))
+                .contains(StatusItem.EM_EXECUCAO);
+        assertThat(MaquinaEstadosItem.proximos(StatusItem.PAUSADO, StatusOs.PAUSADO))
+                .contains(StatusItem.EM_EXECUCAO);
+    }
+
+    @Test
+    @DisplayName("cancelar continua valendo em qualquer ponto do carro")
+    void cancelaSempre() {
+        for (StatusOs doCarro : StatusOs.values()) {
+            assertThat(MaquinaEstadosItem.proximos(StatusItem.PENDENTE, doCarro))
+                    .as("cancelar com o carro em %s", doCarro)
+                    .contains(StatusItem.CANCELADO);
+        }
+    }
 }

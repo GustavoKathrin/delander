@@ -358,6 +358,7 @@ public class PecaService {
                 p.getFornecedor(), p.getStatus(), p.getStatus().descricao(),
                 p.getOrigem(), p.getOrigem().descricao(),
                 p.getMomentoNecessario(), p.getMomentoNecessario().descricao(),
-                p.getPrevisaoChegada(), p.getValorUnitario(), p.total());
+                p.getPrevisaoChegada(), p.getValorUnitario(), p.total(),
+                p.getValorUnitario() == null);
     }
 }

@@ -117,9 +117,15 @@ export const etapa = (n: number): Etapa => ETAPAS[Math.min(Math.max(n, 1), 7) - 
  * testes — para descrever algo que o dado já sabe dizer.
  *
  * Então o dado diz: lançou serviço? cotou a peça? Note que a conta NÃO usa
- * preço. Preço é mascarado para quem não pode ver dinheiro, e com isso a
- * régua mostraria uma etapa para o dono e outra para o mecânico olhando o
- * mesmo carro. O que serve é o status da peça, que todo mundo vê.
+ * o VALOR da peça. Valor é mascarado para quem não pode ver dinheiro, e com
+ * isso a régua mostraria uma etapa para o dono e outra para o mecânico
+ * olhando o mesmo carro. O que serve é `semCotacao`, que é a ausência do
+ * preço e não o preço — o servidor manda para todo mundo.
+ *
+ * Já foi o `status` da peça, e estava errado: a peça continua SOLICITADA
+ * depois de cotada (comprar só depois do "sim" do cliente), então o carro
+ * ficava preso na etapa 3 com a pendência "1 peça esperando preço" em cima
+ * de uma peça que já tinha preço. A etapa dizia uma coisa e media outra.
  */
 export function etapaDaOs(os: DetalheOs): number {
   const status = os.resumo.status
@@ -133,7 +139,7 @@ export function etapaDaOs(os: DetalheOs): number {
   const servicos = os.itens.filter((i) => i.status !== 'CANCELADO')
   if (servicos.length === 0) return 2
 
-  const aCotar = os.pecas.some((p) => p.origem === 'COMPRAR' && p.status === 'SOLICITADA')
+  const aCotar = os.pecas.some((p) => p.origem === 'COMPRAR' && p.semCotacao)
   if (aCotar) return 3
 
   return 4
@@ -160,23 +166,40 @@ function varianteDaAcao(
   return 'primario'
 }
 
-/** Só para comparar avanço e recuo: a etapa mínima a que o status pertence. */
+/**
+ * A ordem do caminho, só para comparar avanço e recuo.
+ *
+ * Não é o número da etapa, e foi isso que quebrou: etapa 5 é a aprovação
+ * inteira, então "aguardando" e "aprovado" valiam 5 os dois. Como o próximo
+ * passo era o primeiro destino com ordem ESTRITAMENTE maior, nenhum
+ * candidato passava — e o botão grande da etapa 5 caía no primeiro da lista
+ * do servidor, que é "Cliente recusou". A tela destacava a recusa e
+ * escondia o "sim" atrás de "Outras opções".
+ *
+ * Então a escala é mais fina que a régua: cada status tem o seu lugar, e
+ * pausado fica um degrau ABAIXO de execução para "Retomar" ser o próximo
+ * passo de um serviço parado, e não "Marcar como pronto".
+ */
 function ordemDoStatus(status: StatusOs): number {
   switch (status) {
     case 'RECEBIDO':
     case 'AGENDADO':
     case 'CANCELADO':
-      return 1
+      return 10
     case 'EM_DIAGNOSTICO':
-      return 2
+      return 20
     case 'AGUARDANDO_APROVACAO':
+      return 50
     case 'ORCAMENTO_APROVADO':
-      return 5
-    case 'EM_EXECUCAO':
+      return 55
     case 'PAUSADO':
-      return 6
+      return 58
+    case 'EM_EXECUCAO':
+      return 60
+    case 'PRONTO_AGUARDANDO_RETIRADA':
+      return 70
     default:
-      return 7
+      return 75
   }
 }
 
@@ -247,10 +270,13 @@ export function EtapasDaOs({
   const avancos = proximos.filter((p) => p !== 'CANCELADO')
   const podeCancelar = proximos.includes('CANCELADO')
 
-  // O passo principal é o primeiro que o servidor oferece e que leva adiante;
-  // os outros ficam como alternativa, em botão menor.
+  // O passo principal é o destino mais PRÓXIMO que leva adiante, e não o
+  // primeiro da lista que o servidor mandou: com `find`, a ordem do
+  // EnumSet do servidor decidia qual botão ficava grande.
   const principal =
-    avancos.find((p) => ordemDoStatus(p) > ordemDoStatus(status)) ?? avancos[0]
+    avancos
+      .filter((p) => ordemDoStatus(p) > ordemDoStatus(status))
+      .sort((a, b) => ordemDoStatus(a) - ordemDoStatus(b))[0] ?? avancos[0]
   const alternativos = avancos.filter((p) => p !== principal)
 
   return (

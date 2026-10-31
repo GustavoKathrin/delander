@@ -282,7 +282,7 @@ export default function PainelArtigo({
             className={cx(
               'fonte-display h-12 w-full rounded-md text-sm font-extrabold uppercase tracking-wider transition',
               pronto && !salvar.isPending
-                ? 'bg-faixa sobre-destaque hover:brightness-110'
+                ? 'bg-marca-600 sobre-marca hover:brightness-110'
                 : 'cursor-not-allowed bg-slate-200 text-slate-400',
             )}
           >

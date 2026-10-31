@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChartNoAxesColumn,
   ClipboardList,
+  LayoutDashboard,
   LayoutGrid,
   Lightbulb,
   LogOut,
@@ -40,6 +41,7 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
   {
     titulo: 'Oficina',
     itens: [
+      { para: '/', rotulo: 'Início', Icone: LayoutDashboard },
       { para: '/patio', rotulo: 'Pátio', Icone: LayoutGrid },
       // Nao e somenteGerencia: o mecanico tambem ganha em ver a oficina
       // inteira -- e dele que vem a pergunta "quem esta no elevador agora".
@@ -52,7 +54,7 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
     titulo: 'Acompanhar',
     itens: [
       { para: '/radar', rotulo: 'Carros parados', Icone: RadarIcone, somenteGerencia: true },
-      { para: '/painel', rotulo: 'Painel do dono', Icone: ChartNoAxesColumn, somenteGerencia: true },
+      { para: '/painel', rotulo: 'Revisão do mês', Icone: ChartNoAxesColumn, somenteGerencia: true },
       { para: '/pecas', rotulo: 'Peças para comprar', Icone: Package, somenteAtendimento: true },
     ],
   },
@@ -141,7 +143,7 @@ export default function Layout() {
                         cx(
                           'flex min-h-11 items-center gap-2.5 rounded px-2.5 py-2 text-sm transition',
                           isActive
-                            ? 'bg-faixa font-semibold sobre-destaque'
+                            ? 'bg-marca-600 font-semibold sobre-marca'
                             : 'text-zinc-300 hover:bg-white/10 hover:text-white',
                         )
                       }
@@ -221,7 +223,7 @@ export default function Layout() {
           {podeAgendar && (
             <Link
               to="/patio"
-              className="fonte-display ml-auto inline-flex min-h-11 items-center gap-1 rounded bg-faixa px-3 text-[11px] font-extrabold uppercase tracking-wider sobre-destaque"
+              className="fonte-display ml-auto inline-flex min-h-11 items-center gap-1 rounded bg-marca-600 sobre-marca px-3 text-[11px] font-extrabold uppercase tracking-wider sobre-destaque"
             >
               <Plus className="size-3.5" aria-hidden />
               Agendar

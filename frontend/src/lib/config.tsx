@@ -120,6 +120,9 @@ export function ProvedorConfig({ children }: { children: ReactNode }) {
       raiz.style.setProperty('--color-marca-600', marca)
       raiz.style.setProperty('--color-marca-700', escurecer(marca, 0.18))
       raiz.style.setProperty('--color-marca-900', escurecer(marca, 0.45))
+      // A marca virou o acento unico das acoes, entao ela tambem precisa de
+      // um texto que sobreviva a ela -- marca clara com letra preta some.
+      raiz.style.setProperty('--cor-sobre-marca', claro(marca) ? '#18181b' : '#ffffff')
     }
 
     if (/^#[0-9a-f]{6}$/i.test(destaque)) {

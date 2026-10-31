@@ -396,7 +396,7 @@ export default function Patio() {
                   className={cx(
                     'fonte-display px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider transition',
                     densidade === d
-                      ? 'bg-faixa sobre-destaque'
+                      ? 'bg-marca-600 sobre-marca'
                       : 'text-zinc-400 hover:bg-white/10 hover:text-white',
                   )}
                 >
@@ -423,7 +423,7 @@ export default function Patio() {
               <button
                 type="button"
                 onClick={() => setAgendar({})}
-                className="inline-flex h-11 items-center gap-2 rounded-md bg-faixa px-5 fonte-display text-sm font-extrabold uppercase tracking-wider sobre-destaque shadow-lg transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="inline-flex h-11 items-center gap-2 rounded-md bg-marca-600 sobre-marca px-5 fonte-display text-sm font-extrabold uppercase tracking-wider sobre-destaque shadow-lg transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
                 <Plus className="size-5" aria-hidden />
                 Agendar carro
@@ -469,7 +469,7 @@ export default function Patio() {
           </div>
         )}
 
-        <div className="faixa-seguranca h-1.5" aria-hidden />
+        <div className="faixa-seguranca h-0.5" aria-hidden />
       </header>
 
       {/* ============================ piso da oficina ============================ */}
@@ -646,7 +646,7 @@ export default function Patio() {
 
       {/* ============================ portão / fila ============================ */}
       <section className="border-t-4 border-aco-900 bg-aco-800">
-        <div className="faixa-seguranca h-1.5" aria-hidden />
+        <div className="faixa-seguranca h-0.5" aria-hidden />
         <div className="px-4 py-3">
           <div className="mb-2 flex items-center gap-3">
             <h2 className="fonte-display text-sm font-bold uppercase tracking-widest text-zinc-200">
@@ -951,7 +951,7 @@ function CelulaVaga({
         className={cx(
           'pointer-events-none relative z-10 flex items-center gap-2 px-2.5 py-1.5',
           vaga.tipo === 'ELEVADOR'
-            ? 'bg-faixa sobre-destaque'
+            ? 'bg-marca-600 sobre-marca'
             : os
               ? 'bg-aco-800 text-white'
               : 'bg-stone-300/70 text-stone-700',
@@ -1180,7 +1180,7 @@ function CelulaVaga({
             <button
               type="button"
               onClick={onSubir}
-              className="pointer-events-auto fonte-display w-full rounded bg-faixa px-2 py-1 text-[11px] font-extrabold uppercase tracking-wider sobre-destaque transition hover:brightness-110"
+              className="pointer-events-auto fonte-display w-full rounded bg-marca-600 sobre-marca px-2 py-1 text-[11px] font-extrabold uppercase tracking-wider sobre-destaque transition hover:brightness-110"
             >
               Subir carro
             </button>

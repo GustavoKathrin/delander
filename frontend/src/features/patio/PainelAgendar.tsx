@@ -383,7 +383,7 @@ export default function PainelAgendar({
           <p className="bg-aco-900 px-4 py-1.5 text-[11px] text-zinc-300">{resumoDoPatio}</p>
         )}
 
-        <div className="faixa-seguranca h-1" aria-hidden />
+        <div className="faixa-seguranca h-0.5" aria-hidden />
 
         <div className="flex-1 space-y-5 overflow-y-auto p-4">
           {/* ---------------- 1. cliente e carro ---------------- */}
@@ -899,7 +899,7 @@ export default function PainelAgendar({
               setErro(undefined)
               salvar.mutate()
             }}
-            className="fonte-display h-12 w-full rounded-md bg-faixa text-sm font-extrabold uppercase tracking-wider sobre-destaque shadow transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+            className="fonte-display h-12 w-full rounded-md bg-marca-600 sobre-marca text-sm font-extrabold uppercase tracking-wider sobre-destaque shadow transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
           >
             {salvar.isPending
               ? 'Agendando...'

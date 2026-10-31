@@ -24,6 +24,7 @@ import Wiki from './features/wiki/Wiki'
 import ArtigoWiki from './features/wiki/ArtigoWiki'
 import Acompanhar from './features/publico/Acompanhar'
 import ModoTv from './features/tv/ModoTv'
+import Inicio from './features/inicio/Inicio'
 
 function Protegida({ children }: { children: React.ReactNode }) {
   const { autenticado } = useAuth()
@@ -31,10 +32,17 @@ function Protegida({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-/** O mecanico cai direto no painel dele; o dono, na planta do patio. */
+/*
+ * O mecanico cai na bancada dele; todo o resto cai no painel.
+ *
+ * Antes o sistema abria na planta do patio. Planta responde "onde esta cada
+ * carro" -- pergunta legitima, mas nao e a primeira do dia. A primeira e "o
+ * que travou", e e essa que o painel responde.
+ */
 function TelaInicial() {
   const { ehMecanico } = useAuth()
-  return <Navigate to={ehMecanico ? '/meus-servicos' : '/patio'} replace />
+  if (ehMecanico) return <Navigate to="/meus-servicos" replace />
+  return <Inicio />
 }
 
 export default function App() {

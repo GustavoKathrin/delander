@@ -102,4 +102,37 @@ public final class PecaDtos {
                                         String observacao,
                                         BigDecimal saldoAtual) {
     }
+
+    // ------------------------------------------------------------ cotacao
+
+    public record CotacaoRequisicao(
+            /** Null quando foi um lugar avulso, fora do cadastro. */
+            UUID fornecedorId,
+            @NotBlank(message = "Informe de quem e o preco") @Size(max = 180) String fornecedorNome,
+            BigDecimal valorUnitario,
+            Integer prazoDias,
+            @Size(max = 300) String observacao) {
+    }
+
+    public record CotacaoResposta(UUID id,
+                                  UUID pecaOsId,
+                                  UUID fornecedorId,
+                                  String fornecedorNome,
+                                  BigDecimal valorUnitario,
+                                  Integer prazoDias,
+                                  String observacao,
+                                  boolean escolhida) {
+
+        public static CotacaoResposta de(CotacaoPeca c) {
+            return new CotacaoResposta(
+                    c.getId(),
+                    c.getPecaOsId(),
+                    c.getFornecedorId(),
+                    c.getFornecedorNome(),
+                    c.getValorUnitario(),
+                    c.getPrazoDias(),
+                    c.getObservacao(),
+                    c.isEscolhida());
+        }
+    }
 }

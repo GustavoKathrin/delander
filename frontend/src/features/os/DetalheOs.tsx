@@ -27,6 +27,7 @@ import type {
   ItemOs,
   MomentoPeca,
   PecaCatalogo,
+  PecaOs,
   MotivoParada,
   OrigemPeca,
   ResumoArtigo,
@@ -68,6 +69,7 @@ import { CarroTopo, Placa } from '../../components/oficina'
 import ModalCompartilhar from './ModalCompartilhar'
 import { RegistrarTrabalho } from './RegistrarTrabalho'
 import { ChecklistEntrada } from './ChecklistEntrada'
+import { ModalCotacao } from './Cotacao'
 import { PrecoDaPeca } from '../../components/PrecoDaPeca'
 import { GaleriaFotos } from './GaleriaFotos'
 import { HistoricoDaOs } from './HistoricoDaOs'
@@ -192,6 +194,8 @@ export default function DetalheOs() {
   const [acaoServico, setAcaoServico] = useState<{ item: ItemOs; acao: AcaoServico } | null>(null)
   /** O serviço sobre o qual se vai anotar o trabalho. */
   const [anotando, setAnotando] = useState<ItemOs | null>(null)
+  /** Peça cuja cotação está aberta. Null = modal fechado. */
+  const [cotando, setCotando] = useState<PecaOs | null>(null)
   const [erroAcao, setErroAcao] = useState<string>()
 
   const consulta = useQuery({
@@ -616,6 +620,19 @@ export default function DetalheOs() {
                       <span className="text-xs text-slate-500">{moeda(peca.total)}</span>
                     )}
                     <PrecoDaPeca osId={os.resumo.id} peca={peca} onSalvou={invalidar} />
+                    {/*
+                        Cotar e pedir preco em VARIOS lugares e escolher um.
+                        O campo ao lado continua existindo para quem ja sabe o
+                        valor e so quer digitar -- a cotacao e para quando
+                        vale a pena ligar em tres e comparar.
+                    */}
+                    <button
+                      type="button"
+                      onClick={() => setCotando(peca)}
+                      className="rounded-md px-2 py-1.5 text-xs font-semibold text-marca-700 ring-1 ring-marca-200 transition hover:bg-marca-50"
+                    >
+                      Cotar
+                    </button>
                   </span>
                 ) : (
                   <span className="w-24 text-right text-xs text-slate-600">{moeda(peca.total)}</span>
@@ -1287,6 +1304,13 @@ export default function DetalheOs() {
           setAdicionandoPeca(false)
           avisar('Peça registrada.')
         }}
+      />
+
+      <ModalCotacao
+        aberto={Boolean(cotando)}
+        peca={cotando}
+        onFechar={() => setCotando(null)}
+        onMudou={invalidar}
       />
     </div>
   )

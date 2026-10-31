@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,13 +28,16 @@ public class PecaController {
     private final PecaService service;
     private final PecaCatalogoService catalogo;
     private final PedidoEstoqueService pedidoEstoque;
+    private final CotacaoService cotacaoService;
 
     public PecaController(PecaService service,
                           PecaCatalogoService catalogo,
-                          PedidoEstoqueService pedidoEstoque) {
+                          PedidoEstoqueService pedidoEstoque,
+                          CotacaoService cotacaoService) {
         this.service = service;
         this.catalogo = catalogo;
         this.pedidoEstoque = pedidoEstoque;
+        this.cotacaoService = cotacaoService;
     }
 
     @GetMapping("/pecas/pendentes")
@@ -146,5 +151,32 @@ public class PecaController {
     public ResponseEntity<Void> remover(@PathVariable UUID osId, @PathVariable UUID pecaId) {
         service.remover(osId, pecaId);
         return ResponseEntity.noContent().build();
+    }
+
+    // ------------------------------------------------------------ cotacao
+
+    @GetMapping("/pecas/{pecaId}/cotacoes")
+    @Operation(summary = "Os precos que ja foram pedidos para esta peca")
+    public List<PecaDtos.CotacaoResposta> cotacoes(@PathVariable UUID pecaId) {
+        return cotacaoService.daPeca(pecaId);
+    }
+
+    @PostMapping("/pecas/{pecaId}/cotacoes")
+    @Operation(summary = "Anota o preco que um fornecedor deu")
+    public PecaDtos.CotacaoResposta cotar(@PathVariable UUID pecaId,
+                                          @Valid @RequestBody PecaDtos.CotacaoRequisicao req) {
+        return cotacaoService.registrar(pecaId, req);
+    }
+
+    @PutMapping("/cotacoes/{id}/escolher")
+    @Operation(summary = "Esta e a que vai para o orcamento")
+    public PecaDtos.CotacaoResposta escolher(@PathVariable UUID id) {
+        return cotacaoService.escolher(id);
+    }
+
+    @DeleteMapping("/cotacoes/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void apagarCotacao(@PathVariable UUID id) {
+        cotacaoService.apagar(id);
     }
 }

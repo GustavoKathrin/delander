@@ -919,3 +919,21 @@ export interface Fornecedor {
   observacao?: string
   ativo: boolean
 }
+
+/**
+ * Um preço que alguém deu para uma peça.
+ *
+ * Vários por peça: guardar só o escolhido fecharia o orçamento de hoje e
+ * jogaria fora o que faz a próxima negociação.
+ */
+export interface CotacaoPeca {
+  id: string
+  pecaOsId: string
+  fornecedorId?: string
+  fornecedorNome: string
+  valorUnitario: number
+  prazoDias?: number
+  observacao?: string
+  /** Uma por peça. É dela que sai o valor do orçamento. */
+  escolhida: boolean
+}

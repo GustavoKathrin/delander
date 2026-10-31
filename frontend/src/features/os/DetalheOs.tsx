@@ -1729,9 +1729,20 @@ function ModalNovaPeca({
           </Campo>
         </div>
 
-        {/* As duas perguntas que mudam tudo, em botão e não em combo: isto é
-            preenchido de pé, na oficina, muitas vezes no celular. */}
-        <div className="sm:col-span-2">
+        {/*
+            "Temos aqui ou precisa comprar" NAO e pergunta para o mecanico.
+            Quem sabe o que tem na prateleira e quem cuida da prateleira: o
+            balcao. O mecanico esta de pe ao lado do carro e sabe uma coisa
+            so, que e o que ele responde aqui -- de que peca o carro precisa.
+            Quando ele escolhe do catalogo, o proprio saldo ja responde; e
+            quando digita livre, nasce como compra, que e o erro barato: peca
+            de estoque marcada como compra aparece na fila e alguem corrige,
+            o contrario fica invisivel e o carro espera uma peca que ninguem
+            comprou.
+
+            Em botao e nao em combo porque isto e preenchido de pe, no
+            celular -- vale para quem ainda ve este campo. */}
+        <div className={cx('sm:col-span-2', !mostraValores && 'hidden')}>
           <Campo rotulo="Esta peça" obrigatorio>
             <EscolhaDupla
               valor={origem}
@@ -1747,7 +1758,7 @@ function ModalNovaPeca({
         {/* "Quando faz falta" só é pergunta para peça que alguém vai
             buscar. Para a que já está na prateleira a resposta não existe,
             e pergunta cuja resposta o sistema joga fora é clique à toa. */}
-        {origem === 'COMPRAR' && (
+        {origem === 'COMPRAR' && mostraValores && (
           <div className="sm:col-span-2">
             <Campo
               rotulo="Faz falta"

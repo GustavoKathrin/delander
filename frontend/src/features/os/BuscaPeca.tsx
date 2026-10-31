@@ -52,6 +52,38 @@ export function BuscaPeca({
 
   const achadas = busca.data ?? []
 
+  /*
+   * A busca frouxa: o aviso de "ja existe uma parecida".
+   *
+   * A busca de cima e por prefixo, entao "past freio" nao encontra "pastilha
+   * de freio" e a pessoa cadastra a terceira grafia da mesma peca. E assim
+   * que um catalogo vira "pastilha de freio", "pastilha freio" e "past. de
+   * freio" como se fossem tres pecas diferentes.
+   *
+   * Quando a busca exata nao acha nada, esta aqui tenta de novo so com a
+   * palavra mais longa do que foi digitado -- a que carrega o sentido. O
+   * resultado NAO e escolhido sozinho: aparece como pergunta, porque
+   * parecido nao e igual e quem sabe a diferenca e quem esta com a peca na
+   * mao.
+   */
+  const palavraForte = termo
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((x) => x.length >= 4)
+    .sort((a, b) => b.length - a.length)[0]
+
+  const parecidas = useQuery({
+    queryKey: ['pecas-parecidas', palavraForte],
+    enabled: achadas.length === 0 && !busca.isLoading && Boolean(palavraForte) && termo.length >= 4,
+    queryFn: () =>
+      api<PecaCatalogo[]>(
+        `/pecas/catalogo/autocompletar?termo=${encodeURIComponent(palavraForte!)}`,
+      ),
+  })
+  const sugestoes = (parecidas.data ?? []).slice(0, 4)
+
   /**
    * "Não achei, cadastra agora".
    *
@@ -155,6 +187,38 @@ export function BuscaPeca({
             </ul>
           ) : (
             <div className="space-y-2 px-3 py-2.5">
+              {sugestoes.length > 0 && (
+                <div className="-mx-3 -mt-2.5 mb-2 border-b border-amber-200 bg-amber-50 px-3 py-2">
+                  <p className="flex items-start gap-1.5 text-xs font-medium text-amber-900">
+                    <PackageSearch className="mt-0.5 size-3.5 flex-none" aria-hidden />
+                    Já existe peça parecida no catálogo. É alguma destas?
+                  </p>
+                  <ul className="mt-1.5 space-y-1">
+                    {sugestoes.map((peca) => (
+                      <li key={peca.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onEscolher(peca)
+                            onDescricao(peca.descricao)
+                          }}
+                          className="flex w-full items-center gap-2 rounded-md bg-white px-2 py-1.5 text-left ring-1 ring-amber-200 transition hover:ring-amber-400"
+                        >
+                          <span className="min-w-0 flex-1 truncate text-sm text-slate-900">
+                            {peca.descricao}
+                          </span>
+                          <span className="flex-none text-[11px] text-slate-500">
+                            {peca.temEstoque ? `${peca.quantidadeEstoque} aqui` : 'sem estoque'}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-1.5 text-[11px] leading-snug text-amber-800">
+                    Se for outra peça mesmo, pode cadastrar abaixo.
+                  </p>
+                </div>
+              )}
               <p className="flex items-start gap-1.5 text-xs text-slate-600">
                 <ShoppingCart className="mt-0.5 size-3.5 flex-none" aria-hidden />
                 Não está no catálogo. Do jeito que está, entra só como pedido de compra deste

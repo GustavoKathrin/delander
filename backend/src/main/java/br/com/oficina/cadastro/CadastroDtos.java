@@ -143,4 +143,47 @@ public final class CadastroDtos {
                     .intValue();
         }
     }
+
+    // ------------------------------------------------------- fornecedores
+
+    public record FornecedorRequisicao(
+            @NotBlank(message = "Informe o nome do fornecedor") @Size(max = 180) String nome,
+            @Size(max = 200) String especialidade,
+            @Size(max = 40) String telefone,
+            @Size(max = 40) String whatsapp,
+            @Size(max = 180) String email,
+            @Size(max = 20) String cnpj,
+            @Size(max = 120) String cidade,
+            Integer prazoDiasTipico,
+            @Size(max = 500) String observacao,
+            Boolean ativo) {
+    }
+
+    public record FornecedorResposta(UUID id,
+                                     String nome,
+                                     String especialidade,
+                                     String telefone,
+                                     String whatsapp,
+                                     String email,
+                                     String cnpj,
+                                     String cidade,
+                                     Integer prazoDiasTipico,
+                                     String observacao,
+                                     boolean ativo) {
+
+        public static FornecedorResposta de(Fornecedor f) {
+            return new FornecedorResposta(
+                    f.getId(),
+                    f.getNome(),
+                    f.getEspecialidade(),
+                    f.getTelefone(),
+                    f.getWhatsapp(),
+                    f.getEmail(),
+                    f.getCnpj(),
+                    f.getCidade(),
+                    f.getPrazoDiasTipico(),
+                    f.getObservacao(),
+                    f.isAtivo());
+        }
+    }
 }

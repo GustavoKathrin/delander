@@ -903,3 +903,19 @@ export interface PassagemProntuario {
   /** As fotos daquela passagem, com o nome do serviço. */
   fotos: ArquivoOs[]
 }
+
+/** De quem a oficina compra peça. Alimenta a cotação. */
+export interface Fornecedor {
+  id: string
+  nome: string
+  especialidade?: string
+  telefone?: string
+  whatsapp?: string
+  email?: string
+  cnpj?: string
+  cidade?: string
+  /** Quantos dias costuma levar. Média do que já aconteceu, não promessa. */
+  prazoDiasTipico?: number
+  observacao?: string
+  ativo: boolean
+}

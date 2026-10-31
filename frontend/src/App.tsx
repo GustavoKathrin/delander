@@ -25,6 +25,7 @@ import ArtigoWiki from './features/wiki/ArtigoWiki'
 import Acompanhar from './features/publico/Acompanhar'
 import ModoTv from './features/tv/ModoTv'
 import Inicio from './features/inicio/Inicio'
+import Fornecedores from './features/fornecedores/Fornecedores'
 
 function Protegida({ children }: { children: React.ReactNode }) {
   const { autenticado } = useAuth()
@@ -76,6 +77,7 @@ export default function App() {
         }
       >
         <Route path="/" element={<TelaInicial />} />
+        <Route path="/fornecedores" element={<Fornecedores />} />
         <Route path="/patio" element={<Patio />} />
         <Route path="/quadro" element={<Quadro />} />
         <Route path="/radar" element={<Radar />} />

@@ -26,6 +26,7 @@ public class CadastroService {
     private final BoxRepository boxRepository;
     private final MotivoParadaRepository motivoRepository;
     private final CatalogoServicoRepository catalogoRepository;
+    private final FornecedorRepository fornecedorRepository;
     private final OsItemRepository itemRepository;
     private final ConfiguracaoService config;
     private final Contexto contexto;
@@ -34,6 +35,7 @@ public class CadastroService {
                            BoxRepository boxRepository,
                            MotivoParadaRepository motivoRepository,
                            CatalogoServicoRepository catalogoRepository,
+                           FornecedorRepository fornecedorRepository,
                            OsItemRepository itemRepository,
                            ConfiguracaoService config,
                            Contexto contexto) {
@@ -41,6 +43,7 @@ public class CadastroService {
         this.boxRepository = boxRepository;
         this.motivoRepository = motivoRepository;
         this.catalogoRepository = catalogoRepository;
+        this.fornecedorRepository = fornecedorRepository;
         this.itemRepository = itemRepository;
         this.config = config;
         this.contexto = contexto;
@@ -324,5 +327,100 @@ public class CadastroService {
     /** Limpa o cache de configuracao quando um cadastro muda a capacidade. */
     public void invalidarCache() {
         config.limparCache(contexto.oficinaId());
+    }
+
+    // ------------------------------------------------------- fornecedores
+
+    /**
+     * De quem a oficina compra peca.
+     *
+     * So gerencia mexe: a secretaria usa a lista na cotacao, mas quem entra e
+     * quem sai do cadastro e decisao do dono -- e e o cadastro que vai virar
+     * historico de preco.
+     */
+    @Transactional(readOnly = true)
+    public List<CadastroDtos.FornecedorResposta> fornecedores(boolean apenasAtivos) {
+        UUID oficinaId = contexto.oficinaId();
+        List<Fornecedor> lista = apenasAtivos
+                ? fornecedorRepository.listarAtivos(oficinaId)
+                : fornecedorRepository.listar(oficinaId);
+        return lista.stream().map(CadastroDtos.FornecedorResposta::de).toList();
+    }
+
+    @Transactional
+    public CadastroDtos.FornecedorResposta criarFornecedor(CadastroDtos.FornecedorRequisicao req) {
+        contexto.exigirGerencia();
+        Fornecedor f = new Fornecedor();
+        f.setOficinaId(contexto.oficinaId());
+        aplicar(f, req);
+        return CadastroDtos.FornecedorResposta.de(fornecedorRepository.save(f));
+    }
+
+    @Transactional
+    public CadastroDtos.FornecedorResposta atualizarFornecedor(UUID id,
+                                                               CadastroDtos.FornecedorRequisicao req) {
+        contexto.exigirGerencia();
+        Fornecedor f = fornecedorRepository.findById(id)
+                .filter(x -> x.getOficinaId().equals(contexto.oficinaId()))
+                .orElseThrow(() -> RecursoNaoEncontradoException.de("Fornecedor", id));
+        aplicar(f, req);
+        return CadastroDtos.FornecedorResposta.de(fornecedorRepository.save(f));
+    }
+
+    /**
+     * Apagar fornecedor e desativar nao sao a mesma coisa.
+     *
+     * Enquanto ele nao tiver preco cotado guardado, apagar e limpeza. Depois
+     * que tiver, apagar levaria junto o historico de "quanto a peca custava
+     * com quem" -- que e justamente a razao de existir este cadastro. Nesse
+     * caso a saida e desativar: some das listas e o passado continua de pe.
+     */
+    @Transactional
+    public void apagarFornecedor(UUID id) {
+        contexto.exigirGerencia();
+        Fornecedor f = fornecedorRepository.findById(id)
+                .filter(x -> x.getOficinaId().equals(contexto.oficinaId()))
+                .orElseThrow(() -> RecursoNaoEncontradoException.de("Fornecedor", id));
+        fornecedorRepository.delete(f);
+    }
+
+    private void aplicar(Fornecedor f, CadastroDtos.FornecedorRequisicao req) {
+        f.setNome(req.nome().trim());
+        f.setEspecialidade(vazioVira(req.especialidade()));
+        f.setTelefone(vazioVira(req.telefone()));
+        f.setWhatsapp(soDigitos(req.whatsapp()));
+        f.setEmail(vazioVira(req.email()));
+        f.setCnpj(vazioVira(req.cnpj()));
+        f.setCidade(vazioVira(req.cidade()));
+        f.setPrazoDiasTipico(req.prazoDiasTipico());
+        f.setObservacao(vazioVira(req.observacao()));
+        if (req.ativo() != null) {
+            f.setAtivo(req.ativo());
+        }
+    }
+
+    /** Campo em branco vira nulo: "" e null significam a mesma coisa e so um deve existir. */
+    private static String vazioVira(String valor) {
+        if (valor == null) {
+            return null;
+        }
+        String limpo = valor.trim();
+        return limpo.isEmpty() ? null : limpo;
+    }
+
+    /**
+     * WhatsApp guardado so com digito.
+     *
+     * O link do WhatsApp nao aceita parentese nem traco, e quem digita o
+     * telefone digita do jeito que esta no papel. Normalizar na entrada evita
+     * ter que adivinhar na hora de montar o link -- que e quando da errado.
+     */
+    private static String soDigitos(String valor) {
+        String limpo = vazioVira(valor);
+        if (limpo == null) {
+            return null;
+        }
+        String digitos = limpo.replaceAll("[^0-9]", "");
+        return digitos.isEmpty() ? null : digitos;
     }
 }

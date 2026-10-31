@@ -134,4 +134,31 @@ public class CadastroController {
     public void apagarServico(@PathVariable UUID id) {
         service.apagarServico(id);
     }
+
+    // ------------------------------------------------------- fornecedores
+
+    @GetMapping("/fornecedores")
+    @Operation(summary = "De quem a oficina compra peca")
+    public List<CadastroDtos.FornecedorResposta> fornecedores(
+            @RequestParam(defaultValue = "false") boolean apenasAtivos) {
+        return service.fornecedores(apenasAtivos);
+    }
+
+    @PostMapping("/fornecedores")
+    public CadastroDtos.FornecedorResposta criarFornecedor(
+            @Valid @RequestBody CadastroDtos.FornecedorRequisicao req) {
+        return service.criarFornecedor(req);
+    }
+
+    @PutMapping("/fornecedores/{id}")
+    public CadastroDtos.FornecedorResposta atualizarFornecedor(
+            @PathVariable UUID id, @Valid @RequestBody CadastroDtos.FornecedorRequisicao req) {
+        return service.atualizarFornecedor(id, req);
+    }
+
+    @DeleteMapping("/fornecedores/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void apagarFornecedor(@PathVariable UUID id) {
+        service.apagarFornecedor(id);
+    }
 }

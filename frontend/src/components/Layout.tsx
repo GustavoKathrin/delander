@@ -17,6 +17,7 @@ import {
   Radar as RadarIcone,
   ScanLine,
   Settings,
+  Truck,
   Users,
   Wrench,
   X,
@@ -74,6 +75,7 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
       // todo servico lancado. Isso nao e configuracao, e o que a oficina
       // vende -- estava numa aba dentro de Configuracoes > Cadastros.
       { para: '/catalogo', rotulo: 'Serviços e mão de obra', Icone: Wrench, somenteGerencia: true },
+      { para: '/fornecedores', rotulo: 'Fornecedores', Icone: Truck, somenteGerencia: true },
       { para: '/funcionarios', rotulo: 'Funcionários', Icone: Users, somenteGerencia: true },
       { para: '/configuracoes', rotulo: 'Configurações', Icone: Settings, somenteGerencia: true },
     ],
